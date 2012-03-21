@@ -131,36 +131,35 @@ class TcpClientRequestor(threading.Thread):
             return None
 
     def parse(self):
-        while True:
-            raw_buffer = self.message.find('\n')
-            if raw_buffer == -1:
-                return True
-
-            raw_command = self.message[0:raw_buffer].strip()
-            self.message = self.message[raw_buffer + 1:]
-            if raw_command == 'quit': 
-                return False
-
-            try:
-                command = json.loads(raw_command)
-            except:
-                self.session.push_response(
-                    {"error": "bad JSON", "request": raw_command})
-                return True
-
-            try:
-                # Try to load vital fields, and return an error if
-                # unsuccessful.
-                message_id = command['id']
-                method = command['method']
-            except KeyError:
-                # Return an error JSON in response.
-                self.session.push_response(
-                    {"error": "syntax error", "request": raw_command})
-            else:
-                self.session.push_request(command)
-
+        raw_buffer = self.message.find('\n')
+        if raw_buffer == -1:
             return True
+
+        raw_command = self.message[0:raw_buffer].strip()
+        self.message = self.message[raw_buffer + 1:]
+        if raw_command == 'quit': 
+            return False
+
+        try:
+            command = json.loads(raw_command)
+        except:
+            self.session.push_response(
+                {"error": "bad JSON", "request": raw_command})
+            return True
+
+        try:
+            # Try to load vital fields, and return an error if
+            # unsuccessful.
+            message_id = command['id']
+            method = command['method']
+        except KeyError:
+            # Return an error JSON in response.
+            self.session.push_response(
+                {"error": "syntax error", "request": raw_command})
+        else:
+            self.session.push_request(command)
+
+        return True
 
 class TcpServer(threading.Thread):
 
