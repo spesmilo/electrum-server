@@ -6,6 +6,7 @@ import time
 class Backend:
 
     def __init__(self):
+        # Create 3 thread-pools each with 1 thread
         self.network_service = bitcoin.async_service(1)
         self.disk_service = bitcoin.async_service(1)
         self.mempool_service = bitcoin.async_service(1)
@@ -56,6 +57,8 @@ class Backend:
             print "Error with new transaction:", ec
             return
         tx_hash = bitcoin.hash_transaction(tx)
+        # If we want to ignore this transaction, we can set
+        # the 2 handlers to be null handlers that do nothing.
         self.transaction_pool.store(tx,
             bitcoin.bind(self.tx_confirmed, bitcoin._1, tx_hash),
             bitcoin.bind(self.handle_mempool_store, bitcoin._1, tx_hash))
@@ -75,6 +78,20 @@ class Backend:
         else:
             print "Confirmed", tx_hash
 
+class GhostValue:
+
+    def __init__(self):
+        self.event = threading.Event()
+        self.value = None
+
+    def get(self):
+        self.event.wait()
+        return self.value
+
+    def set(self, value):
+        self.value = value
+        self.event.set()
+
 class NumblocksSubscribe:
 
     def __init__(self, backend):
@@ -82,28 +99,18 @@ class NumblocksSubscribe:
         self.lock = threading.Lock()
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
         self.backend.blockchain.fetch_last_depth(self.set_last_depth)
-        self.latest = None
+        self.latest = GhostValue()
 
     def subscribe(self, session, request):
-        last = self.get_last_depth()
+        last = self.latest.get()
         session.push_response({"id": request["id"], "result": last})
-
-    def get_last_depth(self):
-        # Stall until last depth has been set...
-        # Should use condition variable here instead
-        while True:
-            with self.lock:
-                last = self.latest
-            if last is not None:
-                return last
-            time.sleep(0.1)
 
     def set_last_depth(self, ec, last_depth):
         if ec:
             print "Error retrieving last depth", ec
         else:
             with self.lock:
-                self.latest = last_depth
+                self.latest.set(last_depth)
 
     def reorganize(self, ec, fork_point, arrivals, replaced):
         pass
