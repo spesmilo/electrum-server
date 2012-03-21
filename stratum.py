@@ -72,7 +72,7 @@ class Session:
     def pop_request(self):
         return self.request_queue.get()
 
-    def push_response(self):
+    def push_response(self, item):
         self.response_queue.put(item)
 
     def pop_response(self):
@@ -136,16 +136,17 @@ class TcpClientRequestor(threading.Thread):
             if raw_buffer == -1:
                 return True
 
-            command = self.message[0:raw_buffer].strip()
+            raw_command = self.message[0:raw_buffer].strip()
             self.message = self.message[raw_buffer + 1:]
-            if command == 'quit': 
+            if raw_command == 'quit': 
                 return False
 
             try:
-                command = json.loads(command)
+                command = json.loads(raw_command)
             except:
-                print "json error", repr(command)
-                continue
+                self.session.push_response(
+                    {"error": "bad JSON", "request": raw_command})
+                return True
 
             try:
                 # Try to load vital fields, and return an error if
@@ -153,10 +154,13 @@ class TcpClientRequestor(threading.Thread):
                 message_id = command['id']
                 method = command['method']
             except KeyError:
-                # This should return an error JSON in response.
-                print "syntax error", repr(command), self.session.address[0]
+                # Return an error JSON in response.
+                self.session.push_response(
+                    {"error": "syntax error", "request": raw_command})
             else:
                 self.session.push_request(command)
+
+            return True
 
 class TcpServer(threading.Thread):
 
