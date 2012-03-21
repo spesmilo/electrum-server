@@ -148,15 +148,15 @@ class TcpClientRequestor(threading.Thread):
                 continue
 
             try:
-                message_id = command.get('id')
-                method = command.get('method')
-                params = command.get('params')
-            except:
+                # Try to load vital fields, and return an error if
+                # unsuccessful.
+                message_id = command['id']
+                method = command['method']
+            except KeyError:
+                # This should return an error JSON in response.
                 print "syntax error", repr(command), self.session.address[0]
-                continue
-
-            self.session.push_request((message_id, method, params))
-            print message_id, method, params
+            else:
+                self.session.push_request(command)
 
 class TcpServer(threading.Thread):
 
