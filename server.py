@@ -37,7 +37,7 @@ from json import dumps, loads
 
 class MyStore(Datastore_class):
 
-    def __init__(self, config, address_queue):
+    def __init__(self, config):
         conf = DataStore.CONFIG_DEFAULTS
         args, argv = readconf.parse_argv( [], conf)
         args.dbtype = config.get('database','type')
@@ -54,7 +54,8 @@ class MyStore(Datastore_class):
         self.mempool_keys = {}
         self.bitcoind_url = 'http://%s:%s@%s:%s/' % ( config.get('bitcoind','user'), config.get('bitcoind','password'), config.get('bitcoind','host'), config.get('bitcoind','port'))
 
-        self.address_queue = address_queue
+        self.address_queue = Queue()
+
         self.dblock = thread.allocate_lock()
 
 
@@ -420,10 +421,6 @@ wallets = {} # for ultra-light clients such as bccapi
 from Queue import Queue
 input_queue = Queue()
 output_queue = Queue()
-address_queue = Queue()
-
-
-
 
 
 
@@ -968,7 +965,7 @@ if __name__ == '__main__':
 
     # backend
     # from db import MyStore
-    store = MyStore(config,address_queue)
+    store = MyStore(config)
 
     # supported protocols
     thread.start_new_thread(native_server_thread, ())
@@ -991,7 +988,7 @@ if __name__ == '__main__':
                 send_numblocks(session_id)
         while True:
             try:
-                addr = address_queue.get(False)
+                addr = store.address_queue.get(False)
             except:
                 break
             do_update_address(addr)
