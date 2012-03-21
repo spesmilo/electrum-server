@@ -100,20 +100,32 @@ class NumblocksSubscribe:
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
         self.backend.blockchain.fetch_last_depth(self.set_last_depth)
         self.latest = GhostValue()
+        self.subscribed = []
 
     def subscribe(self, session, request):
         last = self.latest.get()
         session.push_response({"id": request["id"], "result": last})
+        with self.lock:
+            self.subscribed.append((session, request))
 
     def set_last_depth(self, ec, last_depth):
         if ec:
             print "Error retrieving last depth", ec
         else:
-            with self.lock:
-                self.latest.set(last_depth)
+            self.latest.set(last_depth)
 
     def reorganize(self, ec, fork_point, arrivals, replaced):
-        pass
+        latest = fork_point + len(arrivals)
+        self.latest.set(latest)
+        subscribed = self.spring_clean()
+        for session, request in subscribed:
+            session.push_response({"id": request["id"], "result": latest})
+
+    def spring_clean(self):
+        with self.lock:
+            self.subscribed = [sub for sub in self.subscribed
+                               if not sub[0].stopped()]
+            return self.subscribed[:]
 
 class LibbitcoinProcessor(stratum.Processor):
 
