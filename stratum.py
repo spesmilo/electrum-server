@@ -32,6 +32,10 @@ class Processor(threading.Thread):
                     # to our internal register
                     self.add_session(session)
                     self.process(session)
+        self.stop()
+
+    def stop(self):
+        pass
 
     def process(self, session):
         request = session.pop_request()
