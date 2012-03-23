@@ -340,6 +340,16 @@ class MyStore(Datastore_class):
             tx['hash'] = util.double_sha256(tx['tx'])
             tx_hash = store.hashin(tx['hash'])
 
+            store.mempool_keys.append(tx_hash)
+            if store.tx_find_id_and_value(tx):
+                pass
+            else:
+                tx_id = store.import_tx(tx, False)
+                store.update_tx_cache(tx_id)
+    
+        store.commit()
+
+
     def send_tx(self,tx):
         postdata = dumps({"method": 'importtransaction', 'params': [tx], 'id':'jsonrpc'})
         respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
@@ -449,23 +459,24 @@ def cmd_load(_,__,pw):
 
 
 
-def modified_addresses(session):
-    if 1:
-        t1 = time.time()
-        addresses = session['addresses']
-        session['last_time'] = time.time()
-        ret = {}
-        k = 0
-        for addr in addresses:
-            status = get_address_status( addr )
-            msg_id, last_status = addresses.get( addr )
-            if last_status != status:
-                addresses[addr] = msg_id, status
-                ret[addr] = status
+def modified_addresses(a_session):
+    #t1 = time.time()
+    import copy
+    session = copy.deepcopy(a_session)
+    addresses = session['addresses']
+    session['last_time'] = time.time()
+    ret = {}
+    k = 0
+    for addr in addresses:
+        status = get_address_status( addr )
+        msg_id, last_status = addresses.get( addr )
+        if last_status != status:
+            addresses[addr] = msg_id, status
+            ret[addr] = status
 
-        t2 = time.time() - t1 
-        #if t2 > 10: print "high load:", session_id, "%d/%d"%(k,len(addresses)), t2
-        return ret, addresses
+    #t2 = time.time() - t1 
+    #if t2 > 10: print "high load:", session_id, "%d/%d"%(k,len(addresses)), t2
+    return ret, addresses
 
 
 def poll_session(session_id): 
@@ -828,10 +839,9 @@ def process_input_queue():
             address = data[0]
             out = { 'result':store.get_history( address ) } 
         elif method == 'transaction.broadcast':
-            postdata = dumps({"method": 'importtransaction', 'params': [data], 'id':'jsonrpc'})
-            txo = urllib.urlopen(bitcoind_url, postdata).read()
+            txo = store.send_tx(data[0])
             print "sent tx:", txo
-            out = json.loads(txo)
+            out = {'result':txo }
         else:
             print "unknown command", method
         if out:
