@@ -163,8 +163,8 @@ class LibbitcoinProcessor(stratum.Processor):
         # Execute and when ready, you call
         # session.push_response(response)
 
-if __name__ == "__main__":
+def run(stratum):
+    print "Warning: pre-alpha prototype. Full of bugs."
     processor = LibbitcoinProcessor()
-    app = stratum.Stratum()
-    app.start(processor)
+    stratum.start(processor)
 
