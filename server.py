@@ -486,6 +486,7 @@ def poll_session(session_id):
         print time.asctime(), "session not found", session_id
         return -1, {}
     else:
+        sessions[session_id]['last_time'] = time.time()
         ret, addresses = modified_addresses(session)
         if ret: sessions[session_id]['addresses'] = addresses
         return repr( (block_number,ret))
@@ -496,6 +497,7 @@ def poll_session_json(session_id, message_id):
     if session is None:
         raise BaseException("session not found %s"%session_id)
     else:
+        m_sessions[0][session_id]['last_time'] = time.time()
         out = []
         ret, addresses = modified_addresses(session)
         if ret: 
