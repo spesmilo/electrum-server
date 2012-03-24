@@ -174,7 +174,7 @@ if __name__ == "__main__":
     service = bitcoin.async_service(1)
     prefix = "/home/genjix/libbitcoin/database"
     chain = bitcoin.bdb_blockchain(service, prefix)
-    address = "1FpES68UNcxnXeoaFciqvUSGiKGZ33gbfQ"
+    address = "1LzBzVqEeuQyjD2mRWHes3dgWrT9titxvq"
     print "Looking up", address
     payment_history(chain, address, finish)
     raw_input()

@@ -178,7 +178,7 @@ class TcpServer(threading.Thread):
         print "TCP server started."
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("localhost", 50001))
+        sock.bind(("176.31.24.241", 50001))
         sock.listen(1)
         while not self.shared.stopped():
             session = Session(*sock.accept())
