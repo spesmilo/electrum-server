@@ -74,8 +74,6 @@ m_sessions = [{}] # served by http
 
 peer_list = {}
 
-wallets = {} # for ultra-light clients such as bccapi
-
 from Queue import Queue
 input_queue = Queue()
 output_queue = Queue()
