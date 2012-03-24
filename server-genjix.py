@@ -3,6 +3,8 @@ import stratum
 import threading
 import time
 
+import composed 
+
 class Backend:
 
     def __init__(self):
@@ -127,11 +129,25 @@ class NumblocksSubscribe:
                                if not sub[0].stopped()]
             return self.subscribed[:]
 
+class AddressGetHistory:
+
+    def __init__(self, backend):
+        self.backend = backend
+
+    def get(self, session, request):
+        address = str(request["params"])
+        composed.payment_history(self.backend.blockchain, address,
+            bitcoin.bind(self.respond, session, request, bitcoin._1))
+
+    def respond(self, session, request, result):
+        session.push_response({"id": request["id"], "result": result})
+
 class LibbitcoinProcessor(stratum.Processor):
 
     def __init__(self):
         self.backend = Backend()
         self.numblocks_subscribe = NumblocksSubscribe(self.backend)
+        self.address_get_history = AddressGetHistory(self.backend)
         stratum.Processor.__init__(self)
 
     def stop(self):
@@ -139,9 +155,11 @@ class LibbitcoinProcessor(stratum.Processor):
 
     def process(self, session):
         request = session.pop_request()
+        print "New request (lib)", request
         if request["method"] == "numblocks.subscribe":
             self.numblocks_subscribe.subscribe(session, request)
-        print "New request (lib)", request
+        elif request["method"] == "address.get_history":
+            self.address_get_history.get(session, request)
         # Execute and when ready, you call
         # session.push_response(response)
 
