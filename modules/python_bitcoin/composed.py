@@ -104,8 +104,8 @@ class PaymentHistory:
     def load_tx_info(self, point, statement_line, is_input):
         info = {}
         info["tx_hash"] = str(point.hash)
-        info["pos"] = point.index
-        info["is_in"] = 1 if is_input else 0
+        info["index"] = point.index
+        info["is_input"] = 1 if is_input else 0
         self.chain.fetch_transaction_index(point.hash,
             bitcoin.bind(self.tx_index, bitcoin._1, bitcoin._2, bitcoin._3,
                 statement_line, info))
@@ -117,8 +117,8 @@ class PaymentHistory:
                 statement_line, info))
 
     def block_header(self, ec, blk_head, statement_line, info):
-        info["time"] = blk_head.timestamp
-        info["blk_hash"] = str(bitcoin.hash_block_header(blk_head))
+        info["timestamp"] = blk_head.timestamp
+        info["block_hash"] = str(bitcoin.hash_block_header(blk_head))
         tx_hash = bitcoin.hash_digest(info["tx_hash"])
         self.chain.fetch_transaction(tx_hash,
             bitcoin.bind(self.load_tx, bitcoin._1, bitcoin._2,
@@ -135,22 +135,22 @@ class PaymentHistory:
                 outputs.append("Unknown")
         info["outputs"] = outputs
         info["inputs"] = [None for i in range(len(tx.inputs))]
-        if info["is_in"] == 1:
-            info["inputs"][info["pos"]] = self.address
+        if info["is_input"] == 1:
+            info["inputs"][info["index"]] = self.address
         else:
-            our_output = tx.outputs[info["pos"]]
+            our_output = tx.outputs[info["index"]]
             info["value"] = our_output.value
             with statement_line.lock:
                 statement_line.raw_output_script = \
                     str(bitcoin.save_script(our_output.output_script))
         if not [empty_in for empty_in in info["inputs"] if empty_in is None]:
             # We have the sole input
-            assert(info["is_in"] == 1)
+            assert(info["is_input"] == 1)
             with statement_line.lock:
                 statement_line.input_loaded = info
             self.finish_if_done()
         for tx_idx, tx_in in enumerate(tx.inputs):
-            if info["is_in"] == 1 and info["pos"] == tx_idx:
+            if info["is_input"] == 1 and info["index"] == tx_idx:
                 continue
             self.chain.fetch_transaction(tx_in.previous_output.hash,
                 bitcoin.bind(self.load_input, bitcoin._1, bitcoin._2,
@@ -166,7 +166,7 @@ class PaymentHistory:
             info["inputs"][inputs_index] = "Unknown"
         if not [empty_in for empty_in in info["inputs"] if empty_in is None]:
             with statement_line.lock:
-                if info["is_in"] == 1:
+                if info["is_input"] == 1:
                     statement_line.input_loaded = info
                 else:
                     statement_line.output_loaded = info
