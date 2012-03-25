@@ -129,18 +129,19 @@ class TcpClientRequestor(threading.Thread):
         while not self.shared.stopped():
             if not self.update():
                 self.session.stop()
-                return
+                break
+
+            while self.parse():
+                pass
 
     def update(self):
         data = self.receive()
         if data is None:
             # close_session
-            self.stop()
+            self.session.stop()
             return False
 
         self.message += data
-        if not self.parse():
-            return False
         return True
 
     def receive(self):
@@ -152,11 +153,12 @@ class TcpClientRequestor(threading.Thread):
     def parse(self):
         raw_buffer = self.message.find('\n')
         if raw_buffer == -1:
-            return True
+            return False
 
         raw_command = self.message[0:raw_buffer].strip()
         self.message = self.message[raw_buffer + 1:]
         if raw_command == 'quit': 
+            self.session.stop()
             return False
 
         try:
