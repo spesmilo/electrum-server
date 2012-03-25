@@ -161,6 +161,9 @@ class LibbitcoinProcessor(stratum.Processor):
             self.numblocks_subscribe.subscribe(session, request)
         elif request["method"] == "address.get_history":
             self.address_get_history.get(session, request)
+        elif request["method"] == "server.banner":
+            session.push_response({"id": request["id"],
+                "result": "libbitcoin using python-bitcoin bindings"})
         # Execute and when ready, you call
         # session.push_response(response)
 
