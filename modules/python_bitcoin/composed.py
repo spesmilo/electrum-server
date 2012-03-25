@@ -73,7 +73,8 @@ class PaymentHistory:
             else:
                 statement_line.input_point = inpoint
         self.finish_if_done()
-        self.load_tx_info(inpoint, statement_line, True)
+        if not ec:
+            self.load_tx_info(inpoint, statement_line, True)
 
     def finish_if_done(self):
         with self.lock:
@@ -81,8 +82,9 @@ class PaymentHistory:
                 return
         result = []
         for line in self.statement:
-            line.input_loaded["value"] = -line.output_loaded["value"]
-            result.append(line.input_loaded)
+            if line.input_point:
+                line.input_loaded["value"] = -line.output_loaded["value"]
+                result.append(line.input_loaded)
             result.append(line.output_loaded)
         self.handle_finish(result)
         self.stop()
@@ -170,11 +172,14 @@ def payment_history(chain, address, handle_finish):
 if __name__ == "__main__":
     def finish(result):
         print result
+    def last(ec, depth):
+        print "D:", depth
 
     service = bitcoin.async_service(1)
     prefix = "/home/genjix/libbitcoin/database"
     chain = bitcoin.bdb_blockchain(service, prefix)
-    address = "1LzBzVqEeuQyjD2mRWHes3dgWrT9titxvq"
+    chain.fetch_last_depth(last)
+    address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"
     print "Looking up", address
     payment_history(chain, address, finish)
     raw_input()
