@@ -230,7 +230,7 @@ class Stratum:
         processor.shared = shared
         processor.start()
         # Create various transports we need
-        transports = TcpServer(shared, processor, "ecdsa.org", 50002),
+        transports = TcpServer(shared, processor, "176.31.24.241", 50001),
         for server in transports:
             server.start()
         while not shared.stopped():
