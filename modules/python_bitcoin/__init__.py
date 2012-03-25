@@ -164,8 +164,27 @@ class LibbitcoinProcessor(stratum.Processor):
         elif request["method"] == "server.banner":
             session.push_response({"id": request["id"],
                 "result": "libbitcoin using python-bitcoin bindings"})
+        elif request["method"] == "transaction.broadcast":
+            self.broadcast_transaction(session, request)
         # Execute and when ready, you call
         # session.push_response(response)
+
+    def broadcast_transaction(self, session, request):
+        raw_tx = bitcoin.data_chunk(str(request["params"]))
+        exporter = bitcoin.satoshi_exporter()
+        try:
+            tx = exporter.load_transaction(raw_tx)
+        except RuntimeError:
+            response = {"id": request["id"], "result": None,
+                "error": {"message": 
+                    "Exception while parsing the transaction data.",
+                    "code": -4}}
+        else:
+            # TODO: actually broadcast - bindings need to be made for that
+            # method
+            tx_hash = str(bitcoin.hash_transaction(tx))
+            response = {"id": request["id"], "result": tx_hash}
+        session.push_response(response)
 
 def run(stratum):
     print "Warning: pre-alpha prototype. Full of bugs."
