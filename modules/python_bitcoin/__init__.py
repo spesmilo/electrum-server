@@ -180,8 +180,7 @@ class LibbitcoinProcessor(stratum.Processor):
                     "Exception while parsing the transaction data.",
                     "code": -4}}
         else:
-            # TODO: actually broadcast - bindings need to be made for that
-            # method
+            self.backend.protocol.broadcast_transaction(tx)
             tx_hash = str(bitcoin.hash_transaction(tx))
             response = {"id": request["id"], "result": tx_hash}
         session.push_response(response)
