@@ -31,6 +31,7 @@ class StatementLine:
         self.output_loaded = None
         self.input_point = None
         self.input_loaded = None
+        self.raw_output_script = None
 
     def is_loaded(self):
         with self.lock:
@@ -85,6 +86,9 @@ class PaymentHistory:
             if line.input_point:
                 line.input_loaded["value"] = -line.output_loaded["value"]
                 result.append(line.input_loaded)
+            else:
+                line.output_loaded["raw_output_script"] = \
+                    line.raw_output_script
             result.append(line.output_loaded)
         self.handle_finish(result)
         self.stop()
@@ -134,7 +138,11 @@ class PaymentHistory:
         if info["is_in"] == 1:
             info["inputs"][info["pos"]] = self.address
         else:
-            info["value"] = tx.outputs[info["pos"]].value
+            our_output = tx.outputs[info["pos"]]
+            info["value"] = our_output.value
+            with statement_line.lock:
+                statement_line.raw_output_script = \
+                    str(bitcoin.save_script(our_output.output_script))
         if not [empty_in for empty_in in info["inputs"] if empty_in is None]:
             # We have the sole input
             assert(info["is_in"] == 1)
