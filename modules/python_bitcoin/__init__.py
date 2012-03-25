@@ -122,6 +122,7 @@ class NumblocksSubscribe:
         subscribed = self.spring_clean()
         for session, request in subscribed:
             session.push_response({"id": request["id"], "result": latest})
+        self.backend.blockchain.subscribe_reorganize(self.reorganize)
 
     def spring_clean(self):
         with self.lock:
