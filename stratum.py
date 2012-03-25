@@ -136,7 +136,7 @@ class TcpClientRequestor(threading.Thread):
 
     def update(self):
         data = self.receive()
-        if data is None:
+        if not data:
             # close_session
             self.session.stop()
             return False
@@ -148,7 +148,7 @@ class TcpClientRequestor(threading.Thread):
         try:
             return self.session.connection().recv(1024)
         except socket.error:
-            return None
+            return ''
 
     def parse(self):
         raw_buffer = self.message.find('\n')
