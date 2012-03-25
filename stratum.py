@@ -53,6 +53,8 @@ class Session:
 
         self.request_queue = queue.Queue()
         self.response_queue = queue.Queue()
+        self.numblocks_sub = None
+        self.addresses_sub = {}
 
     def stop(self):
         self._connection.close()
@@ -81,6 +83,15 @@ class Session:
 
     def pop_response(self):
         return self.response_queue.get()
+
+    def subscribe_to_numblocks(self,message_id):
+        with self.lock:
+            self.numblocks_sub = message_id
+    
+    def subscribe_to_address(self,address,message_id,status):
+        with self.lock:
+            self.addresses_sub[address] = message_id,status
+
 
 class TcpClientResponder(threading.Thread):
 
@@ -167,18 +178,20 @@ class TcpClientRequestor(threading.Thread):
 
 class TcpServer(threading.Thread):
 
-    def __init__(self, shared, processor):
+    def __init__(self, shared, processor, host, port):
         self.shared = shared
         self.processor = processor
         self.clients = []
         threading.Thread.__init__(self)
         self.daemon = True
+        self.host = host
+        self.port = port
 
     def run(self):
         print "TCP server started."
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(("176.31.24.241", 50001))
+        sock.bind((self.host, self.port))
         sock.listen(1)
         while not self.shared.stopped():
             session = Session(*sock.accept())
@@ -211,7 +224,7 @@ class Stratum:
         processor.shared = shared
         processor.start()
         # Create various transports we need
-        transports = TcpServer(shared, processor),
+        transports = TcpServer(shared, processor, "176.31.24.241",50001),
         for server in transports:
             server.start()
         while not shared.stopped():
