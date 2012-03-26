@@ -396,6 +396,7 @@ class AbeProcessor(stratum.Processor):
         message_id = request['id']
         method = request['method']
         params = request.get('params',[])
+        #print request
 
         result = ''
         if method == 'numblocks.subscribe':

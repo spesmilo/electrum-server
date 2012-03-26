@@ -70,6 +70,7 @@ class Session:
         self.lock = threading.Lock()
         self.numblocks_sub = None
         self.addresses_sub = {}
+        print "new session", address
 
     def stop(self):
         self._connection.close()
@@ -110,8 +111,8 @@ class TcpResponder(threading.Thread):
             # Possible race condition here by having session
             # close connection?
             # I assume Python connections are thread safe interfaces
-            connection = session.connection()
             try:
+                connection = session.connection()
                 connection.send(raw_response + "\n")
             except:
                 session.stop()
@@ -128,7 +129,6 @@ class TcpClientRequestor(threading.Thread):
     def run(self):
         while not self.shared.stopped():
             if not self.update():
-                self.session.stop()
                 break
 
             while self.parse():
