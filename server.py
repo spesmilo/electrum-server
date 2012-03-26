@@ -427,6 +427,9 @@ class AbeProcessor(stratum.Processor):
             response = { 'id':message_id, 'result':result }
             self.push_response(session,response)
 
+    def get_status(self,addr):
+        return store.get_status(addr)
+
 
 
 ####################################################################
@@ -560,10 +563,7 @@ if __name__ == '__main__':
             for session_id in sessions_sub_numblocks.keys():
                 send_numblocks(session_id)
 
-            for session in stratum_processor.sessions:
-                if session.numblocks_sub is not None:
-                    response = { 'id':session.numblocks_sub, 'result':block_number }
-                    stratum_processor.push_response(session,response)
+            stratum_processor.update_from_blocknum(block_number)
 
         while True:
             try:
@@ -572,15 +572,7 @@ if __name__ == '__main__':
                 break
             do_update_address(addr)
 
-            for session in stratum_processor.sessions:
-                m = session.addresses_sub.get(addr)
-                if m:
-                    status = store.get_status( addr )
-                    message_id, last_status = m
-                    if status != last_status:
-                        session.subscribe_to_address(message_id, status)
-                        response = { 'id':message_id, 'result':status }
-                        stratum_processor.push_response(session,response)
+            stratum_processor.update_from_address(addr)
 
         time.sleep(10)
     print "server stopped"

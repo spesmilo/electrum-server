@@ -61,6 +61,29 @@ class Processor(threading.Thread):
         # When ready, you call
         # self.push_response(session,response)
 
+    def update_from_blocknum(self,block_number):
+        for session in self.sessions:
+            if session.numblocks_sub is not None:
+                response = { 'id':session.numblocks_sub, 'result':block_number }
+                self.push_response(session,response)
+
+    def update_from_address(self,addr):
+        for session in self.sessions:
+            m = session.addresses_sub.get(addr)
+            if m:
+                status = self.get_status( addr )
+                message_id, last_status = m
+                if status != last_status:
+                    session.subscribe_to_address(message_id, status)
+                    response = { 'id':message_id, 'result':status }
+                    self.push_response(session,response)
+
+    def get_status(self,addr):
+        # return status of an address
+        # return store.get_status(addr)
+        pass
+
+
 class Session:
 
     def __init__(self, connection, address):
