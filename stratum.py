@@ -74,7 +74,7 @@ class Processor(threading.Thread):
                 status = self.get_status( addr )
                 message_id, last_status = m
                 if status != last_status:
-                    session.subscribe_to_address(message_id, status)
+                    session.subscribe_to_address(addr,message_id, status)
                     response = { 'id':message_id, 'result':status }
                     self.push_response(session,response)
 
