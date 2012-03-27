@@ -106,7 +106,7 @@ class NumblocksSubscribe:
 
     def subscribe(self, session, request):
         last = self.latest.get()
-        session.push_response({"id": request["id"], "result": last})
+        self.push_response(session,{"id": request["id"], "result": last})
         with self.lock:
             self.subscribed.append((session, request))
 
@@ -121,7 +121,7 @@ class NumblocksSubscribe:
         self.latest.set(latest)
         subscribed = self.spring_clean()
         for session, request in subscribed:
-            session.push_response({"id": request["id"], "result": latest})
+            self.push_response(session,{"id": request["id"], "result": latest})
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
 
     def spring_clean(self):
@@ -141,7 +141,7 @@ class AddressGetHistory:
             bitcoin.bind(self.respond, session, request, bitcoin._1))
 
     def respond(self, session, request, result):
-        session.push_response({"id": request["id"], "result": result})
+        self.push_response(session,{"id": request["id"], "result": result})
 
 class LibbitcoinProcessor(stratum.Processor):
 
@@ -154,20 +154,20 @@ class LibbitcoinProcessor(stratum.Processor):
     def stop(self):
         self.backend.stop()
 
-    def process(self, session):
-        request = session.pop_request()
+    def process(self, session, request):
+
         print "New request (lib)", request
         if request["method"] == "numblocks.subscribe":
             self.numblocks_subscribe.subscribe(session, request)
         elif request["method"] == "address.get_history":
             self.address_get_history.get(session, request)
         elif request["method"] == "server.banner":
-            session.push_response({"id": request["id"],
+            self.push_response(session, {"id": request["id"],
                 "result": "libbitcoin using python-bitcoin bindings"})
         elif request["method"] == "transaction.broadcast":
             self.broadcast_transaction(session, request)
         # Execute and when ready, you call
-        # session.push_response(response)
+        # self.push_response(session,response)
 
     def broadcast_transaction(self, session, request):
         raw_tx = bitcoin.data_chunk(str(request["params"]))
@@ -183,7 +183,7 @@ class LibbitcoinProcessor(stratum.Processor):
             self.backend.protocol.broadcast_transaction(tx)
             tx_hash = str(bitcoin.hash_transaction(tx))
             response = {"id": request["id"], "result": tx_hash}
-        session.push_response(response)
+        self.push_response(session,response)
 
 def run(stratum):
     print "Warning: pre-alpha prototype. Full of bugs."
