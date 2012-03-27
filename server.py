@@ -68,7 +68,6 @@ password = config.get('server','password')
 stopping = False
 block_number = -1
 sessions = {}
-sessions_sub_numblocks = {} # sessions that have subscribed to the service
 
 m_sessions = [{}] # served by http
 
@@ -161,51 +160,15 @@ def poll_session_json(session_id, message_id):
         return out
 
 
-def do_update_address(addr):
-    # an address was involved in a transaction; we check if it was subscribed to in a session
-    # the address can be subscribed in several sessions; the cache should ensure that we don't do redundant requests
 
-    for session_id in sessions.keys():
-        session = sessions[session_id]
-        if session.get('type') != 'persistent': continue
-        addresses = session['addresses'].keys()
-
-        if addr in addresses:
-            status = store.get_status( addr )
-            message_id, last_status = session['addresses'][addr]
-            if last_status != status:
-                #print "sending new status for %s:"%addr, status
-                send_status(session_id,message_id,addr,status)
-                sessions[session_id]['addresses'][addr] = (message_id,status)
-
-
-
-def send_numblocks(session_id):
-    message_id = sessions_sub_numblocks[session_id]
-    out = json.dumps( {'id':message_id, 'result':block_number} )
-    output_queue.put((session_id, out))
-
-def send_status(session_id, message_id, address, status):
-    out = json.dumps( { 'id':message_id, 'result':status } )
-    output_queue.put((session_id, out))
 
 def address_get_history_json(_,message_id,address):
     return store.get_history(address)
-
-def subscribe_to_numblocks(session_id, message_id):
-    sessions_sub_numblocks[session_id] = message_id
-    send_numblocks(session_id)
 
 def subscribe_to_numblocks_json(session_id, message_id):
     global m_sessions
     m_sessions[0][session_id]['numblocks'] = message_id,block_number
     return block_number
-
-def subscribe_to_address(session_id, message_id, address):
-    status = store.get_status(address)
-    sessions[session_id]['addresses'][address] = (message_id, status)
-    sessions[session_id]['last_time'] = time.time()
-    send_status(session_id, message_id, address, status)
 
 def add_address_to_session_json(session_id, message_id, address):
     global m_sessions
@@ -253,7 +216,7 @@ def get_banner(_,__):
     return config.get('server','banner').replace('\\n','\n')
 
 def update_session(session_id,addresses):
-    """deprecated in 0.42"""
+    """deprecated in 0.42, wad replaced by add_address_to_session"""
     sessions[session_id]['addresses'] = {}
     for a in addresses:
         sessions[session_id]['addresses'][a] = ''
@@ -560,9 +523,6 @@ if __name__ == '__main__':
 
         if block_number != old_block_number:
             old_block_number = block_number
-            for session_id in sessions_sub_numblocks.keys():
-                send_numblocks(session_id)
-
             stratum_processor.update_from_blocknum(block_number)
 
         while True:
@@ -570,7 +530,6 @@ if __name__ == '__main__':
                 addr = store.address_queue.get(False)
             except:
                 break
-            do_update_address(addr)
 
             stratum_processor.update_from_address(addr)
 
