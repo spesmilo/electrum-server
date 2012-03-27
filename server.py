@@ -66,7 +66,6 @@ except:
 password = config.get('server','password')
 
 stopping = False
-block_number = -1
 sessions = {}
 
 m_sessions = [{}] # served by http
@@ -134,7 +133,7 @@ def poll_session(session_id):
         sessions[session_id]['last_time'] = time.time()
         ret, addresses = modified_addresses(session)
         if ret: sessions[session_id]['addresses'] = addresses
-        return repr( (block_number,ret))
+        return repr( (store.block_number,ret))
 
 
 def poll_session_json(session_id, message_id):
@@ -200,15 +199,6 @@ def client_version_json(session_id, _, version):
     sessions = m_sessions[0]
     sessions[session_id]['version'] = version
     m_sessions[0] = sessions
-
-def create_session_json(_, __):
-    sessions = m_sessions[0]
-    session_id = random_string(10)
-    print "creating session", session_id
-    sessions[session_id] = { 'addresses':{}, 'numblocks':('','') }
-    sessions[session_id]['last_time'] = time.time()
-    m_sessions[0] = sessions
-    return session_id
 
 
 
@@ -355,7 +345,7 @@ def clean_session_thread():
 import stratum
 
 class AbeProcessor(stratum.Processor):
-    def process(self,session,request):
+    def process(self,request):
         message_id = request['id']
         method = request['method']
         params = request.get('params',[])
@@ -363,15 +353,15 @@ class AbeProcessor(stratum.Processor):
 
         result = ''
         if method == 'numblocks.subscribe':
-            session.subscribe_to_numblocks(message_id)
-            result = block_number
+            result = store.block_number
         elif method == 'address.subscribe':
             address = params[0]
+            store.watch_address(address)
             status = store.get_status(address)
-            session.subscribe_to_address(address,message_id,status)
             result = status
         elif method == 'client.version':
-            session.version = params[0]
+            #session.version = params[0]
+            pass
         elif method == 'server.banner':
             result = config.get('server','banner').replace('\\n','\n')
         elif method == 'server.peers':
@@ -387,8 +377,8 @@ class AbeProcessor(stratum.Processor):
             print "unknown method", request
 
         if result!='':
-            response = { 'id':message_id, 'result':result }
-            self.push_response(session,response)
+            response = { 'id':message_id, 'method':method, 'params':params, 'result':result }
+            self.push_response(response)
 
     def get_status(self,addr):
         return store.get_status(addr)
@@ -498,41 +488,33 @@ if __name__ == '__main__':
 
     # supported protocols
     thread.start_new_thread(native_server_thread, ())
-
-    thread.start_new_thread(http_server_thread, ())
     thread.start_new_thread(clean_session_thread, ())
 
-    #tcp stratum
-    stratum_processor = AbeProcessor()
+    #thread.start_new_thread(http_server_thread, ())
+
+
+    processor = AbeProcessor()
     shared = stratum.Shared()
     # Bind shared to processor since constructor is user defined
-    stratum_processor.shared = shared
-    stratum_processor.start()
+    processor.shared = shared
+    processor.start()
+
     # Create various transports we need
-    server = stratum.TcpServer(shared, stratum_processor, "ecdsa.org",50001)
+
+    #tcp stratum
+    tcpserver = stratum.TcpServer(shared, processor, "ecdsa.org",50001)
+    tcpserver.start()
+
+    #http stratum
+    from StratumJSONRPCServer import HttpServer
+    server = HttpServer(shared, processor, "ecdsa.org",8081)
     server.start()
+
 
     if (config.get('server','irc') == 'yes' ):
 	thread.start_new_thread(irc_thread, ())
 
     print "starting Electrum server"
-
-    old_block_number = None
-    while not stopping:
-        block_number = store.main_iteration()
-
-        if block_number != old_block_number:
-            old_block_number = block_number
-            stratum_processor.update_from_blocknum(block_number)
-
-        while True:
-            try:
-                addr = store.address_queue.get(False)
-            except:
-                break
-
-            stratum_processor.update_from_address(addr)
-
-        time.sleep(10)
+    store.run(processor)
     print "server stopped"
 

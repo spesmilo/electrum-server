@@ -7,6 +7,7 @@ import psycopg2, binascii
 import thread, traceback, sys, urllib, operator
 from json import dumps, loads
 from Queue import Queue
+import time
 
 class AbeStore(Datastore_class):
 
@@ -30,6 +31,8 @@ class AbeStore(Datastore_class):
         self.address_queue = Queue()
 
         self.dblock = thread.allocate_lock()
+        self.block_number = -1
+        self.watched_addresses = []
 
 
 
@@ -365,3 +368,28 @@ class AbeStore(Datastore_class):
             store.dblock.release()
 
         return block_number
+
+    def watch_address(self, addr):
+        if addr not in self.watched_addresses:
+            self.watched_addresses.append(addr)
+
+    def run(self, processor):
+        
+        old_block_number = None
+        while not processor.shared.stopped():
+            self.block_number = self.main_iteration()
+
+            if self.block_number != old_block_number:
+                old_block_number = self.block_number
+                processor.push_response({ 'method':'numblocks.subscribe', 'result':self.block_number })
+
+            while True:
+                try:
+                    addr = self.address_queue.get(False)
+                except:
+                    break
+                if addr in self.watched_addresses:
+                    status = self.get_status( addr )
+                    processor.push_response({ 'method':'address.subscribe', 'params':[addr], 'result':status })
+
+            time.sleep(10)
