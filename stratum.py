@@ -13,7 +13,7 @@ class Processor(threading.Thread):
         self.request_queue = queue.Queue()
         self.response_queue = queue.Queue()
         self.internal_ids = {}
-        self.internal_id = 0
+        self.internal_id = 1
         self.lock = threading.Lock()
 
     def push_response(self, item):
@@ -30,12 +30,14 @@ class Processor(threading.Thread):
 
     def get_session_id(self, internal_id):
         with self.lock:
-            return session_ids.pop(internal_id)
+            return self.internal_ids.pop(internal_id)
 
     def store_session_id(self, session, msgid):
         with self.lock:
             self.internal_ids[self.internal_id] = session, msgid
+            r = self.internal_id
             self.internal_id += 1
+            return r
 
     def run(self):
         if self.shared is None:
@@ -111,7 +113,6 @@ class TcpResponder(threading.Thread):
     def run(self):
         while not self.shared.stopped():
             response = self.processor.pop_response()
-
             internal_id = response.get('id')
             params = response.get('params',[])
             try:
@@ -122,8 +123,7 @@ class TcpResponder(threading.Thread):
 
             if internal_id:
                 session, message_id = self.processor.get_session_id(internal_id)
-                if message_id:
-                    response['id'] = message_id
+                response['id'] = message_id
                 self.send_response(response, session)
 
             else:
@@ -175,7 +175,7 @@ class TcpClientRequestor(threading.Thread):
     def receive(self):
         try:
             return self.session.connection().recv(1024)
-        except socket.error:
+        except:
             return ''
 
     def parse(self):
