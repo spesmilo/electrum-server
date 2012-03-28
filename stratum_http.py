@@ -369,6 +369,7 @@ class HttpServer(threading.Thread):
 
     def process(self, session, request):
         print session, request
+        self.processor.process(request)
 
     def do_stop(self, session, request):
         self.shared.stop()
