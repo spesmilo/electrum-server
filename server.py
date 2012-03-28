@@ -53,9 +53,11 @@ password = config.get('server','password')
 
 
 from processor import Shared, Processor, Dispatcher
-from stratum_http import HttpServer
-from stratum import TcpServer
-from native import NativeServer
+
+
+from transports.stratum_http import HttpServer
+from transports.stratum_tcp import TcpServer
+from transports.native import NativeServer
 
 
 import irc 
