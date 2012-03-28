@@ -64,41 +64,14 @@ except:
 
 
 password = config.get('server','password')
-
 stopping = False
 sessions = {}
-
-m_sessions = [{}] # served by http
-
-
-from Queue import Queue
-input_queue = Queue()
-output_queue = Queue()
-
 
 
 
 def random_string(N):
     import random, string
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(N))
-
-    
-
-def cmd_stop(_,__,pw):
-    global stopping
-    if password == pw:
-        stopping = True
-        return 'ok'
-    else:
-        return 'wrong password'
-
-def cmd_load(_,__,pw):
-    if password == pw:
-        return repr( len(sessions) )
-    else:
-        return 'wrong password'
-
-
 
 
 
@@ -135,53 +108,12 @@ def poll_session(session_id):
         return repr( (store.block_number,ret))
 
 
-def poll_session_json(session_id, message_id):
-    session = m_sessions[0].get(session_id)
-    if session is None:
-        raise BaseException("session not found %s"%session_id)
-    else:
-        m_sessions[0][session_id]['last_time'] = time.time()
-        out = []
-        ret, addresses = modified_addresses(session)
-        if ret: 
-            m_sessions[0][session_id]['addresses'] = addresses
-            for addr in ret:
-                msg_id, status = addresses[addr]
-                out.append(  { 'id':msg_id, 'result':status } )
-
-        msg_id, last_nb = session.get('numblocks')
-        if last_nb:
-            if last_nb != block_number:
-                m_sessions[0][session_id]['numblocks'] = msg_id, block_number
-                out.append( {'id':msg_id, 'result':block_number} )
-
-        return out
-
-
-
-
-def address_get_history_json(_,message_id,address):
-    return store.get_history(address)
-
-def subscribe_to_numblocks_json(session_id, message_id):
-    global m_sessions
-    m_sessions[0][session_id]['numblocks'] = message_id,block_number
-    return block_number
-
-def add_address_to_session_json(session_id, message_id, address):
-    global m_sessions
-    sessions = m_sessions[0]
-    status = store.get_status(address)
-    sessions[session_id]['addresses'][address] = (message_id, status)
-    sessions[session_id]['last_time'] = time.time()
-    m_sessions[0] = sessions
-    return status
-
 def add_address_to_session(session_id, address):
     status = store.get_status(address)
     sessions[session_id]['addresses'][address] = ("", status)
     sessions[session_id]['last_time'] = time.time()
     return status
+
 
 def new_session(version, addresses):
     session_id = random_string(10)
@@ -193,17 +125,6 @@ def new_session(version, addresses):
     return out
 
 
-def client_version_json(session_id, _, version):
-    global m_sessions
-    sessions = m_sessions[0]
-    sessions[session_id]['version'] = version
-    m_sessions[0] = sessions
-
-
-
-def get_banner(_,__):
-    return config.get('server','banner').replace('\\n','\n')
-
 def update_session(session_id,addresses):
     """deprecated in 0.42, wad replaced by add_address_to_session"""
     sessions[session_id]['addresses'] = {}
@@ -211,6 +132,7 @@ def update_session(session_id,addresses):
         sessions[session_id]['addresses'][a] = ''
     sessions[session_id]['last_time'] = time.time()
     return 'ok'
+
 
 def native_server_thread():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -303,19 +225,12 @@ def do_command(cmd, data, ipaddr):
         out = poll_session(data)
 
     elif cmd == 'h': 
-        # history
         address = data
         out = repr( store.get_history( address ) )
-
-    elif cmd == 'load': 
-        out = cmd_load(None,None,data)
 
     elif cmd =='tx':
         out = store.send_tx(data)
         print timestr(), "sent tx:", ipaddr, out
-
-    elif cmd == 'stop':
-        out = cmd_stop(data)
 
     elif cmd == 'peers':
         out = repr(irc.get_peers())
@@ -341,9 +256,11 @@ def clean_session_thread():
 ####################################################################
 
 
-import stratum
+from processor import Shared, Processor, Dispatcher
+from stratum_http import HttpServer
+from stratum import TcpServer
 
-class AbeProcessor(stratum.Processor):
+class AbeProcessor(Processor):
     def process(self,request):
         message_id = request['id']
         method = request['method']
@@ -441,27 +358,6 @@ class Irc(threading.Thread):
                 s.close()
 
 
-def get_peers_json(_,__):
-    return irc.get_peers()
-
-def http_server_thread():
-    # see http://code.google.com/p/jsonrpclib/
-    from SocketServer import ThreadingMixIn
-    from StratumJSONRPCServer import StratumJSONRPCServer
-    class StratumThreadedJSONRPCServer(ThreadingMixIn, StratumJSONRPCServer): pass
-    server = StratumThreadedJSONRPCServer(( config.get('server','host'), 8081))
-    server.register_function(get_peers_json, 'server.peers')
-    server.register_function(cmd_stop, 'stop')
-    server.register_function(cmd_load, 'load')
-    server.register_function(get_banner, 'server.banner')
-    server.register_function(lambda a,b,c: store.send_tx(c), 'transaction.broadcast')
-    server.register_function(address_get_history_json, 'address.get_history')
-    server.register_function(add_address_to_session_json, 'address.subscribe')
-    server.register_function(subscribe_to_numblocks_json, 'numblocks.subscribe')
-    server.register_function(client_version_json, 'client.version')
-    server.register_function(create_session_json, 'session.create')   # internal message (not part of protocol)
-    server.register_function(poll_session_json, 'session.poll')       # internal message (not part of protocol)
-    server.serve_forever()
 
 
 if __name__ == '__main__':
@@ -494,29 +390,24 @@ if __name__ == '__main__':
     # backend
     store = abe_backend.AbeStore(config)
 
-    # supported protocols
+    # old protocol
     thread.start_new_thread(native_server_thread, ())
     thread.start_new_thread(clean_session_thread, ())
 
-    #thread.start_new_thread(http_server_thread, ())
-
-
     processor = AbeProcessor()
-    shared = stratum.Shared()
+    shared = Shared()
     # Bind shared to processor since constructor is user defined
     processor.shared = shared
     processor.start()
-
+    # dispatcher
+    dispatcher = Dispatcher(shared, processor)
+    dispatcher.start()
     # Create various transports we need
-
-    #tcp stratum
-    tcpserver = stratum.TcpServer(shared, processor, "ecdsa.org",50001)
-    tcpserver.start()
-
-    #http stratum
-    from stratum_http import HttpServer
-    server = HttpServer(shared, processor, "ecdsa.org",8081)
-    server.start()
+    transports = [ TcpServer(shared, processor, "ecdsa.org",50001),
+                   HttpServer(shared, processor, "ecdsa.org",8081)
+                   ]
+    for server in transports:
+        server.start()
 
 
     if (config.get('server','irc') == 'yes' ):

@@ -199,12 +199,12 @@ class StratumJSONRPCRequestHandler(
             c = self.headers.get('cookie')
             if c:
                 if c[0:8]=='SESSION=':
-                    print "found cookie", c[8:]
+                    #print "found cookie", c[8:]
                     session_id = c[8:]
 
             if session_id is None:
                 session_id = self.server.create_session()
-                print "setting cookie", session_id
+                #print "setting cookie", session_id
 
             data = json.dumps([])
             response = self.server._marshaled_dispatch(session_id, data)
@@ -317,31 +317,28 @@ class StratumJSONRPCServer(SocketServer.TCPServer, StratumJSONRPCDispatcher):
 
     def create_session(self):
         session_id = random_string(10)
-        self.sessions[session_id] = { 'addresses':{}, 'responses':[]}
+        self.sessions[session_id] = HttpSession(session_id)
         return session_id
 
     def poll_session(self,session_id):
-        responses = self.sessions[session_id]['responses']
-        self.sessions[session_id]['responses'] = []
+        responses = self.sessions[session_id].pending_responses[:]
+        self.sessions[session_id].pending_responses = []
         print "poll: %d responses"%len(responses)
         return responses
 
 
-class HttpResponder(threading.Thread):
-    """read responses from the queue and dispatch them to sessions"""
-    def __init__(self, shared, processor):
-        self.shared = shared
-        self.processor = processor
-        threading.Thread.__init__(self)
+from processor import Session
 
-    def run(self):
-        while not self.shared.stopped():
-            session,response = self.processor.pop_response()
-            if not session.stopped():
-                raw_response = json.dumps(response)
-                session.responses.append(response)
+class HttpSession(Session):
 
+    def __init__(self, session_id):
+        Session.__init__(self)
+        self.pending_responses = []
+        print "new http session", session_id
 
+    def send_response(self, response):
+        raw_response = json.dumps(response)
+        self.pending_responses.append(response)
 
 class HttpServer(threading.Thread):
     def __init__(self, shared, _processor, host, port):
@@ -356,20 +353,25 @@ class HttpServer(threading.Thread):
     def run(self):
         # see http://code.google.com/p/jsonrpclib/
         from SocketServer import ThreadingMixIn
-        from StratumJSONRPCServer import StratumJSONRPCServer
         class StratumThreadedJSONRPCServer(ThreadingMixIn, StratumJSONRPCServer): pass
-        server = StratumThreadedJSONRPCServer(( self.host, self.port))
+        self.server = StratumThreadedJSONRPCServer(( self.host, self.port))
         for s in ['server.peers', 'server.banner', 'transaction.broadcast', \
                       'address.get_history','address.subscribe', 'numblocks.subscribe', 'client.version']:
-            server.register_function(self.process, s)
+            self.server.register_function(self.process, s)
 
-        server.register_function(self.do_stop, 'stop')
+        self.server.register_function(self.do_stop, 'stop')
+
         print "HTTP server started."
-        server.serve_forever()
+        self.server.serve_forever()
 
-    def process(self, session, request):
-        print session, request
-        self.processor.process(request)
+
+    def process(self, session_id, request):
+        #print session, request
+        session = self.server.sessions.get(session_id)
+        if session:
+            #print "zz",session_id,session
+            request['id'] = self.processor.store_session_id(session, request['id'])
+            self.processor.process(request)
 
     def do_stop(self, session, request):
         self.shared.stop()
