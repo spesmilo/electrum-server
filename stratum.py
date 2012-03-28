@@ -12,7 +12,9 @@ class Processor(threading.Thread):
         self.daemon = True
         self.request_queue = queue.Queue()
         self.response_queue = queue.Queue()
-        self.id_session = {}
+        self.internal_ids = {}
+        self.internal_id = 0
+        self.lock = threading.Lock()
 
     def push_response(self, item):
         self.response_queue.put(item)
@@ -26,6 +28,15 @@ class Processor(threading.Thread):
     def pop_request(self):
         return self.request_queue.get()
 
+    def get_session_id(self, internal_id):
+        with self.lock:
+            return session_ids.pop(internal_id)
+
+    def store_session_id(self, session, msgid):
+        with self.lock:
+            self.internal_ids[self.internal_id] = session, msgid
+            self.internal_id += 1
+
     def run(self):
         if self.shared is None:
             raise TypeError("self.shared not set in Processor")
@@ -35,18 +46,11 @@ class Processor(threading.Thread):
             method = request['method']
             params = request.get('params',[])
 
-            if method == 'numblocks.subscribe':
-                session.subscribe_to_numblocks()
+            if method in [ 'numblocks.subscribe', 'address.subscribe', 'server.peers']:
+                session.subscribe_to_service(method, params)
 
-            elif method == 'address.subscribe':
-                address = params[0]
-                session.subscribe_to_address(address)
-
-            elif method == 'server.peers':
-                session.subscribe_to_peers()
-
-            message_id = request['id']
-            self.id_session[message_id] = session
+            # store session and id locally
+            request['id'] = self.store_session_id(session, request['id'])
             self.process(request)
 
         self.stop()
@@ -70,8 +74,7 @@ class Session:
         self.address = address
         self._stopped = False
         self.lock = threading.Lock()
-        self.numblocks_sub = None
-        self.addresses_sub = {}
+        self.subscriptions = []
         print "new session", address
 
     def stop(self):
@@ -90,16 +93,10 @@ class Session:
         else:
             return self._connection
 
-    def subscribe_to_numblocks(self):
+    def subscribe_to_service(self, method, params):
         with self.lock:
-            self.numblocks_sub = True
+            self.subscriptions.append((method, params))
     
-    def subscribe_to_peers(self):
-        pass
-
-    def subscribe_to_address(self,address):
-        with self.lock:
-            self.addresses_sub[address] = 'unknown'
 
 
 class TcpResponder(threading.Thread):
@@ -114,40 +111,27 @@ class TcpResponder(threading.Thread):
     def run(self):
         while not self.shared.stopped():
             response = self.processor.pop_response()
-            # if it is a subscription, find the list of sessions that suuscribed
-            
-            # if there is an id, there should be a session
-            # note: I must add and remove the session id to the message id..
 
-            message_id = response.get('id')
+            internal_id = response.get('id')
+            params = response.get('params',[])
             try:
                 method = response['method']
             except:
                 print "no method", response
                 continue
 
-            if message_id:
-                session = self.processor.id_session.pop(message_id)
+            if internal_id:
+                session, message_id = self.processor.get_session_id(internal_id)
+                if message_id:
+                    response['id'] = message_id
                 self.send_response(response, session)
 
-            elif method == 'numblocks.subscribe':
+            else:
                 for session in self.server.sessions:
                     if not session.stopped():
-                        if session.numblocks_sub:
+                        if (method,params) in session.subscriptions:
                             self.send_response(response, session)
 
-            elif method == 'address.subscribe':
-                for session in self.server.sessions:
-                    if not session.stopped():
-                        addr = response['params'][0]
-                        last_status = session.addresses_sub.get(addr)
-                        if last_status:
-                            new_status = response.get('result')
-                            if new_status != last_status:
-                                session.addresses_sub[addr] = new_status
-                                self.send_response(response, session)
-            else:
-                print "error", response
 
 
     def send_response(self, response, session):

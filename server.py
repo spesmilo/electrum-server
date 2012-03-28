@@ -33,7 +33,7 @@ import time, json, socket, operator, thread, ast, sys, re, traceback
 import ConfigParser
 from json import dumps, loads
 import urllib
-
+import threading
 
 config = ConfigParser.ConfigParser()
 # set some defaults, which will be overwritten by the config file
@@ -70,7 +70,6 @@ sessions = {}
 
 m_sessions = [{}] # served by http
 
-peer_list = {}
 
 from Queue import Queue
 input_queue = Queue()
@@ -319,7 +318,7 @@ def do_command(cmd, data, ipaddr):
         out = cmd_stop(data)
 
     elif cmd == 'peers':
-        out = repr(peer_list.values())
+        out = repr(irc.get_peers())
 
     else:
         out = None
@@ -365,7 +364,7 @@ class AbeProcessor(stratum.Processor):
         elif method == 'server.banner':
             result = config.get('server','banner').replace('\\n','\n')
         elif method == 'server.peers':
-            result = peer_list.values()
+            result = irc.get_peers()
         elif method == 'address.get_history':
             address = params[0]
             result = store.get_history( address ) 
@@ -389,52 +388,61 @@ class AbeProcessor(stratum.Processor):
 
 
 
+class Irc(threading.Thread):
 
+    def __init__(self, processor):
+        self.processor = processor
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.peers = {}
 
-def irc_thread():
-    global peer_list
-    NICK = 'E_'+random_string(10)
-    while not stopping:
-        try:
-            s = socket.socket()
-            s.connect(('irc.freenode.net', 6667))
-            s.send('USER electrum 0 * :'+config.get('server','host')+' '+config.get('server','ircname')+'\n')
-            s.send('NICK '+NICK+'\n')
-            s.send('JOIN #electrum\n')
-            sf = s.makefile('r', 0)
-            t = 0
-            while not stopping:
-                line = sf.readline()
-                line = line.rstrip('\r\n')
-                line = line.split()
-                if line[0]=='PING': 
-                    s.send('PONG '+line[1]+'\n')
-                elif '353' in line: # answer to /names
-                    k = line.index('353')
-                    for item in line[k+1:]:
-                        if item[0:2] == 'E_':
-                            s.send('WHO %s\n'%item)
-                elif '352' in line: # answer to /who
-            	    # warning: this is a horrible hack which apparently works
-            	    k = line.index('352')
-                    ip = line[k+4]
-                    ip = socket.gethostbyname(ip)
-                    name = line[k+6]
-                    host = line[k+9]
-                    peer_list[name] = (ip,host)
-                if time.time() - t > 5*60:
-                    s.send('NAMES #electrum\n')
-                    t = time.time()
-                    peer_list = {}
-        except:
-            traceback.print_exc(file=sys.stdout)
-        finally:
-    	    sf.close()
-            s.close()
+    def get_peers(self):
+        return self.peers.values()
+
+    def run(self):
+        NICK = 'E_'+random_string(10)
+        while not self.processor.shared.stopped():
+            try:
+                s = socket.socket()
+                s.connect(('irc.freenode.net', 6667))
+                s.send('USER electrum 0 * :'+config.get('server','host')+' '+config.get('server','ircname')+'\n')
+                s.send('NICK '+NICK+'\n')
+                s.send('JOIN #electrum\n')
+                sf = s.makefile('r', 0)
+                t = 0
+                while not self.processor.shared.stopped():
+                    line = sf.readline()
+                    line = line.rstrip('\r\n')
+                    line = line.split()
+                    if line[0]=='PING': 
+                        s.send('PONG '+line[1]+'\n')
+                    elif '353' in line: # answer to /names
+                        k = line.index('353')
+                        for item in line[k+1:]:
+                            if item[0:2] == 'E_':
+                                s.send('WHO %s\n'%item)
+                    elif '352' in line: # answer to /who
+                        # warning: this is a horrible hack which apparently works
+                        k = line.index('352')
+                        ip = line[k+4]
+                        ip = socket.gethostbyname(ip)
+                        name = line[k+6]
+                        host = line[k+9]
+                        self.peers[name] = (ip,host)
+                    if time.time() - t > 5*60:
+                        self.processor.push_response({'method':'server.peers', 'result':[self.get_peers()]})
+                        s.send('NAMES #electrum\n')
+                        t = time.time()
+                        self.peers = {}
+            except:
+                traceback.print_exc(file=sys.stdout)
+            finally:
+                sf.close()
+                s.close()
 
 
 def get_peers_json(_,__):
-    return peer_list.values()
+    return irc.get_peers()
 
 def http_server_thread():
     # see http://code.google.com/p/jsonrpclib/
@@ -506,13 +514,15 @@ if __name__ == '__main__':
     tcpserver.start()
 
     #http stratum
-    from StratumJSONRPCServer import HttpServer
+    from stratum_http import HttpServer
     server = HttpServer(shared, processor, "ecdsa.org",8081)
     server.start()
 
 
     if (config.get('server','irc') == 'yes' ):
-	thread.start_new_thread(irc_thread, ())
+	irc = Irc(processor)
+        irc.start()
+
 
     print "starting Electrum server"
     store.run(processor)
