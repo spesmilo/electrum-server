@@ -56,47 +56,11 @@ from processor import Shared, Processor, Dispatcher
 from stratum_http import HttpServer
 from stratum import TcpServer
 from native import NativeServer
-from irc import Irc
-from abe_backend import AbeStore
 
-class AbeProcessor(Processor):
-    def process(self,request):
-        message_id = request['id']
-        method = request['method']
-        params = request.get('params',[])
-        #print request
 
-        result = ''
-        if method == 'numblocks.subscribe':
-            result = store.block_number
-        elif method == 'address.subscribe':
-            address = params[0]
-            store.watch_address(address)
-            status = store.get_status(address)
-            result = status
-        elif method == 'client.version':
-            #session.version = params[0]
-            pass
-        elif method == 'server.banner':
-            result = config.get('server','banner').replace('\\n','\n')
-        elif method == 'server.peers':
-            result = irc.get_peers()
-        elif method == 'address.get_history':
-            address = params[0]
-            result = store.get_history( address ) 
-        elif method == 'transaction.broadcast':
-            txo = store.send_tx(params[0])
-            print "sent tx:", txo
-            result = txo 
-        else:
-            print "unknown method", request
-
-        if result!='':
-            response = { 'id':message_id, 'method':method, 'params':params, 'result':result }
-            self.push_response(response)
-
-    def get_status(self,addr):
-        return store.get_status(addr)
+import irc 
+import abe_backend 
+from processor import Processor
 
 
 
@@ -116,25 +80,25 @@ if __name__ == '__main__':
         print out
         sys.exit(0)
 
-    processor = AbeProcessor()
+    processor = Processor()
     shared = Shared()
     # Bind shared to processor since constructor is user defined
     processor.shared = shared
     processor.start()
 
-    irc = Irc(processor, config.get('server','host'), config.get('server','ircname'))
-    if (config.get('server','irc') == 'yes' ): irc.start()
+    abe = abe_backend.AbeBackend(config, processor)
+    processor.register('blockchain', abe.process)
 
-    # backend
-    store = AbeStore(config)
+    sb = irc.ServerBackend(config, processor)
+    processor.register('server', sb.process)
 
     # dispatcher
     dispatcher = Dispatcher(shared, processor)
     dispatcher.start()
 
-    host = config.get('server','host')
     # Create various transports we need
-    transports = [ NativeServer(shared, store, irc, config.get('server','banner'), host, 50000),
+    host = config.get('server','host')
+    transports = [ NativeServer(shared, abe.store, sb.irc, config.get('server','banner'), host, 50000),
                    TcpServer(shared, processor, host, 50001),
                    HttpServer(shared, processor, host, 8081),
                    ]
@@ -142,6 +106,7 @@ if __name__ == '__main__':
         server.start()
 
     print "starting Electrum server on", host
-    store.run(processor)
+    while not shared.stopped():
+        time.sleep(1)
     print "server stopped"
 

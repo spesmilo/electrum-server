@@ -1,5 +1,5 @@
 import bitcoin
-import stratum
+from processor import Processor
 import threading
 import time
 
@@ -102,13 +102,6 @@ class NumblocksSubscribe:
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
         self.backend.blockchain.fetch_last_depth(self.set_last_depth)
         self.latest = GhostValue()
-        self.subscribed = []
-
-    def subscribe(self, session, request):
-        last = self.latest.get()
-        self.push_response(session,{"id": request["id"], "result": last})
-        with self.lock:
-            self.subscribed.append((session, request))
 
     def set_last_depth(self, ec, last_depth):
         if ec:
@@ -119,74 +112,72 @@ class NumblocksSubscribe:
     def reorganize(self, ec, fork_point, arrivals, replaced):
         latest = fork_point + len(arrivals)
         self.latest.set(latest)
-        subscribed = self.spring_clean()
-        for session, request in subscribed:
-            self.push_response(session,{"id": request["id"], "result": latest})
+        self.push_response({"method":"numblocks.subscribe", "result": latest})
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
 
-    def spring_clean(self):
-        with self.lock:
-            self.subscribed = [sub for sub in self.subscribed
-                               if not sub[0].stopped()]
-            return self.subscribed[:]
 
 class AddressGetHistory:
 
     def __init__(self, backend):
         self.backend = backend
 
-    def get(self, session, request):
+    def get(self, request):
         address = str(request["params"])
         composed.payment_history(self.backend.blockchain, address,
-            bitcoin.bind(self.respond, session, request, bitcoin._1))
+            bitcoin.bind(self.respond, request, bitcoin._1))
 
-    def respond(self, session, request, result):
-        self.push_response(session,{"id": request["id"], "result": result})
+    def respond(self, request, result):
+        self.push_response({"id": request["id"], "method":request["method"], "params":request["params"], "result": result})
 
-class LibbitcoinProcessor(stratum.Processor):
+class LibbitcoinProcessor(Processor):
 
     def __init__(self):
         self.backend = Backend()
         self.numblocks_subscribe = NumblocksSubscribe(self.backend)
         self.address_get_history = AddressGetHistory(self.backend)
-        stratum.Processor.__init__(self)
+        Processor.__init__(self)
 
     def stop(self):
         self.backend.stop()
 
-    def process(self, session, request):
+    def process(self, request):
 
         print "New request (lib)", request
         if request["method"] == "numblocks.subscribe":
             self.numblocks_subscribe.subscribe(session, request)
         elif request["method"] == "address.get_history":
-            self.address_get_history.get(session, request)
+            self.address_get_history.get(request)
         elif request["method"] == "server.banner":
-            self.push_response(session, {"id": request["id"],
+            self.push_response({"id": request["id"], "method": request["method"], "params":request["params"],
                 "result": "libbitcoin using python-bitcoin bindings"})
         elif request["method"] == "transaction.broadcast":
-            self.broadcast_transaction(session, request)
+            self.broadcast_transaction(request)
         # Execute and when ready, you call
-        # self.push_response(session,response)
+        # self.push_response(response)
 
-    def broadcast_transaction(self, session, request):
+    def broadcast_transaction(self, request):
         raw_tx = bitcoin.data_chunk(str(request["params"]))
         exporter = bitcoin.satoshi_exporter()
         try:
             tx = exporter.load_transaction(raw_tx)
         except RuntimeError:
-            response = {"id": request["id"], "result": None,
+            response = {"id": request["id"], "method": request["method"], "params":request["params"], "result": None,
                 "error": {"message": 
                     "Exception while parsing the transaction data.",
                     "code": -4}}
         else:
             self.backend.protocol.broadcast_transaction(tx)
             tx_hash = str(bitcoin.hash_transaction(tx))
-            response = {"id": request["id"], "result": tx_hash}
-        self.push_response(session,response)
+            response = {"id": request["id"], "method": request["method"], "params":request["params"], "result": tx_hash}
+        self.push_response(response)
 
-def run(stratum):
+
+
+def run(processor):
+    #processor = LibbitcoinProcessor()
     print "Warning: pre-alpha prototype. Full of bugs."
-    processor = LibbitcoinProcessor()
-    stratum.start(processor)
+    while not processor.shared.stopped():
+        if raw_input() == "quit":
+            shared.stop()
+        time.sleep(1)
 

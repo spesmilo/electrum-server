@@ -60,3 +60,31 @@ class Irc(threading.Thread):
             finally:
                 sf.close()
                 s.close()
+
+
+class ServerBackend:
+
+    def __init__(self, config, processor):
+        self.banner = config.get('server','banner')
+        self.irc = Irc(processor, config.get('server','host'), config.get('server','ircname'))
+        self.irc.processor = processor
+        if (config.get('server','irc') == 'yes' ): 
+            self.irc.start()
+
+    def process(self, request, queue):
+        method = request['method']
+
+        result = ''
+        if method == 'server.banner':
+            result = self.banner.replace('\\n','\n')
+        elif method == 'server.peers.subscribe':
+            result = self.irc.get_peers()
+        else:
+            print "unknown method", request
+
+        if result!='':
+            response = { 'id':request['id'], 'method':method, 'params':request['params'], 'result':result }
+            queue.put(response)
+
+
+

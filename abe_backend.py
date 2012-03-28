@@ -381,7 +381,7 @@ class AbeStore(Datastore_class):
 
             if self.block_number != old_block_number:
                 old_block_number = self.block_number
-                processor.push_response({ 'method':'numblocks.subscribe', 'result':self.block_number })
+                processor.push_response({ 'method':'blockchain.numblocks.subscribe', 'result':self.block_number })
 
             while True:
                 try:
@@ -390,6 +390,44 @@ class AbeStore(Datastore_class):
                     break
                 if addr in self.watched_addresses:
                     status = self.get_status( addr )
-                    processor.push_response({ 'method':'address.subscribe', 'params':[addr], 'result':status })
+                    processor.push_response({ 'method':'blockchain.address.subscribe', 'params':[addr], 'result':status })
 
             time.sleep(10)
+
+
+
+class AbeBackend:
+
+    def __init__(self,config, processor):
+        self.store = AbeStore(config)
+        self.store.processor = processor
+        thread.start_new_thread(self.store.run,(processor,))
+
+    def process(self, request, queue):
+        message_id = request['id']
+        method = request['method']
+        params = request.get('params',[])
+        result = ''
+        if method == 'blockchain.numblocks.subscribe':
+            result = self.store.block_number
+        elif method == 'blockchain.address.subscribe':
+            address = params[0]
+            self.store.watch_address(address)
+            status = self.store.get_status(address)
+            result = status
+        elif method == 'blockchain.address.get_history':
+            address = params[0]
+            result = self.store.get_history( address ) 
+        elif method == 'blockchain.transaction.broadcast':
+            txo = self.store.send_tx(params[0])
+            print "sent tx:", txo
+            result = txo 
+        else:
+            print "unknown method", request
+
+        if result != '':
+            response = { 'id':message_id, 'method':method, 'params':params, 'result':result }
+            queue.put(response)
+
+
+

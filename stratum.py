@@ -12,6 +12,7 @@ class TcpSession(Session):
         self._connection = connection
         self.address = address
         Session.__init__(self)
+        print "New session", address
 
     def connection(self):
         if self.stopped():
@@ -127,25 +128,4 @@ class TcpServer(threading.Thread):
 
 
 
-
-class Stratum:
-
-    def start(self, processor):
-        shared = Shared()
-        # Bind shared to processor since constructor is user defined
-        processor.shared = shared
-        processor.start()
-        # Create various transports we need
-        transports = TcpServer(shared, processor, "176.31.24.241", 50001),
-        for server in transports:
-            server.start()
-        while not shared.stopped():
-            if raw_input() == "quit":
-                shared.stop()
-            time.sleep(1)
-
-if __name__ == "__main__":
-    processor = Processor()
-    app = Stratum()
-    app.start(processor)
 

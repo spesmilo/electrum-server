@@ -2,6 +2,7 @@ import json
 import socket
 import threading
 import time
+import traceback, sys
 import Queue as queue
 
 class Shared:
@@ -32,6 +33,7 @@ class Processor(threading.Thread):
         self.internal_id = 1
         self.lock = threading.Lock()
         self.sessions = []
+        self.processors = {}
 
     def push_response(self, item):
         self.response_queue.put(item)
@@ -56,6 +58,9 @@ class Processor(threading.Thread):
             self.internal_id += 1
             return r
 
+    def register(self, prefix, function):
+        self.processors[prefix] = function
+
     def run(self):
         if self.shared is None:
             raise TypeError("self.shared not set in Processor")
@@ -65,12 +70,26 @@ class Processor(threading.Thread):
             method = request['method']
             params = request.get('params',[])
 
-            if method in [ 'numblocks.subscribe', 'address.subscribe', 'server.peers']:
+            suffix = method.split('.')[-1]
+            if suffix == 'subscribe':
                 session.subscribe_to_service(method, params)
 
             # store session and id locally
             request['id'] = self.store_session_id(session, request['id'])
-            self.process(request)
+
+            # dispatch request to the relevant module..
+            prefix = method.split('.')[0]
+            try:
+                func = self.processors[prefix]
+            except:
+                print "error: no processor for", prefix
+                continue
+
+            try:
+                func(request,self.response_queue)
+            except:
+                traceback.print_exc(file=sys.stdout)
+                continue
 
         self.stop()
 
