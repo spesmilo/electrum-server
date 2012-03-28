@@ -123,6 +123,7 @@ class Dispatcher(threading.Thread):
         self.shared = shared
         self.processor = processor
         threading.Thread.__init__(self)
+        self.daemon = True
 
     def run(self):
         while not self.shared.stopped():
