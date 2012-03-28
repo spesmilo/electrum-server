@@ -66,42 +66,36 @@ class Processor(threading.Thread):
             raise TypeError("self.shared not set in Processor")
         while not self.shared.stopped():
             session, request = self.pop_request()
-
-            method = request['method']
-            params = request.get('params',[])
-
-            suffix = method.split('.')[-1]
-            if suffix == 'subscribe':
-                session.subscribe_to_service(method, params)
-
-            # store session and id locally
-            request['id'] = self.store_session_id(session, request['id'])
-
-            # dispatch request to the relevant module..
-            prefix = method.split('.')[0]
-            try:
-                func = self.processors[prefix]
-            except:
-                print "error: no processor for", prefix
-                continue
-
-            try:
-                func(request,self.response_queue)
-            except:
-                traceback.print_exc(file=sys.stdout)
-                continue
+            self.process(session, request)
 
         self.stop()
 
     def stop(self):
         pass
 
-    def process(self, request):
-        print "New request", request
-        # Do stuff...
-        # response = request
-        # When ready, you call
-        # self.push_response(response)
+    def process(self, session, request):
+        method = request['method']
+        params = request.get('params',[])
+
+        suffix = method.split('.')[-1]
+        if suffix == 'subscribe':
+            session.subscribe_to_service(method, params)
+
+        # store session and id locally
+        request['id'] = self.store_session_id(session, request['id'])
+
+        # dispatch request to the relevant module..
+        prefix = request['method'].split('.')[0]
+        try:
+            func = self.processors[prefix]
+        except:
+            print "error: no processor for", prefix
+            return
+        try:
+            func(request,self.response_queue)
+        except:
+            traceback.print_exc(file=sys.stdout)
+
 
     def add_session(self, session):
         with self.lock:

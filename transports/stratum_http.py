@@ -355,8 +355,9 @@ class HttpServer(threading.Thread):
         from SocketServer import ThreadingMixIn
         class StratumThreadedJSONRPCServer(ThreadingMixIn, StratumJSONRPCServer): pass
         self.server = StratumThreadedJSONRPCServer(( self.host, self.port))
-        for s in ['server.peers', 'server.banner', 'transaction.broadcast', \
-                      'address.get_history','address.subscribe', 'numblocks.subscribe', 'client.version']:
+        for s in ['server.peers.subscribe', 'server.banner', 'blockchain.transaction.broadcast', \
+                      'blockchain.address.get_history','blockchain.address.subscribe', \
+                      'blockchain.numblocks.subscribe', 'client.version' ]:
             self.server.register_function(self.process, s)
 
         self.server.register_function(self.do_stop, 'stop')
@@ -369,9 +370,7 @@ class HttpServer(threading.Thread):
         #print session, request
         session = self.server.sessions.get(session_id)
         if session:
-            #print "zz",session_id,session
-            request['id'] = self.processor.store_session_id(session, request['id'])
-            self.processor.process(request)
+            self.processor.process(session, request)
 
     def do_stop(self, session, request):
         self.shared.stop()
