@@ -86,10 +86,15 @@ if __name__ == '__main__':
     dispatcher.register('server', sb)
 
     # Create various transports we need
-    transports = [ NativeServer(shared, abe, sb, config.get('server','banner'), host, 50000),
+    transports = [ 
                    TcpServer(dispatcher, host, 50001),
                    HttpServer(dispatcher, host, 8081),
                    ]
+
+    # NativeServer cannot be used with libbitcoin
+    if not use_libbitcoin:
+        transports.append( NativeServer(shared, abe, sb, config.get('server','banner'), host, 50000) )
+
     for server in transports:
         server.start()
 
