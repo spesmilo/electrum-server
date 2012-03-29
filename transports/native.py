@@ -1,4 +1,4 @@
-import thread, threading, time, socket, traceback, ast
+import thread, threading, time, socket, traceback, ast, sys
 
 
 
@@ -12,10 +12,11 @@ def timestr():
 
 class NativeServer(threading.Thread):
 
-    def __init__(self, shared, store, irc, banner, host, port):
+    def __init__(self, shared, abe, irc, banner, host, port):
         threading.Thread.__init__(self)
         self.banner = banner
-        self.store = store
+        self.abe = abe
+        self.store = abe.store
         self.irc = irc
         self.sessions = {}
         self.host = host
@@ -50,7 +51,7 @@ class NativeServer(threading.Thread):
             self.sessions[session_id]['last_time'] = time.time()
             ret, addresses = self.modified_addresses(session)
             if ret: self.sessions[session_id]['addresses'] = addresses
-            return repr( (self.store.block_number,ret))
+            return repr( (self.abe.block_number,ret))
 
 
     def add_address_to_session(self, session_id, address):
@@ -115,7 +116,7 @@ class NativeServer(threading.Thread):
     def do_command(self, cmd, data, ipaddr):
 
         if cmd=='b':
-            out = "%d"%block_number
+            out = "%d"%self.abe.block_number
 
         elif cmd in ['session','new_session']:
             try:

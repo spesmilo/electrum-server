@@ -4,7 +4,7 @@ import threading
 import time
 import Queue as queue
 
-from processor import Session, Dispatcher, Shared
+from processor import Session, Dispatcher
 
 class TcpSession(Session):
 
@@ -41,9 +41,9 @@ class TcpSession(Session):
 
 class TcpClientRequestor(threading.Thread):
 
-    def __init__(self, shared, processor, session):
-        self.shared = shared
-        self.processor = processor
+    def __init__(self, dispatcher, session):
+        self.shared = dispatcher.shared
+        self.dispatcher = dispatcher
         self.message = ""
         self.session = session
         threading.Thread.__init__(self)
@@ -86,7 +86,7 @@ class TcpClientRequestor(threading.Thread):
         try:
             command = json.loads(raw_command)
         except:
-            self.processor.push_response({"error": "bad JSON", "request": raw_command})
+            self.dispatcher.push_response({"error": "bad JSON", "request": raw_command})
             return True
 
         try:
@@ -96,17 +96,17 @@ class TcpClientRequestor(threading.Thread):
             method = command['method']
         except KeyError:
             # Return an error JSON in response.
-            self.processor.push_response({"error": "syntax error", "request": raw_command})
+            self.dispatcher.push_response({"error": "syntax error", "request": raw_command})
         else:
-            self.processor.push_request(self.session,command)
+            self.dispatcher.push_request(self.session,command)
 
         return True
 
 class TcpServer(threading.Thread):
 
-    def __init__(self, shared, processor, host, port):
-        self.shared = shared
-        self.processor = processor
+    def __init__(self, dispatcher, host, port):
+        self.shared = dispatcher.shared
+        self.dispatcher = dispatcher.request_dispatcher
         threading.Thread.__init__(self)
         self.daemon = True
         self.host = host
@@ -121,10 +121,10 @@ class TcpServer(threading.Thread):
         sock.listen(1)
         while not self.shared.stopped():
             session = TcpSession(*sock.accept())
-            client_req = TcpClientRequestor(self.shared, self.processor, session)
+            client_req = TcpClientRequestor(self.dispatcher, session)
             client_req.start()
-            self.processor.add_session(session)
-            self.processor.collect_garbage()
+            self.dispatcher.add_session(session)
+            self.dispatcher.collect_garbage()
 
 
 

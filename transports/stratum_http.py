@@ -341,9 +341,9 @@ class HttpSession(Session):
         self.pending_responses.append(response)
 
 class HttpServer(threading.Thread):
-    def __init__(self, shared, _processor, host, port):
-        self.shared = shared
-        self.processor = _processor
+    def __init__(self, dispatcher, host, port):
+        self.shared = dispatcher.shared
+        self.dispatcher = dispatcher.request_dispatcher
         threading.Thread.__init__(self)
         self.daemon = True
         self.host = host
@@ -370,7 +370,7 @@ class HttpServer(threading.Thread):
         #print session, request
         session = self.server.sessions.get(session_id)
         if session:
-            self.processor.process(session, request)
+            self.dispatcher.process(session, request)
 
     def do_stop(self, session, request):
         self.shared.stop()

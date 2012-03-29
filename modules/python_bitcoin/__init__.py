@@ -96,8 +96,9 @@ class GhostValue:
 
 class NumblocksSubscribe:
 
-    def __init__(self, backend):
+    def __init__(self, backend, processor):
         self.backend = backend
+        self.processor = processor
         self.lock = threading.Lock()
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
         self.backend.blockchain.fetch_last_depth(self.set_last_depth)
@@ -112,14 +113,15 @@ class NumblocksSubscribe:
     def reorganize(self, ec, fork_point, arrivals, replaced):
         latest = fork_point + len(arrivals)
         self.latest.set(latest)
-        self.push_response({"method":"numblocks.subscribe", "result": latest})
+        self.processor.push_response({"method":"numblocks.subscribe", "result": latest})
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
 
 
 class AddressGetHistory:
 
-    def __init__(self, backend):
+    def __init__(self, backend, processor):
         self.backend = backend
+        self.processor = processor
 
     def get(self, request):
         address = str(request["params"])
@@ -127,15 +129,16 @@ class AddressGetHistory:
             bitcoin.bind(self.respond, request, bitcoin._1))
 
     def respond(self, request, result):
-        self.push_response({"id": request["id"], "method":request["method"], "params":request["params"], "result": result})
+        self.processor.push_response({"id": request["id"], "method":request["method"], "params":request["params"], "result": result})
+
 
 class LibbitcoinProcessor(Processor):
 
-    def __init__(self):
-        self.backend = Backend()
-        self.numblocks_subscribe = NumblocksSubscribe(self.backend)
-        self.address_get_history = AddressGetHistory(self.backend)
+    def __init__(self, config):
         Processor.__init__(self)
+        self.backend = Backend()
+        self.numblocks_subscribe = NumblocksSubscribe(self.backend, self)
+        self.address_get_history = AddressGetHistory(self.backend, self)
 
     def stop(self):
         self.backend.stop()
@@ -171,13 +174,9 @@ class LibbitcoinProcessor(Processor):
             response = {"id": request["id"], "method": request["method"], "params":request["params"], "result": tx_hash}
         self.push_response(response)
 
-
-
-def run(processor):
-    #processor = LibbitcoinProcessor()
-    print "Warning: pre-alpha prototype. Full of bugs."
-    while not processor.shared.stopped():
-        if raw_input() == "quit":
-            shared.stop()
-        time.sleep(1)
+    def run(self):
+        # this class is a thread. it does nothing in this example.
+        print "Warning: pre-alpha prototype. Full of bugs."
+        while not self.shared.stopped():
+            time.sleep(1)
 

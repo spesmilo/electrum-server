@@ -24,7 +24,39 @@ class Shared:
 class Processor(threading.Thread):
 
     def __init__(self):
-        self.shared = None
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.dispatcher = None
+
+    def process(self, request):
+        pass
+
+    def push_response(self, response):
+        self.dispatcher.request_dispatcher.push_response(response)
+
+
+
+class Dispatcher:
+
+    def __init__(self):
+        self.shared = Shared()
+        self.request_dispatcher = RequestDispatcher(self.shared)
+        self.request_dispatcher.start()
+        self.response_dispatcher = ResponseDispatcher(self.shared, self.request_dispatcher)
+        self.response_dispatcher.start()
+
+    def register(self, prefix, processor):
+        processor.dispatcher = self
+        processor.shared = self.shared
+        processor.start()
+        self.request_dispatcher.processors[prefix] = processor
+
+
+
+class RequestDispatcher(threading.Thread):
+
+    def __init__(self, shared):
+        self.shared = shared
         threading.Thread.__init__(self)
         self.daemon = True
         self.request_queue = queue.Queue()
@@ -58,9 +90,6 @@ class Processor(threading.Thread):
             self.internal_id += 1
             return r
 
-    def register(self, prefix, function):
-        self.processors[prefix] = function
-
     def run(self):
         if self.shared is None:
             raise TypeError("self.shared not set in Processor")
@@ -87,12 +116,12 @@ class Processor(threading.Thread):
         # dispatch request to the relevant module..
         prefix = request['method'].split('.')[0]
         try:
-            func = self.processors[prefix]
+            p = self.processors[prefix]
         except:
             print "error: no processor for", prefix
             return
         try:
-            func(request,self.response_queue)
+            p.process(request)
         except:
             traceback.print_exc(file=sys.stdout)
 
@@ -130,7 +159,7 @@ class Session:
             self.subscriptions.append((method, params))
     
 
-class Dispatcher(threading.Thread):
+class ResponseDispatcher(threading.Thread):
 
     def __init__(self, shared, processor):
         self.shared = shared

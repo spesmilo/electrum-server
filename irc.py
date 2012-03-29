@@ -6,23 +6,27 @@ def random_string(N):
     import random, string
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(N))
 
+from processor import Processor
 
-class Irc(threading.Thread):
+class ServerProcessor(Processor):
 
-    def __init__(self, processor, host, nick):
-        self.processor = processor
-        threading.Thread.__init__(self)
+    def __init__(self, config):
+        Processor.__init__(self)
         self.daemon = True
         self.peers = {}
-        self.host = host
-        self.nick = nick
+        self.banner = config.get('server','banner')
+        self.host = config.get('server','host')
+        self.nick = config.get('server','ircname')
+        self.irc = config.get('server','irc') == 'yes'
 
     def get_peers(self):
         return self.peers.values()
 
     def run(self):
+        if not self.irc: 
+            return
         NICK = 'E_'+random_string(10)
-        while not self.processor.shared.stopped():
+        while not self.shared.stopped():
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
@@ -31,7 +35,7 @@ class Irc(threading.Thread):
                 s.send('JOIN #electrum\n')
                 sf = s.makefile('r', 0)
                 t = 0
-                while not self.processor.shared.stopped():
+                while not self.shared.stopped():
                     line = sf.readline()
                     line = line.rstrip('\r\n')
                     line = line.split()
@@ -51,7 +55,7 @@ class Irc(threading.Thread):
                         host = line[k+9]
                         self.peers[name] = (ip,host)
                     if time.time() - t > 5*60:
-                        self.processor.push_response({'method':'server.peers', 'result':[self.get_peers()]})
+                        self.push_response({'method':'server.peers', 'result':[self.get_peers()]})
                         s.send('NAMES #electrum\n')
                         t = time.time()
                         self.peers = {}
@@ -62,29 +66,21 @@ class Irc(threading.Thread):
                 s.close()
 
 
-class ServerBackend:
 
-    def __init__(self, config, processor):
-        self.banner = config.get('server','banner')
-        self.irc = Irc(processor, config.get('server','host'), config.get('server','ircname'))
-        self.irc.processor = processor
-        if (config.get('server','irc') == 'yes' ): 
-            self.irc.start()
-
-    def process(self, request, queue):
+    def process(self, request):
         method = request['method']
 
         result = ''
         if method == 'server.banner':
             result = self.banner.replace('\\n','\n')
         elif method == 'server.peers.subscribe':
-            result = self.irc.get_peers()
+            result = self.get_peers()
         else:
             print "unknown method", request
 
         if result!='':
             response = { 'id':request['id'], 'method':method, 'params':request['params'], 'result':result }
-            queue.put(response)
+            self.push_response(response)
 
 
 
