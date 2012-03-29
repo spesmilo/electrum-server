@@ -341,13 +341,14 @@ class HttpSession(Session):
         self.pending_responses.append(response)
 
 class HttpServer(threading.Thread):
-    def __init__(self, dispatcher, host, port):
+    def __init__(self, dispatcher, host, port, password):
         self.shared = dispatcher.shared
         self.dispatcher = dispatcher.request_dispatcher
         threading.Thread.__init__(self)
         self.daemon = True
         self.host = host
         self.port = port
+        self.password = password
         self.lock = threading.Lock()
 
     def run(self):
@@ -373,8 +374,13 @@ class HttpServer(threading.Thread):
             self.dispatcher.process(session, request)
 
     def do_stop(self, session, request):
-        self.shared.stop()
-        return 'ok'
+        try:
+            password = request['params'][0]
+        except:
+            password = None
+        if password == self.password:
+            self.shared.stop()
+            return 'ok'
 
 
         

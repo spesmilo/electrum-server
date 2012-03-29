@@ -96,7 +96,7 @@ if __name__ == '__main__':
     transports = []
     if native_port: transports.append( NativeServer(shared, abe, sb, config.get('server','banner'), host, int(native_port)) )
     if stratum_tcp_port: transports.append( TcpServer(dispatcher, host, int(stratum_tcp_port)) )
-    if stratum_http_port: transports.append( HttpServer(dispatcher, host, int(stratum_http_port)) )
+    if stratum_http_port: transports.append( HttpServer(dispatcher, host, int(stratum_http_port), password) )
     for server in transports:
         server.start()
 
