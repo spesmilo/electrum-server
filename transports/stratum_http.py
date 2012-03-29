@@ -110,9 +110,13 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
             if type(result) is Fault:
                 responses.append(result.response())
                 continue
-            resp_entry = self._marshaled_single_dispatch(session_id, req_entry)
-            if resp_entry is not None:
-                responses.append(resp_entry)
+
+            session = self.sessions.get(session_id)
+            if session:
+                self.dispatcher.process(session, req_entry)
+                if req_entry['method'] == 'server.stop':
+                    return json.dumps({'result':'ok'})
+
 
         r = self.poll_session(session_id)
         for item in r:
@@ -127,65 +131,7 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
 
         return response
 
-    def _marshaled_single_dispatch(self, session_id, request):
-        # TODO - Use the multiprocessing and skip the response if
-        # it is a notification
-        # Put in support for custom dispatcher here
-        # (See SimpleXMLRPCServer._marshaled_dispatch)
-        method = request.get('method')
-        params = request.get('params')
-        try:
-            response = self._dispatch(method, session_id, request)
-        except:
-            exc_type, exc_value, exc_tb = sys.exc_info()
-            fault = Fault(-32603, '%s:%s' % (exc_type, exc_value))
-            return fault.response()
-        if 'id' not in request.keys() or request['id'] == None:
-            # It's a notification
-            return None
 
-        try:
-            response = jsonrpclib.dumps(response,
-                                        methodresponse=True,
-                                        rpcid=request['id']
-                                        )
-            return response
-        except:
-            exc_type, exc_value, exc_tb = sys.exc_info()
-            fault = Fault(-32603, '%s:%s' % (exc_type, exc_value))
-            return fault.response()
-
-    def _dispatch(self, method, session_id, request):
-        func = None
-        try:
-            func = self.funcs[method]
-        except KeyError:
-            if self.instance is not None:
-                if hasattr(self.instance, '_dispatch'):
-                    return self.instance._dispatch(method, params)
-                else:
-                    try:
-                        func = SimpleXMLRPCServer.resolve_dotted_attribute(
-                            self.instance,
-                            method,
-                            True
-                            )
-                    except AttributeError:
-                        pass
-        if func is not None:
-            try:
-                response = func(session_id, request)
-                return response
-            except TypeError:
-                return Fault(-32602, 'Invalid parameters.')
-            except:
-                err_lines = traceback.format_exc().splitlines()
-                trace_string = '%s | %s' % (err_lines[-3], err_lines[-1])
-                fault = jsonrpclib.Fault(-32603, 'Server error: %s' % 
-                                         trace_string)
-                return fault
-        else:
-            return Fault(-32601, 'Method %s not supported.' % method)
 
 class StratumJSONRPCRequestHandler(
         SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
@@ -341,46 +287,24 @@ class HttpSession(Session):
         self.pending_responses.append(response)
 
 class HttpServer(threading.Thread):
-    def __init__(self, dispatcher, host, port, password):
+    def __init__(self, dispatcher, host, port):
         self.shared = dispatcher.shared
         self.dispatcher = dispatcher.request_dispatcher
         threading.Thread.__init__(self)
         self.daemon = True
         self.host = host
         self.port = port
-        self.password = password
         self.lock = threading.Lock()
 
     def run(self):
         # see http://code.google.com/p/jsonrpclib/
         from SocketServer import ThreadingMixIn
         class StratumThreadedJSONRPCServer(ThreadingMixIn, StratumJSONRPCServer): pass
-        self.server = StratumThreadedJSONRPCServer(( self.host, self.port))
-        for s in ['server.peers.subscribe', 'server.banner', 'blockchain.transaction.broadcast', \
-                      'blockchain.address.get_history','blockchain.address.subscribe', \
-                      'blockchain.numblocks.subscribe', 'client.version' ]:
-            self.server.register_function(self.process, s)
 
-        self.server.register_function(self.do_stop, 'stop')
+        self.server = StratumThreadedJSONRPCServer(( self.host, self.port))
+        self.server.dispatcher = self.dispatcher
+        self.server.register_function(None, 'server.stop')
 
         print "HTTP server started."
         self.server.serve_forever()
 
-
-    def process(self, session_id, request):
-        #print session, request
-        session = self.server.sessions.get(session_id)
-        if session:
-            self.dispatcher.process(session, request)
-
-    def do_stop(self, session, request):
-        try:
-            password = request['params'][0]
-        except:
-            password = None
-        if password == self.password:
-            self.shared.stop()
-            return 'ok'
-
-
-        

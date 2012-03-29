@@ -14,6 +14,7 @@ class ServerProcessor(Processor):
         self.peers = {}
         self.banner = config.get('server','banner')
         self.host = config.get('server','host')
+        self.password = config.get('server','password')
 
         self.native_port = config.get('server','native_port')
         self.stratum_tcp_port = config.get('server','stratum_tcp_port')
@@ -91,18 +92,29 @@ class ServerProcessor(Processor):
         method = request['method']
         params = request['params']
         result = None
+
         if method == 'server.banner':
             result = self.banner.replace('\\n','\n')
+
         elif method == 'server.peers.subscribe':
             result = self.get_peers()
+
         elif method == 'server.version':
             print "version", params
+
+        elif method == 'server.stop':
+            print "stopping..."
+            try:
+                password = request['params'][0]
+            except:
+                password = None
+            if password == self.password:
+                self.shared.stop()
+                result = 'ok'
         else:
             print "unknown method", request
 
         if result!='':
             response = { 'id':request['id'], 'method':method, 'params':params, 'result':result }
             self.push_response(response)
-
-
 

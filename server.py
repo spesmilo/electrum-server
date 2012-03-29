@@ -72,10 +72,10 @@ if __name__ == '__main__':
 
     if len(sys.argv)>1:
         import jsonrpclib
-        server = jsonrpclib.Server('http://%s:8081'%host)
+        server = jsonrpclib.Server('http://%s:%s'%(host,stratum_http_port))
         cmd = sys.argv[1]
         if cmd == 'stop':
-            out = server.stop(password)
+            out = server.server.stop(password)
         else:
             out = "Unknown command: '%s'" % cmd
         print out
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     transports = []
     if native_port: transports.append( NativeServer(shared, abe, sb, config.get('server','banner'), host, int(native_port)) )
     if stratum_tcp_port: transports.append( TcpServer(dispatcher, host, int(stratum_tcp_port)) )
-    if stratum_http_port: transports.append( HttpServer(dispatcher, host, int(stratum_http_port), password) )
+    if stratum_http_port: transports.append( HttpServer(dispatcher, host, int(stratum_http_port)) )
     for server in transports:
         server.start()
 
