@@ -1,6 +1,4 @@
-####################################################################
-
-import threading, socket, traceback, time
+import threading, socket, traceback, time, sys
 
 def random_string(N):
     import random, string
@@ -16,22 +14,43 @@ class ServerProcessor(Processor):
         self.peers = {}
         self.banner = config.get('server','banner')
         self.host = config.get('server','host')
-        self.nick = config.get('server','ircname')
-        self.irc = config.get('server','irc') == 'yes'
+
+        self.native_port = config.get('server','native_port')
+        self.stratum_tcp_port = config.get('server','stratum_tcp_port')
+        self.stratum_http_port = config.get('server','stratum_http_port')
+
+        self.irc = config.get('server', 'irc') == 'yes'
+        self.nick = config.get('server', 'irc_nick') 
+        if not self.nick: self.nick = random_string(10)
+
 
     def get_peers(self):
         return self.peers.values()
 
+
+    def getname(self):
+        s = ''
+        if self.native_port:
+            s+= 'n' + self.native_port + ' '
+        if self.stratum_tcp_port:
+            s += 's' + self.stratum_tcp_port + ' ' 
+        if self.stratum_http_port:
+            s += 'h' + self.stratum_http_port + ' '
+        return s
+
+
     def run(self):
         if not self.irc: 
             return
-        NICK = 'E_'+random_string(10)
+
+        ircname = self.getname()
+
         while not self.shared.stopped():
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
-                s.send('USER electrum 0 * :'+self.host+' '+self.nick+'\n')
-                s.send('NICK '+NICK+'\n')
+                s.send('USER electrum 0 * :' + self.host + ' ' + ircname + '\n')
+                s.send('NICK E_' + self.nick + '\n')
                 s.send('JOIN #electrum\n')
                 sf = s.makefile('r', 0)
                 t = 0
@@ -53,7 +72,8 @@ class ServerProcessor(Processor):
                         ip = socket.gethostbyname(ip)
                         name = line[k+6]
                         host = line[k+9]
-                        self.peers[name] = (ip,host)
+                        ports  = line[k+10:]
+                        self.peers[name] = (ip, host, ports)
                     if time.time() - t > 5*60:
                         self.push_response({'method':'server.peers', 'result':[self.get_peers()]})
                         s.send('NAMES #electrum\n')
@@ -69,17 +89,19 @@ class ServerProcessor(Processor):
 
     def process(self, request):
         method = request['method']
-
-        result = ''
+        params = request['params']
+        result = None
         if method == 'server.banner':
             result = self.banner.replace('\\n','\n')
         elif method == 'server.peers.subscribe':
             result = self.get_peers()
+        elif method == 'server.version':
+            print "version", params
         else:
             print "unknown method", request
 
         if result!='':
-            response = { 'id':request['id'], 'method':method, 'params':request['params'], 'result':result }
+            response = { 'id':request['id'], 'method':method, 'params':params, 'result':result }
             self.push_response(response)
 
 

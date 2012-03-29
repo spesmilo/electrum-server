@@ -23,10 +23,12 @@ config = ConfigParser.ConfigParser()
 config.add_section('server')
 config.set('server','banner', 'Welcome to Electrum!')
 config.set('server', 'host', 'localhost')
-config.set('server', 'port', '50000')
+config.set('server', 'native_port', '50000')
+config.set('server', 'stratum_tcp_port', '50001')
+config.set('server', 'stratum_http_port', '8081')
 config.set('server', 'password', '')
 config.set('server', 'irc', 'yes')
-config.set('server', 'ircname', 'Electrum server')
+config.set('server', 'irc_nick', '')
 config.add_section('database')
 config.set('database', 'type', 'psycopg2')
 config.set('database', 'database', 'abe')
@@ -48,6 +50,11 @@ except:
 password = config.get('server','password')
 host = config.get('server','host')
 use_libbitcoin = False
+native_port = config.get('server','native_port')
+stratum_tcp_port = config.get('server','stratum_tcp_port')
+stratum_http_port = config.get('server','stratum_http_port')
+# NativeServer cannot be used with libbitcoin
+if use_libbitcoin: native_port = None
 
 
 from processor import Dispatcher
@@ -86,15 +93,10 @@ if __name__ == '__main__':
     dispatcher.register('server', sb)
 
     # Create various transports we need
-    transports = [ 
-                   TcpServer(dispatcher, host, 50001),
-                   HttpServer(dispatcher, host, 8081),
-                   ]
-
-    # NativeServer cannot be used with libbitcoin
-    if not use_libbitcoin:
-        transports.append( NativeServer(shared, abe, sb, config.get('server','banner'), host, 50000) )
-
+    transports = []
+    if native_port: transports.append( NativeServer(shared, abe, sb, config.get('server','banner'), host, int(native_port)) )
+    if stratum_tcp_port: transports.append( TcpServer(dispatcher, host, int(stratum_tcp_port)) )
+    if stratum_http_port: transports.append( HttpServer(dispatcher, host, int(stratum_http_port)) )
     for server in transports:
         server.start()
 
