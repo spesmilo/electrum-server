@@ -32,9 +32,9 @@ class NativeServer(threading.Thread):
         session['last_time'] = time.time()
         ret = {}
         k = 0
-        for addr in addresses:
+        for addr in addresses.keys():
             status = self.store.get_status( addr )
-            msg_id, last_status = addresses.get( addr )
+            msg_id, last_status = addresses[addr]
             if last_status != status:
                 addresses[addr] = msg_id, status
                 ret[addr] = status
@@ -75,7 +75,7 @@ class NativeServer(threading.Thread):
         """deprecated in 0.42, wad replaced by add_address_to_session"""
         self.sessions[session_id]['addresses'] = {}
         for a in addresses:
-            self.sessions[session_id]['addresses'][a] = ''
+            self.sessions[session_id]['addresses'][a] = ('','')
         self.sessions[session_id]['last_time'] = time.time()
         return 'ok'
 
