@@ -54,13 +54,12 @@ from processor import Dispatcher
 from transports.stratum_http import HttpServer
 from transports.stratum_tcp import TcpServer
 from transports.native import NativeServer
-from irc import ServerProcessor
-from abe_backend import AbeProcessor
 
+from modules.irc import ServerProcessor
 if use_libbitcoin:
     from modules.python_bitcoin import LibBitcoinProcessor as BlockchainProcessor
 else:
-    from abe_backend import AbeProcessor as BlockchainProcessor
+    from modules.abe import AbeProcessor as BlockchainProcessor
 
 if __name__ == '__main__':
 
