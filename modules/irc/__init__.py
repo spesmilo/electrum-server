@@ -34,7 +34,7 @@ class ServerProcessor(Processor):
         if self.native_port:
             s+= 'n' + self.native_port + ' '
         if self.stratum_tcp_port:
-            s += 's' + self.stratum_tcp_port + ' ' 
+            s += 't' + self.stratum_tcp_port + ' ' 
         if self.stratum_http_port:
             s += 'h' + self.stratum_http_port + ' '
         return s

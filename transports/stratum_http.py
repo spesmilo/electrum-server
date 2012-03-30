@@ -112,11 +112,10 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
                 continue
 
             session = self.sessions.get(session_id)
-            if session:
-                self.dispatcher.process(session, req_entry)
-                if req_entry['method'] == 'server.stop':
-                    return json.dumps({'result':'ok'})
-
+            self.dispatcher.process(session, req_entry)
+                
+            if req_entry['method'] == 'server.stop':
+                return json.dumps({'result':'ok'})
 
         r = self.poll_session(session_id)
         for item in r:
@@ -194,12 +193,12 @@ class StratumJSONRPCRequestHandler(
             c = self.headers.get('cookie')
             if c:
                 if c[0:8]=='SESSION=':
-                    print "found cookie", c[8:]
+                    #print "found cookie", c[8:]
                     session_id = c[8:]
 
             if session_id is None:
                 session_id = self.server.create_session()
-                print "setting cookie", session_id
+                #print "setting cookie", session_id
 
             response = self.server._marshaled_dispatch(session_id, data)
             self.send_response(200)
@@ -266,25 +265,29 @@ class StratumJSONRPCServer(SocketServer.TCPServer, StratumJSONRPCDispatcher):
         self.sessions[session_id] = HttpSession(session_id)
         return session_id
 
-    def poll_session(self,session_id):
-        responses = self.sessions[session_id].pending_responses[:]
-        self.sessions[session_id].pending_responses = []
-        print "poll: %d responses"%len(responses)
+    def poll_session(self, session_id):
+        q = self.sessions[session_id].pending_responses
+        responses = []
+        while not q.empty():
+            r = q.get()
+            responses.append(r)
+        #print "poll: %d responses"%len(responses)
         return responses
 
 
 from processor import Session
+import Queue
 
 class HttpSession(Session):
 
     def __init__(self, session_id):
         Session.__init__(self)
-        self.pending_responses = []
+        self.pending_responses = Queue.Queue()
         print "new http session", session_id
 
     def send_response(self, response):
         raw_response = json.dumps(response)
-        self.pending_responses.append(response)
+        self.pending_responses.put(response)
 
 class HttpServer(threading.Thread):
     def __init__(self, dispatcher, host, port):
