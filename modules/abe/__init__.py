@@ -205,13 +205,13 @@ class AbeStore(Datastore_class):
                 break
             tx_hash = self.hashout_hex(tx_hash)
             txpoint = {
-                    "nTime":    int(nTime),
+                    "timestamp":    int(nTime),
                     "height":   int(height),
-                    "is_in":    int(is_in),
-                    "blk_hash": self.hashout_hex(blk_hash),
+                    "is_input":    int(is_in),
+                    "block_hash": self.hashout_hex(blk_hash),
                     "tx_hash":  tx_hash,
                     "tx_id":    int(tx_id),
-                    "pos":      int(pos),
+                    "index":      int(pos),
                     "value":    int(value),
                     }
 
@@ -220,7 +220,7 @@ class AbeStore(Datastore_class):
 
 
         # todo: sort them really...
-        txpoints = sorted(txpoints, key=operator.itemgetter("nTime"))
+        txpoints = sorted(txpoints, key=operator.itemgetter("timestamp"))
 
         # read memory pool
         rows = []
@@ -243,13 +243,13 @@ class AbeStore(Datastore_class):
 
             #print "mempool", tx_hash
             txpoint = {
-                    "nTime":    0,
+                    "timestamp":    0,
                     "height":   0,
-                    "is_in":    int(is_in),
-                    "blk_hash": 'mempool', 
+                    "is_input":    int(is_in),
+                    "block_hash": 'mempool', 
                     "tx_hash":  tx_hash,
                     "tx_id":    int(tx_id),
-                    "pos":      int(pos),
+                    "index":      int(pos),
                     "value":    int(value),
                     }
             txpoints.append(txpoint)
@@ -274,7 +274,7 @@ class AbeStore(Datastore_class):
             txpoint['outputs'] = txoutputs
 
             # for all unspent inputs, I want their scriptpubkey. (actually I could deduce it from the address)
-            if not txpoint['is_in']:
+            if not txpoint['is_input']:
                 # detect if already redeemed...
                 for row in outrows:
                     if row[6] == dbhash: break
@@ -284,7 +284,7 @@ class AbeStore(Datastore_class):
                 # pos, script, value, o_hash, o_id, o_pos, binaddr = row
                 # if not redeemed, we add the script
                 if row:
-                    if not row[4]: txpoint['raw_scriptPubKey'] = row[1]
+                    if not row[4]: txpoint['raw_output_script'] = row[1]
 
         # cache result
         if not address_has_mempool:
@@ -300,7 +300,7 @@ class AbeStore(Datastore_class):
             status = None
         else:
             lastpoint = tx_points[-1]
-            status = lastpoint['blk_hash']
+            status = lastpoint['block_hash']
             # this is a temporary hack; move it up once old clients have disappeared
             if status == 'mempool': # and session['version'] != "old":
                 status = status + ':%d'% len(tx_points)

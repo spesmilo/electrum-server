@@ -10,6 +10,15 @@ def timestr():
     return time.strftime("[%d/%m/%Y-%H:%M:%S]")
 
 
+def new_to_old(s):
+    s = s.replace("'block_hash'", "'blk_hash'")
+    s = s.replace("'index'", "'pos'")
+    s = s.replace("'timestamp'", "'nTime'")
+    s = s.replace("'is_input'", "'is_in'")
+    s = s.replace("'raw_output_script'","'raw_scriptPubKey'")
+    return s
+
+
 class NativeServer(threading.Thread):
 
     def __init__(self, shared, abe, irc, banner, host, port):
@@ -156,6 +165,7 @@ class NativeServer(threading.Thread):
         elif cmd == 'h': 
             address = data
             out = repr( self.store.get_history( address ) )
+            out = new_to_old(out)
 
         elif cmd =='tx':
             out = self.store.send_tx(data)
