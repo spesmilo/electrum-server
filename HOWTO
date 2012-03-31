@@ -5,8 +5,7 @@ Abstract
 
 This document is an easy to follow guide to installing and running your own Electrum server on Linux. It is structured as a series of steps you need to follow, ordered in the most logical way. The next two sections describe some conventions we use in this document and hardware, software and expertise requirements.
 
-The most up-to date version of this document is available at: https://gitorious.org/electrum/electrum/blobs/master/server/HOWTO
-
+The most up-to date version of this document is available at: https://gitorious.org/electrum/server/blobs/master/HOWTO
 
 Conventions
 
@@ -44,10 +43,11 @@ Step 1. Download and install Electrum
 
 We will download the latest git snapshot for Electrum and 'install' it in our ~/bin directory:
 
-$ cd ~/src
-$ git clone git://gitorious.org/electrum/electrum.git
+$ mkdir -p ~/src/electrum
+$ cd ~/src/electrum
+$ git://gitorious.org/electrum/server.git
 $ chmod +x ~/src/electrum/server/server.py
-$ ln -s ~/src/electrum/server/server.py ~/bin/electrum-server
+$ ln -s ~/src/electrum/server/server.py ~/bin/electrum
 
 
 Step 2. Install a patched version of bitcoind
@@ -55,17 +55,17 @@ Step 2. Install a patched version of bitcoind
 Electrum server requires some small modifications to the bitcoind daemon. The patch is included in the Electrum sources we just downloaded, now we will download the Bitcoin sources, patch, compile and install the binary to our ~/bin directory.
 
 $ cd ~/src
-$ wget https://github.com/bitcoin/bitcoin/tarball/v0.5.2 -O bitcoin-0.5.2.tgz
-$ tar xvzf bitcoin-0.5.2.tgz
-$ mv bitcoin-bitcoin-fb24b05 bitcoin-0.5.2
-$ cd bitcoin-0.5.2/src
-$ patch -p 2 < ~/src/electrum/server/patches/bitcoin-0.5.2.diff
+$ wget https://github.com/bitcoin/bitcoin/tarball/v0.6.0 -O bitcoin-0.6.0.tgz
+$ tar xvzf bitcoin-0.6.0.tgz
+$ mv bitcoin-bitcoin-b3b5ab1 bitcoin-0.6.0
+$ cd bitcoin-0.6.0/src
+$ patch -p 2 < ~/src/electrum/server/patches/bitcoin-0.6.0.diff
 $ make -f makefile.unix
 $ strip bitcoind
 $ mv bitcoind ~/bin
 
 
-Step 3. Configure and start bitcoind.
+Step 3. Configure and start bitcoind
 
 In order to allow Electrum to "talk" to bitcoind, we need to set up a RPC username and password for bitcoind. We will then start bitcoind and wait for it to complete downloading the blockchain.
 
@@ -94,6 +94,8 @@ $ cd ~/src
 $ git clone git://github.com/jtobey/bitcoin-abe.git
 $ cd bitcoin-abe
 $ sudo python setup.py install
+# Please note that the path below might be slightly different on your system,
+# for example python2.6 or 2.8
 $ sudo chmod +x /usr/local/lib/python2.7/dist-packages/Abe/abe.py
 $ ln -s /usr/local/lib/python2.7/dist-packages/Abe/abe.py ~/bin/abe
 
@@ -141,12 +143,12 @@ Listening on http://localhost:2750
 
 It means the blockchain is imported and you can exit Abe by pressing CTRL-C. You will not need to run Abe again after this step, Electrum server will update the blockchain by itsself. We only used Abe because it is much faster for the initial import.
 
-Important notice: This is a *very* long process. Even on fast machines you can expect it to take hours. Here are some benchmarks for importing ~159.400 blocks (size of the Bitcoin blockchain at the time of this writing):
+Important notice: This is a *very* long process. Even on fast machines you can expect it to take hours. Here are some benchmarks for importing ~173.000 blocks (size of the Bitcoin blockchain at the time of this writing):
 
-System 1: ~8 hours.
+System 1: ~9 hours.
 	* CPU: Intel Core i7 Q740 @ 1.73GHz
 	* HDD: very fast SSD
-System 2: ~48 hours.
+System 2: ~55 hours.
 	* CPU: Intel Xeon X3430 @ 2.40GHz
 	* HDD: 2 x SATA in a RAID1.
 
@@ -158,24 +160,28 @@ Electrum reads a config file (/etc/electrum.conf) when starting up. This file in
 $ sudo cp ~/src/electrum/server/electrum.conf.sample /etc/electrum.conf
 $ sudo $EDITOR /etc/electrum.conf
 
-	# sample server config for a public Electrum server	
+	# sample config for a public Electrum server	
 	[server]
 	host = host-fqdn
-	port = 50000
+	native_port = 50000
+	stratum_tcp_port:50001
+	stratum_http_port:8081
 	password = <electrum-server-password>
 	banner = Welcome to Electrum server!
 	irc = yes
-	ircname = public Electrum server
+	irc_nick = MyNick
 	cache = yes
 
-	# sample server config for a private (does not advertise on IRC) Electrum server
+	# sample config for a private server (does not advertise on IRC)
 	[server]
 	host = localhost
-	port = 50000
+	native_port = 50000
+	stratum_tcp_port:50001
+	stratum_http_port:8081
 	password = <electrum-server-password>
-	banner = Welcome to Electrum server!
+	banner = Welcome to my private Electrum server!
 	irc = no
-	ircname = foo
+	irc_nick = foo
 	cache = yes
 
 	# database setup - MySQL
