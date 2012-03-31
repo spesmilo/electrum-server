@@ -1,10 +1,12 @@
 [server]
 host = localhost
-port = 50000
+native_port = 50000
+stratum_tcp_port = 50001
+stratum_http_port = 8081
 password = secret
 banner = Welcome to Electrum!
 irc = yes
-ircname = public Electrum server
+irc_nick = MyNick
 cache = no
 
 [database]
