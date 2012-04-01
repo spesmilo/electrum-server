@@ -5,6 +5,14 @@ import time
 import traceback, sys
 import Queue as queue
 
+def random_string(N):
+    import random, string
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(N))
+
+def timestr():
+    return time.strftime("[%d/%m/%Y-%H:%M:%S]")
+
+
 class Shared:
 
     def __init__(self):
@@ -125,6 +133,9 @@ class RequestDispatcher(threading.Thread):
         except:
             traceback.print_exc(file=sys.stdout)
 
+        if method in ['server.version']:
+            session.version = params[0]
+
 
     def add_session(self, session):
         with self.lock:
@@ -149,6 +160,19 @@ class Session:
         self._stopped = False
         self.lock = threading.Lock()
         self.subscriptions = []
+        self.address = ''
+        self.name = ''
+        threading.Timer(2, self.info).start()
+
+    def info(self):
+        for s in self.subscriptions:
+            m, p = s
+            if m == 'blockchain.address.subscribe':
+                addr = p[0]
+                break
+        else:
+            addr = None
+        print timestr(), self.name, self.address, addr, len(self.subscriptions), self.version
 
     def stopped(self):
         with self.lock:

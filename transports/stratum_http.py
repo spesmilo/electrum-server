@@ -47,11 +47,7 @@ from the processor point of view:
 """
 
 
-def random_string(N):
-    import random, string
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(N))
-
-
+from processor import random_string
 
 
 def get_version(request):
@@ -259,7 +255,6 @@ class StratumJSONRPCServer(SocketServer.TCPServer, StratumJSONRPCDispatcher):
         self.sessions = {}
 
 
-
     def create_session(self):
         session_id = random_string(10)
         self.sessions[session_id] = HttpSession(session_id)
@@ -283,7 +278,8 @@ class HttpSession(Session):
     def __init__(self, session_id):
         Session.__init__(self)
         self.pending_responses = Queue.Queue()
-        print "new http session", session_id
+        self.address = session_id
+        self.name = "HTTP session"
 
     def send_response(self, response):
         raw_response = json.dumps(response)

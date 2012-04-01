@@ -1,13 +1,8 @@
 import thread, threading, time, socket, traceback, ast, sys
 
 
+from processor import timestr, random_string
 
-def random_string(N):
-    import random, string
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(N))
-
-def timestr():
-    return time.strftime("[%d/%m/%Y-%H:%M:%S]")
 
 
 def new_to_old(s):

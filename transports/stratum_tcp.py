@@ -4,15 +4,16 @@ import threading
 import time
 import Queue as queue
 
-from processor import Session, Dispatcher
+from processor import Session, Dispatcher, timestr
 
 class TcpSession(Session):
 
     def __init__(self, connection, address):
-        self._connection = connection
-        self.address = address
         Session.__init__(self)
-        print "New session", address
+        self._connection = connection
+        self.address = address[0]
+        self.version = 'unknown'
+        self.name = "TCP session"
 
     def connection(self):
         if self.stopped():
@@ -22,7 +23,7 @@ class TcpSession(Session):
 
     def stop(self):
         self._connection.close()
-        print "Terminating connection:", self.address[0]
+        #print "Terminating connection:", self.address
         with self.lock:
             self._stopped = True
 

@@ -100,7 +100,7 @@ class ServerProcessor(Processor):
             result = self.get_peers()
 
         elif method == 'server.version':
-            print "version", params
+            pass
 
         elif method == 'server.stop':
             print "stopping..."
