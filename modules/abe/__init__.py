@@ -427,7 +427,7 @@ class AbeProcessor(Processor):
                 except:
                     break
                 if addr in self.watched_addresses:
-                    status = self.get_status( addr )
+                    status = self.store.get_status( addr )
                     self.push_response({ 'method':'blockchain.address.subscribe', 'params':[addr], 'result':status })
 
             time.sleep(10)
