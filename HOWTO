@@ -169,7 +169,6 @@ $ sudo $EDITOR /etc/electrum.conf
 	password = <electrum-server-password>
 	banner = Welcome to Electrum server!
 	irc = yes
-	irc_nick = MyNick
 	cache = yes
 
 	# sample config for a private server (does not advertise on IRC)
@@ -181,7 +180,6 @@ $ sudo $EDITOR /etc/electrum.conf
 	password = <electrum-server-password>
 	banner = Welcome to my private Electrum server!
 	irc = no
-	irc_nick = foo
 	cache = yes
 
 	# database setup - MySQL
