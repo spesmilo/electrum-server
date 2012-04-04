@@ -33,17 +33,17 @@ config.add_section('database')
 config.set('database', 'type', 'psycopg2')
 config.set('database', 'database', 'abe')
 
-try:
-    f = open('/etc/electrum.conf','r')
-    config.readfp(f)
-    f.close()
-except:
-    print "Could not read electrum.conf. I will use the default values."
+for path in ('', '/etc/'):
+    filename = path + 'electrum.conf'
+    try:
+        with open(filename, 'r') as f:
+            config.readfp(f)
+    except:
+        print "Could not read %s. Falling back." % filename
 
 try:
-    f = open('/etc/electrum.banner','r')
-    config.set('server','banner', f.read())
-    f.close()
+    with open('/etc/electrum.banner', 'r') as f:
+        config.set('server','banner', f.read())
 except:
     pass
 
