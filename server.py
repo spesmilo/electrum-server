@@ -18,91 +18,113 @@
 import time, sys, traceback
 import ConfigParser
 
-config = ConfigParser.ConfigParser()
-# set some defaults, which will be overwritten by the config file
-config.add_section('server')
-config.set('server','banner', 'Welcome to Electrum!')
-config.set('server', 'host', 'localhost')
-config.set('server', 'native_port', '50000')
-config.set('server', 'stratum_tcp_port', '50001')
-config.set('server', 'stratum_http_port', '8081')
-config.set('server', 'password', '')
-config.set('server', 'irc', 'yes')
-config.set('server', 'irc_nick', '')
-config.add_section('database')
-config.set('database', 'type', 'psycopg2')
-config.set('database', 'database', 'abe')
-config.set('server', 'backend', 'abe')
-
-for path in ('', '/etc/'):
-    filename = path + 'electrum.conf'
+def attempt_read_config(config, filename):
     try:
         with open(filename, 'r') as f:
             config.readfp(f)
     except IOError:
         print "Could not read %s. Falling back." % filename
 
-try:
-    with open('/etc/electrum.banner', 'r') as f:
-        config.set('server','banner', f.read())
-except IOError:
-    pass
+def create_config():
+    config = ConfigParser.ConfigParser()
+    # set some defaults, which will be overwritten by the config file
+    config.add_section('server')
+    config.set('server','banner', 'Welcome to Electrum!')
+    config.set('server', 'host', 'localhost')
+    config.set('server', 'native_port', '50000')
+    config.set('server', 'stratum_tcp_port', '50001')
+    config.set('server', 'stratum_http_port', '8081')
+    config.set('server', 'password', '')
+    config.set('server', 'irc', 'yes')
+    config.set('server', 'irc_nick', '')
+    config.add_section('database')
+    config.set('database', 'type', 'psycopg2')
+    config.set('database', 'database', 'abe')
+    config.set('server', 'backend', 'abe')
 
-password = config.get('server','password')
-host = config.get('server','host')
-native_port = config.get('server','native_port')
-stratum_tcp_port = config.get('server','stratum_tcp_port')
-stratum_http_port = config.get('server','stratum_http_port')
+    for path in ('', '/etc/'):
+        filename = path + 'electrum.conf'
+        attempt_read_config(config, filename)
 
-from processor import Dispatcher
-from transports.stratum_http import HttpServer
-from transports.stratum_tcp import TcpServer
-from transports.native import NativeServer
+    try:
+        with open('/etc/electrum.banner', 'r') as f:
+            config.set('server','banner', f.read())
+    except IOError:
+        pass
 
-from modules.irc import ServerProcessor
-backend_name = config.get('server', 'backend')
-if backend_name == "libbitcoin":
-    # NativeServer cannot be used with libbitcoin
-    native_port = None
-    from modules.python_bitcoin import BlockchainProcessor
-elif backend_name == "abe":
-    from modules.abe import AbeProcessor as BlockchainProcessor
-else:
-    raise Exception('Unknown backend specified')
+    return config
+
+def run_rpc_command(command, stratum_http_port):
+    import jsonrpclib
+    server = jsonrpclib.Server('http://%s:%s'%(host, stratum_http_port))
+    if command == 'stop':
+        result = server.server.stop(password)
+    else:
+        result = "Unknown command: '%s'" % command
+    print result
 
 if __name__ == '__main__':
+    config = create_config()
+    password = config.get('server', 'password')
+    host = config.get('server', 'host')
+    native_port = config.get('server', 'native_port')
+    stratum_tcp_port = config.get('server', 'stratum_tcp_port')
+    stratum_http_port = config.get('server', 'stratum_http_port')
 
-    if len(sys.argv)>1:
-        import jsonrpclib
-        server = jsonrpclib.Server('http://%s:%s'%(host,stratum_http_port))
-        cmd = sys.argv[1]
-        if cmd == 'stop':
-            out = server.server.stop(password)
-        else:
-            out = "Unknown command: '%s'" % cmd
-        print out
+    if len(sys.argv) > 1:
+        run_rpc_command(sys.argv[1], stratum_http_port)
         sys.exit(0)
+
+    from processor import Dispatcher
+    from transports.stratum_http import HttpServer
+    from transports.stratum_tcp import TcpServer
+    from transports.native import NativeServer
+
+    from modules.irc import ServerProcessor
+    backend_name = config.get('server', 'backend')
+    if backend_name == "libbitcoin":
+        # NativeServer cannot be used with libbitcoin
+        native_port = None
+        config.set('server', 'native_port', '')
+        from modules.python_bitcoin import BlockchainProcessor
+    elif backend_name == "abe":
+        from modules.abe import AbeProcessor as BlockchainProcessor
+    else:
+        sys.stderr.write('Unknown backend specified\n')
+        sys.exit(-1)
 
     # Create hub
     dispatcher = Dispatcher()
     shared = dispatcher.shared
 
     # Create and register processors
-    abe = BlockchainProcessor(config)
-    dispatcher.register('blockchain', abe)
+    chain_proc = BlockchainProcessor(config)
+    dispatcher.register('blockchain', chain_proc)
 
-    sb = ServerProcessor(config)
-    dispatcher.register('server', sb)
+    server_proc = ServerProcessor(config)
+    dispatcher.register('server', server_proc)
 
-    # Create various transports we need
     transports = []
-    if native_port: transports.append( NativeServer(shared, abe, sb, config.get('server','banner'), host, int(native_port)) )
-    if stratum_tcp_port: transports.append( TcpServer(dispatcher, host, int(stratum_tcp_port)) )
-    if stratum_http_port: transports.append( HttpServer(dispatcher, host, int(stratum_http_port)) )
+    # Create various transports we need
+    if native_port is not None:
+        server_banner = config.get('server','banner')
+        native_server = NativeServer(shared, chain_proc, server_proc,
+                                     server_banner, host, int(native_port))
+        transports.append(native_server)
+
+    if stratum_tcp_port is not None:
+        tcp_server = TcpServer(dispatcher, host, int(stratum_tcp_port))
+        transports.append(tcp_server)
+
+    if stratum_http_port is not None:
+        http_server = HttpServer(dispatcher, host, int(stratum_http_port))
+        transports.append(http_server)
+
     for server in transports:
         server.start()
 
-    print "starting Electrum server on", host
+    print "Starting Electrum server on", host
     while not shared.stopped():
         time.sleep(1)
-    print "server stopped"
+    print "Server stopped"
+
