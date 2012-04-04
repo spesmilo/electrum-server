@@ -132,7 +132,7 @@ class AddressGetHistory:
         self.processor.push_response({"id": request["id"], "method":request["method"], "params":request["params"], "result": result})
 
 
-class LibbitcoinProcessor(Processor):
+class BlockchainProcessor(Processor):
 
     def __init__(self, config):
         Processor.__init__(self)

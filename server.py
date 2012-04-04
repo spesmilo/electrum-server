@@ -32,30 +32,27 @@ config.set('server', 'irc_nick', '')
 config.add_section('database')
 config.set('database', 'type', 'psycopg2')
 config.set('database', 'database', 'abe')
+config.set('server', 'backend', 'abe')
 
 for path in ('', '/etc/'):
     filename = path + 'electrum.conf'
     try:
         with open(filename, 'r') as f:
             config.readfp(f)
-    except:
+    except IOError:
         print "Could not read %s. Falling back." % filename
 
 try:
     with open('/etc/electrum.banner', 'r') as f:
         config.set('server','banner', f.read())
-except:
+except IOError:
     pass
 
 password = config.get('server','password')
 host = config.get('server','host')
-use_libbitcoin = False
 native_port = config.get('server','native_port')
 stratum_tcp_port = config.get('server','stratum_tcp_port')
 stratum_http_port = config.get('server','stratum_http_port')
-# NativeServer cannot be used with libbitcoin
-if use_libbitcoin: native_port = None
-
 
 from processor import Dispatcher
 from transports.stratum_http import HttpServer
@@ -63,11 +60,15 @@ from transports.stratum_tcp import TcpServer
 from transports.native import NativeServer
 
 from modules.irc import ServerProcessor
-if use_libbitcoin:
-    from modules.python_bitcoin \
-        import LibbitcoinProcessor as BlockchainProcessor
-else:
+backend_name = config.get('server', 'backend')
+if backend_name == "libbitcoin":
+    # NativeServer cannot be used with libbitcoin
+    native_port = None
+    from modules.python_bitcoin import BlockchainProcessor
+elif backend_name == "abe":
     from modules.abe import AbeProcessor as BlockchainProcessor
+else:
+    raise Exception('Unknown backend specified')
 
 if __name__ == '__main__':
 
