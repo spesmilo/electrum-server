@@ -64,7 +64,8 @@ from transports.native import NativeServer
 
 from modules.irc import ServerProcessor
 if use_libbitcoin:
-    from modules.python_bitcoin import LibBitcoinProcessor as BlockchainProcessor
+    from modules.python_bitcoin \
+        import LibbitcoinProcessor as BlockchainProcessor
 else:
     from modules.abe import AbeProcessor as BlockchainProcessor
 
