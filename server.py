@@ -23,7 +23,7 @@ def attempt_read_config(config, filename):
         with open(filename, 'r') as f:
             config.readfp(f)
     except IOError:
-        print "Could not read %s. Falling back." % filename
+        pass
 
 def create_config():
     config = ConfigParser.ConfigParser()
@@ -42,7 +42,7 @@ def create_config():
     config.set('database', 'database', 'abe')
     config.set('server', 'backend', 'abe')
 
-    for path in ('', '/etc/'):
+    for path in ('/etc/', ''):
         filename = path + 'electrum.conf'
         attempt_read_config(config, filename)
 
