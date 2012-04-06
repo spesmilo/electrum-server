@@ -113,7 +113,8 @@ class NumblocksSubscribe:
     def reorganize(self, ec, fork_point, arrivals, replaced):
         latest = fork_point + len(arrivals)
         self.latest.set(latest)
-        self.processor.push_response({"method":"numblocks.subscribe", "result": latest})
+        response = {"method": "numblocks.subscribe", "result": latest}
+        self.processor.push_response(response)
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
 
 
@@ -129,7 +130,9 @@ class AddressGetHistory:
             bitcoin.bind(self.respond, request, bitcoin._1))
 
     def respond(self, request, result):
-        self.processor.push_response({"id": request["id"], "method":request["method"], "params":request["params"], "result": result})
+        response = {"id": request["id"], "method": request["method"],
+                    "params": request["params"], "result": result}
+        self.processor.push_response(response)
 
 
 class BlockchainProcessor(Processor):
@@ -144,19 +147,17 @@ class BlockchainProcessor(Processor):
         self.backend.stop()
 
     def process(self, request):
-
         print "New request (lib)", request
         if request["method"] == "numblocks.subscribe":
             self.numblocks_subscribe.subscribe(session, request)
         elif request["method"] == "address.get_history":
             self.address_get_history.get(request)
         elif request["method"] == "server.banner":
-            self.push_response({"id": request["id"], "method": request["method"], "params":request["params"],
+            self.push_response({"id": request["id"],
+                "method": request["method"], "params": request["params"],
                 "result": "libbitcoin using python-bitcoin bindings"})
         elif request["method"] == "transaction.broadcast":
             self.broadcast_transaction(request)
-        # Execute and when ready, you call
-        # self.push_response(response)
 
     def broadcast_transaction(self, request):
         raw_tx = bitcoin.data_chunk(str(request["params"]))
@@ -164,18 +165,19 @@ class BlockchainProcessor(Processor):
         try:
             tx = exporter.load_transaction(raw_tx)
         except RuntimeError:
-            response = {"id": request["id"], "method": request["method"], "params":request["params"], "result": None,
-                "error": {"message": 
-                    "Exception while parsing the transaction data.",
-                    "code": -4}}
+            response = {"id": request["id"], "method": request["method"],
+                        "params": request["params"], "result": None,
+                        "error": {"message": 
+                            "Exception while parsing the transaction data.",
+                            "code": -4}}
         else:
             self.backend.protocol.broadcast_transaction(tx)
             tx_hash = str(bitcoin.hash_transaction(tx))
-            response = {"id": request["id"], "method": request["method"], "params":request["params"], "result": tx_hash}
+            response = {"id": request["id"], "method": request["method"],
+                        "params": request["params"], "result": tx_hash}
         self.push_response(response)
 
     def run(self):
-        # this class is a thread. it does nothing in this example.
         print "Warning: pre-alpha prototype. Full of bugs."
         while not self.shared.stopped():
             time.sleep(1)

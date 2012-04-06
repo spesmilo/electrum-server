@@ -29,7 +29,7 @@ def create_config():
     config = ConfigParser.ConfigParser()
     # set some defaults, which will be overwritten by the config file
     config.add_section('server')
-    config.set('server','banner', 'Welcome to Electrum!')
+    config.set('server', 'banner', 'Welcome to Electrum!')
     config.set('server', 'host', 'localhost')
     config.set('server', 'native_port', '50000')
     config.set('server', 'stratum_tcp_port', '50001')
@@ -80,14 +80,14 @@ if __name__ == '__main__':
     from transports.stratum_tcp import TcpServer
     from transports.native import NativeServer
 
-    from modules.irc import ServerProcessor
+    from backends.irc import ServerProcessor
     backend_name = config.get('server', 'backend')
     if backend_name == "libbitcoin":
         # NativeServer cannot be used with libbitcoin
         native_port = None
         config.set('server', 'native_port', '')
     try:
-        backend = __import__("modules." + backend_name,
+        backend = __import__("backends." + backend_name,
                              fromlist=["BlockchainProcessor"])
     except ImportError:
         sys.stderr.write('Unknown backend specified\n')
