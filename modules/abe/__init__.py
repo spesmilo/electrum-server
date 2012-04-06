@@ -371,7 +371,7 @@ class AbeStore(Datastore_class):
 
 from processor import Processor
 
-class AbeProcessor(Processor):
+class BlockchainProcessor(Processor):
 
     def __init__(self, config):
         Processor.__init__(self)

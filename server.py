@@ -86,10 +86,10 @@ if __name__ == '__main__':
         # NativeServer cannot be used with libbitcoin
         native_port = None
         config.set('server', 'native_port', '')
-        from modules.python_bitcoin import BlockchainProcessor
-    elif backend_name == "abe":
-        from modules.abe import AbeProcessor as BlockchainProcessor
-    else:
+    try:
+        backend = __import__("modules." + backend_name,
+                             fromlist=["BlockchainProcessor"])
+    except ImportError:
         sys.stderr.write('Unknown backend specified\n')
         sys.exit(-1)
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     shared = dispatcher.shared
 
     # Create and register processors
-    chain_proc = BlockchainProcessor(config)
+    chain_proc = backend.BlockchainProcessor(config)
     dispatcher.register('blockchain', chain_proc)
 
     server_proc = ServerProcessor(config)
