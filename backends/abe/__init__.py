@@ -2,7 +2,7 @@ from Abe.abe import hash_to_address, decode_check_address
 from Abe.DataStore import DataStore as Datastore_class
 from Abe import DataStore, readconf, BCDataStream,  deserialize, util, base58
 
-import psycopg2, binascii
+import binascii
 
 import thread, traceback, sys, urllib, operator
 from json import dumps, loads
