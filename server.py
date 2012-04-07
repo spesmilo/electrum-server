@@ -91,7 +91,7 @@ if __name__ == '__main__':
                              fromlist=["BlockchainProcessor"])
     except ImportError:
         sys.stderr.write("Unknown backend '%s' specified\n" % backend_name)
-        sys.exit(-1)
+        raise
 
     # Create hub
     dispatcher = Dispatcher()
