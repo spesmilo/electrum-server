@@ -90,7 +90,7 @@ if __name__ == '__main__':
         backend = __import__("backends." + backend_name,
                              fromlist=["BlockchainProcessor"])
     except ImportError:
-        sys.stderr.write('Unknown backend specified\n')
+        sys.stderr.write("Unknown backend '%s' specified\n" % backend_name)
         sys.exit(-1)
 
     # Create hub
