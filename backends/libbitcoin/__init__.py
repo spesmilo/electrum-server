@@ -27,9 +27,9 @@ class Backend:
 
         self.protocol.subscribe_channel(self.monitor_tx)
         self.session = \
-            bitcoin.session(self.hosts, self.handshake, self.network,
-                            self.protocol, self.blockchain, self.poller,
-                            self.transaction_pool)
+            bitcoin.session(self.network_service, self.hosts, self.handshake,
+                            self.network, self.protocol, self.blockchain,
+                            self.poller, self.transaction_pool)
         self.session.start(self.handle_start)
 
     def handle_start(self, ec):
