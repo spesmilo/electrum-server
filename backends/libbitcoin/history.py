@@ -1,5 +1,5 @@
 import bitcoin
-from bitcoin import bind, _1, _2, _3
+from bitcoin import _1, _2, _3
 import threading
 
 class PaymentEntry:
@@ -25,7 +25,8 @@ class PaymentEntry:
 
 class History:
 
-    def __init__(self, chain):
+    def __init__(self, service, chain):
+        self.wrap = bitcoin.Strand(service).wrap
         self.chain = chain
         self.lock = threading.Lock()
         self.statement = []
@@ -38,7 +39,8 @@ class History:
         address = bitcoin.payment_address(address)
         # To begin we fetch all the outputs (payments in)
         # associated with this address
-        self.chain.fetch_outputs(address, self.start_loading)
+        self.chain.fetch_outputs(address,
+            self.wrap(self.start_loading, _1, _2))
 
     def stop(self):
         with self.lock:
@@ -66,7 +68,7 @@ class History:
                 self.statement.append(entry)
             # Attempt to fetch the spend of this output
             self.chain.fetch_spend(outpoint,
-                bind(self.load_spend, _1, _2, entry))
+                self.wrap(self.load_spend, _1, _2, entry))
             self.load_tx_info(outpoint, entry, False)
 
     def load_spend(self, ec, inpoint, entry):
@@ -124,7 +126,7 @@ class History:
         # of the parent block, so we load the block depth and then
         # fetch the block header and hash it.
         self.chain.fetch_transaction_index(point.hash,
-            bind(self.tx_index, _1, _2, _3, entry, info))
+            self.wrap(self.tx_index, _1, _2, _3, entry, info))
 
     def tx_index(self, ec, block_depth, offset, entry, info):
         if self.stop_on_error(ec):
@@ -132,7 +134,7 @@ class History:
         info["height"] = block_depth
         # And now for the block hash
         self.chain.fetch_block_header_by_depth(block_depth,
-            bind(self.block_header, _1, _2, entry, info))
+            self.wrap(self.block_header, _1, _2, entry, info))
 
     def block_header(self, ec, blk_head, entry, info):
         if self.stop_on_error(ec):
@@ -142,7 +144,7 @@ class History:
         tx_hash = bitcoin.hash_digest(info["tx_hash"])
         # Now load the actual main transaction for this input or output
         self.chain.fetch_transaction(tx_hash,
-            bind(self.load_tx, _1, _2, entry, info))
+            self.wrap(self.load_tx, _1, _2, entry, info))
 
     def load_tx(self, ec, tx, entry, info):
         if self.stop_on_error(ec):
@@ -188,7 +190,7 @@ class History:
                 continue
             prevout = tx_input.previous_output
             self.chain.fetch_transaction(prevout.hash,
-                bind(self.load_input_tx, _1, _2,
+                self.wrap(self.load_input_tx, _1, _2,
                      prevout.index, entry, info, input_index))
 
     def inputs_all_loaded(self, info_inputs):
@@ -220,14 +222,19 @@ if __name__ == "__main__":
     def blockchain_started(ec, chain):
         print "Blockchain initialisation:", ec
     def finish(result):
-        print result
+        for line in result:
+            for k, v in line.iteritems():
+                begin = k + ":"
+                print begin, " " * (12 - len(begin)), v
+            print
 
     service = bitcoin.async_service(1)
     prefix = "/home/genjix/libbitcoin/database"
     chain = bitcoin.bdb_blockchain(service, prefix, blockchain_started)
     address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"
     print "Looking up", address
-    h = History(chain)
+    local_service = bitcoin.AsyncService()
+    h = History(local_service, chain)
     h.start(address, finish)
     raw_input()
     print "Stopping..."
