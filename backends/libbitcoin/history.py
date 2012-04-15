@@ -76,13 +76,14 @@ class MemoryPoolBuffer:
                 info["timestamp"] = self.timestamps[info["tx_hash"]]
                 result.append(info)
         if self.lookup_address.has_key(str(address)):
-            point = self.lookup_address[str(address)]
-            info = ExtendableDict()
-            info["tx_hash"] = str(point.hash)
-            info["index"] = point.index
-            info["is_input"] = 0
-            info["timestamp"] = self.timestamps[info["tx_hash"]]
-            result.append(info)
+            addr_points = self.lookup_address[str(address)]
+            for point in addr_points:
+                info = ExtendableDict()
+                info["tx_hash"] = str(point.hash)
+                info["index"] = point.index
+                info["is_input"] = 0
+                info["timestamp"] = self.timestamps[info["tx_hash"]]
+                result.append(info)
         handle(result)
 
 class PaymentEntry:
@@ -108,16 +109,17 @@ class PaymentEntry:
 
 class History:
 
-    def __init__(self, service, chain, txpool, membuf):
+    def __init__(self, service, chain, txpool, membuf, mempool_counter):
         self.chain = chain
         self.txpool = txpool
         self.membuf = membuf
+        self.mempool_counter = mempool_counter
         self.lock = threading.Lock()
-        self.statement = []
-        self.membuf_result = None
         self._stopped = False
 
     def start(self, address, handle_finish):
+        self.statement = []
+        self.membuf_result = None
         self.address = address
         self.handle_finish = handle_finish
 
@@ -218,6 +220,15 @@ class History:
             # Lookup prevout in result
             # Set "value" field
             if info["is_input"] == 1:
+                if not self.mempool_counter.has_key(info["tx_hash"]):
+                    if not self.mempool_counter:
+                        count = 0
+                    else:
+                        count = max(self.mempool_counter.values()) + 1
+                    self.mempool_counter[info["tx_hash"]] = count
+                else:
+                    count = self.mempool_counter[info["tx_hash"]]
+                info["block_hash"] = "mempool:%s" % count
                 prevout_tx = None
                 for prevout_info in result:
                     if prevout_info["tx_hash"] == info.previous_output.hash:
@@ -379,6 +390,7 @@ class History:
             # No more inputs left to load
             # This info has finished loading
             info["height"] = None
+            info["block_hash"] = "mempool"
         self.finish_if_done()
 
 if __name__ == "__main__":
@@ -411,12 +423,15 @@ if __name__ == "__main__":
     membuf.recv_tx(tx_a)
     membuf.recv_tx(tx_b)
     raw_input()
-    #address = bitcoin.payment_address("1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D")
-    address = "1EMnecJFwihf2pf4nE2m8fUNFKVRMWKqhR"
+    address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "1EMnecJFwihf2pf4nE2m8fUNFKVRMWKqhR"
     #address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"
     print "Looking up", address
-    h = History(local_service, chain, txpool, membuf)
-    h.start(address, finish)
+    mempool_count = {}
+    h = History(local_service, chain, txpool, membuf, mempool_count)
+    h.start(address[0], finish)
+    raw_input()
+    h1 = History(local_service, chain, txpool, membuf, mempool_count)
+    h1.start(address[1], finish)
     raw_input()
     print "Stopping..."
 
