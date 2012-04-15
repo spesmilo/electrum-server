@@ -109,10 +109,18 @@ class NumblocksSubscribe:
     def reorganize(self, ec, fork_point, arrivals, replaced):
         latest = fork_point + len(arrivals)
         self.latest.set(latest)
-        response = {"method": "numblocks.subscribe", "result": latest}
+        response = {"id": None, "method": "blockchain.numblocks.subscribe",
+                    "result": latest}
         self.processor.push_response(response)
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
 
+    def subscribe(self, request):
+        latest = self.latest.get()
+        response = {"id": request["id"],
+                    "method": "blockchain.numblocks.subscribe",
+                    "result": latest,
+                    "error": None}
+        self.processor.push_response(response)
 
 class AddressGetHistory:
 
@@ -174,7 +182,7 @@ class BlockchainProcessor(Processor):
     def process(self, request):
         print "New request (lib)", request
         if request["method"] == "blockchain.numblocks.subscribe":
-            self.numblocks_subscribe.subscribe(session, request)
+            self.numblocks_subscribe.subscribe(request)
         elif request["method"] == "blockchain.address.subscribe":
             pass
         elif request["method"] == "blockchain.address.get_history":
