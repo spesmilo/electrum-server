@@ -37,7 +37,7 @@ class MemoryPoolBuffer:
         # transaction timestamps
         self.timestamps = {}
 
-    def recv_tx(self, tx):
+    def recv_tx(self, tx, handle_store):
         tx_hash = bitcoin.hash_transaction(tx)
         desc = (tx_hash, [], [])
         for input in tx.inputs:
@@ -48,14 +48,13 @@ class MemoryPoolBuffer:
                 desc[2].append((idx, address))
         self.txpool.store(tx,
             bind(self.confirmed, _1, desc),
-            bind(self.mempool_stored, _1, desc))
+            bind(self.mempool_stored, _1, desc, handle_store))
 
-    def mempool_stored(self, ec, desc):
+    def mempool_stored(self, ec, desc, handle_store):
         tx_hash, prevouts, addrs = desc
         if ec:
-            print "Error storing memory pool transaction", tx_hash, ec
+            handle_store(ec)
             return
-        print "Accepted transaction", tx_hash
         for idx, prevout in enumerate(prevouts):
             inpoint = bitcoin.input_point()
             inpoint.hash, inpoint.index = tx_hash, idx
@@ -65,6 +64,7 @@ class MemoryPoolBuffer:
             outpoint.hash, outpoint.index = tx_hash, idx
             self.lookup_address[str(address)] = outpoint
         self.timestamps[str(tx_hash)] = int(time.time())
+        handle_store(ec)
 
     def confirmed(self, ec, desc):
         tx_hash, prevouts, addrs = desc
@@ -420,6 +420,8 @@ if __name__ == "__main__":
 
     def blockchain_started(ec, chain):
         print "Blockchain initialisation:", ec
+    def store_tx(ec):
+        print "Tx", ec
     def finish(result):
         print "Finish"
         if result is None:
@@ -435,8 +437,8 @@ if __name__ == "__main__":
     chain = bitcoin.bdb_blockchain(service, prefix, blockchain_started)
     txpool = bitcoin.transaction_pool(service, chain)
     membuf = MemoryPoolBuffer(txpool, chain)
-    membuf.recv_tx(tx_a)
-    membuf.recv_tx(tx_b)
+    membuf.recv_tx(tx_a, store_tx)
+    membuf.recv_tx(tx_b, store_tx)
     raw_input()
     address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "1EMnecJFwihf2pf4nE2m8fUNFKVRMWKqhR"
     #address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"

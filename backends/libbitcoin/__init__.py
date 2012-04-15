@@ -1,9 +1,10 @@
 import bitcoin
+from bitcoin import bind, _1, _2, _3
 from processor import Processor
 import threading
 import time
 
-import composed 
+import history 
 
 class Backend:
 
@@ -20,7 +21,8 @@ class Backend:
                                          self.handshake, self.network)
 
         db_prefix = "/home/genjix/libbitcoin/database"
-        self.blockchain = bitcoin.bdb_blockchain(self.disk_service, db_prefix)
+        self.blockchain = bitcoin.bdb_blockchain(self.disk_service, db_prefix,
+                                                 self.blockchain_started)
         self.poller = bitcoin.poller(self.blockchain)
         self.transaction_pool = \
             bitcoin.transaction_pool(self.mempool_service, self.blockchain)
@@ -32,9 +34,15 @@ class Backend:
                             self.poller, self.transaction_pool)
         self.session.start(self.handle_start)
 
+        self.pool_buffer = history.MemoryPoolBuffer(self.transaction_pool,
+                                                    self.blockchain)
+
     def handle_start(self, ec):
         if ec:
             print "Error starting backend:", ec
+
+    def blockchain_started(self, ec, chain):
+        print "Blockchain initialisation:", ec
 
     def stop(self):
         self.session.stop(self.handle_stop)
@@ -49,8 +57,7 @@ class Backend:
         # Here we subscribe to new transactions from them which we
         # add to the transaction_pool. That way we can track which
         # transactions we are interested in.
-        node.subscribe_transaction(
-            bitcoin.bind(self.recv_tx, bitcoin._1, bitcoin._2, node))
+        node.subscribe_transaction(bind(self.recv_tx, _1, _2, node))
         # Re-subscribe to next new node
         self.protocol.subscribe_channel(self.monitor_tx)
 
@@ -59,26 +66,15 @@ class Backend:
             print "Error with new transaction:", ec
             return
         tx_hash = bitcoin.hash_transaction(tx)
-        # If we want to ignore this transaction, we can set
-        # the 2 handlers to be null handlers that do nothing.
-        self.transaction_pool.store(tx,
-            bitcoin.bind(self.tx_confirmed, bitcoin._1, tx_hash),
-            bitcoin.bind(self.handle_mempool_store, bitcoin._1, tx_hash))
+        self.pool_buffer.recv_tx(tx, bind(self.store_tx, _1, tx_hash))
         # Re-subscribe to new transactions from node
-        node.subscribe_transaction(
-            bitcoin.bind(self.recv_tx, bitcoin._1, bitcoin._2, node))
+        node.subscribe_transaction(bind(self.recv_tx, _1, _2, node))
 
-    def handle_mempool_store(self, ec, tx_hash):
+    def store_tx(self, ec, tx_hash):
         if ec:
             print "Error storing memory pool transaction", tx_hash, ec
         else:
             print "Accepted transaction", tx_hash
-
-    def tx_confirmed(self, ec, tx_hash):
-        if ec:
-            print "Problem confirming transaction", tx_hash, ec
-        else:
-            print "Confirmed", tx_hash
 
 class GhostValue:
 
@@ -125,15 +121,43 @@ class AddressGetHistory:
         self.processor = processor
 
     def get(self, request):
-        address = str(request["params"])
-        composed.payment_history(self.backend.blockchain, address,
-            bitcoin.bind(self.respond, request, bitcoin._1))
+        address = str(request["params"][0])
+        chain = self.backend.blockchain
+        txpool = self.backend.transaction_pool
+        membuf = self.backend.pool_buffer
+        history.payment_history(chain, txpool, membuf, address,
+            bind(self.respond, _1, request))
 
-    def respond(self, request, result):
-        response = {"id": request["id"], "method": request["method"],
-                    "params": request["params"], "result": result}
+    def respond(self, result, request):
+        if result is None:
+            response = {"id": request["id"], "result": None,
+                        "error": {"message": "Error", "code": -4}}
+        else:
+            response = {"id": request["id"], "result": result, "error": None}
         self.processor.push_response(response)
 
+class AddressSubscribe:
+
+    def __init__(self, backend, processor):
+        self.backend = backend
+        self.processor = processor
+
+    def subscribe(self, session, request):
+        address = str(request["params"][0])
+        chain = self.backend.blockchain
+        txpool = self.backend.transaction_pool
+        membuf = self.backend.pool_buffer
+        history.payment_history(chain, txpool, membuf, address,
+            bind(self.respond, _1, request))
+
+    def construct(self, result, request):
+        if result is None:
+            response = {"id": request["id"], "result": None,
+                        "error": {"message": "Error", "code": -4}}
+            return
+        else:
+            response = {"id": request["id"], "result": result, "error": None}
+        self.processor.push_response(response)
 
 class BlockchainProcessor(Processor):
 
@@ -142,21 +166,20 @@ class BlockchainProcessor(Processor):
         self.backend = Backend()
         self.numblocks_subscribe = NumblocksSubscribe(self.backend, self)
         self.address_get_history = AddressGetHistory(self.backend, self)
+        self.address_subscribe = AddressSubscribe(self.backend, self)
 
     def stop(self):
         self.backend.stop()
 
     def process(self, request):
         print "New request (lib)", request
-        if request["method"] == "numblocks.subscribe":
+        if request["method"] == "blockchain.numblocks.subscribe":
             self.numblocks_subscribe.subscribe(session, request)
-        elif request["method"] == "address.get_history":
+        elif request["method"] == "blockchain.address.subscribe":
+            pass
+        elif request["method"] == "blockchain.address.get_history":
             self.address_get_history.get(request)
-        elif request["method"] == "server.banner":
-            self.push_response({"id": request["id"],
-                "method": request["method"], "params": request["params"],
-                "result": "libbitcoin using python-bitcoin bindings"})
-        elif request["method"] == "transaction.broadcast":
+        elif request["method"] == "blockchain.transaction.broadcast":
             self.broadcast_transaction(request)
 
     def broadcast_transaction(self, request):
@@ -165,16 +188,14 @@ class BlockchainProcessor(Processor):
         try:
             tx = exporter.load_transaction(raw_tx)
         except RuntimeError:
-            response = {"id": request["id"], "method": request["method"],
-                        "params": request["params"], "result": None,
+            response = {"id": request["id"], "result": None,
                         "error": {"message": 
                             "Exception while parsing the transaction data.",
                             "code": -4}}
         else:
             self.backend.protocol.broadcast_transaction(tx)
             tx_hash = str(bitcoin.hash_transaction(tx))
-            response = {"id": request["id"], "method": request["method"],
-                        "params": request["params"], "result": tx_hash}
+            response = {"id": request["id"], "result": tx_hash, "error": None}
         self.push_response(response)
 
     def run(self):
