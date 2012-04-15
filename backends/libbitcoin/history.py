@@ -217,18 +217,18 @@ class History:
                 result.append(entry.output_loaded)
         mempool_result = []
         for info in self.membuf_result:
+            if not self.mempool_counter.has_key(info["tx_hash"]):
+                if not self.mempool_counter:
+                    count = 0
+                else:
+                    count = max(self.mempool_counter.values()) + 1
+                self.mempool_counter[info["tx_hash"]] = count
+            else:
+                count = self.mempool_counter[info["tx_hash"]]
+            info["block_hash"] = "mempool:%s" % count
             # Lookup prevout in result
             # Set "value" field
             if info["is_input"] == 1:
-                if not self.mempool_counter.has_key(info["tx_hash"]):
-                    if not self.mempool_counter:
-                        count = 0
-                    else:
-                        count = max(self.mempool_counter.values()) + 1
-                    self.mempool_counter[info["tx_hash"]] = count
-                else:
-                    count = self.mempool_counter[info["tx_hash"]]
-                info["block_hash"] = "mempool:%s" % count
                 prevout_tx = None
                 for prevout_info in result:
                     if prevout_info["tx_hash"] == info.previous_output.hash:
@@ -390,7 +390,6 @@ class History:
             # No more inputs left to load
             # This info has finished loading
             info["height"] = None
-            info["block_hash"] = "mempool"
         self.finish_if_done()
 
 if __name__ == "__main__":
