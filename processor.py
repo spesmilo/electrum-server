@@ -196,21 +196,22 @@ class ResponseDispatcher(threading.Thread):
             response = self.processor.pop_response()
             #print "pop response", response
             internal_id = response.get('id')
-            params = response.get('params',[])
-            try:
-                method = response['method']
-            except:
-                print "no method", response
-                continue
+            params = response.get('params', [])
 
-            if internal_id:
-                session, message_id = self.processor.get_session_id(internal_id)
-                response['id'] = message_id
-                session.send_response(response)
-
-            else:
+            # This is wrong. "params" and "method" should never
+            # be in a response.
+            if internal_id is None:
+                method = response.get('method')
+                if method is None:
+                    print "no method", response
+                    continue
                 for session in self.processor.sessions:
                     if not session.stopped():
                         if (method,params) in session.subscriptions:
                             session.send_response(response)
+                continue
+
+            session, message_id = self.processor.get_session_id(internal_id)
+            response['id'] = message_id
+            session.send_response(response)
 
