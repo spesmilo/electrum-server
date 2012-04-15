@@ -4,9 +4,30 @@ import threading
 import multimap
 import time
 
+class ExpiryQueue(threading.Thread):
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.items = []
+        threading.Thread.__init__(self)
+        self.daemon = True
+
+    def run(self):
+        # Garbage collection
+        while True:
+            with self.lock:
+                self.items = [i for i in self.items if not i.stopped()]
+            time.sleep(0.1)
+
+    def add(self, item):
+        with self.lock:
+            self.items.append(item)
+
+expiry_queue = ExpiryQueue()
+
 class MemoryPoolBuffer:
 
-    def __init__(self, service, txpool, chain):
+    def __init__(self, txpool, chain):
         self.txpool = txpool
         self.chain = chain
         # prevout: inpoint
@@ -109,7 +130,7 @@ class PaymentEntry:
 
 class History:
 
-    def __init__(self, service, chain, txpool, membuf):
+    def __init__(self, chain, txpool, membuf):
         self.chain = chain
         self.txpool = txpool
         self.membuf = membuf
@@ -383,6 +404,11 @@ class History:
             info["block_hash"] = "mempool"
         self.finish_if_done()
 
+def payment_history(chain, txpool, membuf, address, handle_finish):
+    h = History(chain, txpool, membuf)
+    expiry_queue.add(h)
+    h.start(address, handle_finish)
+
 if __name__ == "__main__":
     ex = bitcoin.satoshi_exporter()
     tx_a = bitcoin.data_chunk("0100000003d0406a31f628e18f5d894b2eaf4af719906dc61be4fb433a484ed870f6112d15000000008b48304502210089c11db8c1524d8839243803ac71e536f3d876e8265bbb3bc4a722a5d0bd40aa022058c3e59a7842ef1504b1c2ce048f9af2d69bbf303401dced1f68b38d672098a10141046060f6c8e355b94375eec2cc1d231f8044e811552d54a7c4b36fe8ee564861d07545c6c9d5b9f60d16e67d683b93486c01d3bd3b64d142f48af70bb7867d0ffbffffffff6152ed1552b1f2635317cea7be06615a077fc0f4aa62795872836c4182ca0f25000000008b48304502205f75a468ddb08070d235f76cb94c3f3e2a75e537bc55d087cc3e2a1559b7ac9b022100b17e4c958aaaf9b93359f5476aa5ed438422167e294e7207d5cfc105e897ed91014104a7108ec63464d6735302085124f3b7a06aa8f9363eab1f85f49a21689b286eb80fbabda7f838d9b6bff8550b377ad790b41512622518801c5230463dbbff6001ffffffff01c52914dcb0f3d8822e5a9e3374e5893a7b6033c9cfce5a8e5e6a1b3222a5cb010000008c4930460221009561f7206cc98f40f3eab5f3308b12846d76523bd07b5f058463f387694452b2022100b2684ec201760fa80b02954e588f071e46d0ff16562c1ab393888416bf8fcc44014104a7108ec63464d6735302085124f3b7a06aa8f9363eab1f85f49a21689b286eb80fbabda7f838d9b6bff8550b377ad790b41512622518801c5230463dbbff6001ffffffff02407e0f00000000001976a914c3b98829108923c41b3c1ba6740ecb678752fd5e88ac40420f00000000001976a914424648ea6548cc1c4ea707c7ca58e6131791785188ac00000000")
@@ -408,19 +434,15 @@ if __name__ == "__main__":
     prefix = "/home/genjix/libbitcoin/database.old"
     chain = bitcoin.bdb_blockchain(service, prefix, blockchain_started)
     txpool = bitcoin.transaction_pool(service, chain)
-    local_service = bitcoin.AsyncService()
-    membuf = MemoryPoolBuffer(local_service, txpool, chain)
+    membuf = MemoryPoolBuffer(txpool, chain)
     membuf.recv_tx(tx_a)
     membuf.recv_tx(tx_b)
     raw_input()
     address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "1EMnecJFwihf2pf4nE2m8fUNFKVRMWKqhR"
     #address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"
     print "Looking up", address
-    h = History(local_service, chain, txpool, membuf)
-    h.start(address[0], finish)
-    raw_input()
-    h = History(local_service, chain, txpool, membuf)
-    h.start(address[1], finish)
+    payment_history(chain, txpool, membuf, address[0], finish)
+    payment_history(chain, txpool, membuf, address[1], finish)
     raw_input()
     print "Stopping..."
 
