@@ -25,6 +25,9 @@ class MultiMap:
     def __str__(self):
         return str(self.multi)
 
+    def has_key(self, key):
+        return self.multi.has_key(key)
+
 if __name__ == "__main__":
     m = MultiMap()
     m["foo"] = 1
