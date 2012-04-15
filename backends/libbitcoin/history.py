@@ -109,11 +109,10 @@ class PaymentEntry:
 
 class History:
 
-    def __init__(self, service, chain, txpool, membuf, mempool_counter):
+    def __init__(self, service, chain, txpool, membuf):
         self.chain = chain
         self.txpool = txpool
         self.membuf = membuf
-        self.mempool_counter = mempool_counter
         self.lock = threading.Lock()
         self._stopped = False
 
@@ -217,15 +216,6 @@ class History:
                 result.append(entry.output_loaded)
         mempool_result = []
         for info in self.membuf_result:
-            if not self.mempool_counter.has_key(info["tx_hash"]):
-                if not self.mempool_counter:
-                    count = 0
-                else:
-                    count = max(self.mempool_counter.values()) + 1
-                self.mempool_counter[info["tx_hash"]] = count
-            else:
-                count = self.mempool_counter[info["tx_hash"]]
-            info["block_hash"] = "mempool:%s" % count
             # Lookup prevout in result
             # Set "value" field
             if info["is_input"] == 1:
@@ -390,6 +380,7 @@ class History:
             # No more inputs left to load
             # This info has finished loading
             info["height"] = None
+            info["block_hash"] = "mempool"
         self.finish_if_done()
 
 if __name__ == "__main__":
@@ -425,12 +416,11 @@ if __name__ == "__main__":
     address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "1EMnecJFwihf2pf4nE2m8fUNFKVRMWKqhR"
     #address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"
     print "Looking up", address
-    mempool_count = {}
-    h = History(local_service, chain, txpool, membuf, mempool_count)
+    h = History(local_service, chain, txpool, membuf)
     h.start(address[0], finish)
     raw_input()
-    h1 = History(local_service, chain, txpool, membuf, mempool_count)
-    h1.start(address[1], finish)
+    h = History(local_service, chain, txpool, membuf)
+    h.start(address[1], finish)
     raw_input()
     print "Stopping..."
 
