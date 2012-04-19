@@ -139,7 +139,7 @@ class Backend:
         db_prefix = "/home/genjix/libbitcoin/database"
         self.blockchain = bitcoin.bdb_blockchain(self.disk_service, db_prefix,
                                                  self.blockchain_started)
-        self.poller = bitcoin.poller(self.blockchain)
+        self.poller = bitcoin.poller(self.mempool_service, self.blockchain)
         self.transaction_pool = \
             bitcoin.transaction_pool(self.mempool_service, self.blockchain)
 
