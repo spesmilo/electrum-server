@@ -27,9 +27,10 @@ expiry_queue = ExpiryQueue()
 
 class MemoryPoolBuffer:
 
-    def __init__(self, txpool, chain):
+    def __init__(self, txpool, chain, monitor):
         self.txpool = txpool
         self.chain = chain
+        self.monitor = monitor
         # prevout: inpoint
         self.lookup_input = {}
         # payment_address: outpoint
@@ -38,20 +39,22 @@ class MemoryPoolBuffer:
         self.timestamps = {}
 
     def recv_tx(self, tx, handle_store):
-        tx_hash = bitcoin.hash_transaction(tx)
+        tx_hash = str(bitcoin.hash_transaction(tx))
         desc = (tx_hash, [], [])
         for input in tx.inputs:
-            desc[1].append(input.previous_output)
+            prevout = input.previous_output
+            desc[1].append((str(prevout.hash), prevout.index))
         for idx, output in enumerate(tx.outputs):
             address = bitcoin.payment_address()
             if address.extract(output.output_script):
-                desc[2].append((idx, address))
+                desc[2].append((idx, str(address)))
         self.txpool.store(tx,
             bind(self.confirmed, _1, desc),
             bind(self.mempool_stored, _1, desc, handle_store))
 
     def mempool_stored(self, ec, desc, handle_store):
         tx_hash, prevouts, addrs = desc
+        tx_hash = bitcoin.hash_digest(tx_hash)
         if ec:
             handle_store(ec)
             return
@@ -65,9 +68,11 @@ class MemoryPoolBuffer:
             self.lookup_address[str(address)] = outpoint
         self.timestamps[str(tx_hash)] = int(time.time())
         handle_store(ec)
+        self.monitor.tx_stored(desc)
 
     def confirmed(self, ec, desc):
         tx_hash, prevouts, addrs = desc
+        tx_hash = bitcoin.hash_digest(tx_hash)
         if ec:
             print "Problem confirming transaction", tx_hash, ec
             return
@@ -82,6 +87,7 @@ class MemoryPoolBuffer:
             outpoint.hash, outpoint.index = tx_hash, idx
             self.lookup_address.delete(str(address), outpoint)
         del self.timestamps[str(tx_hash)]
+        self.monitor.tx_confirmed(desc)
 
     def check(self, output_points, address, handle):
         class ExtendableDict(dict):
@@ -171,6 +177,9 @@ class History:
             bind(self.start_loading, _1, output_points))
 
     def start_loading(self, membuf_result, output_points):
+        if len(membuf_result) == 0 and len(output_points) == 0:
+            self.handle_finish([])
+            self.stopped()
         # Create a bunch of entry lines which are outputs and
         # then their corresponding input (if it exists)
         for outpoint in output_points:
@@ -432,15 +441,21 @@ if __name__ == "__main__":
                 print begin, " " * (12 - len(begin)), v
             print
 
+    class FakeMonitor:
+        def tx_stored(self, tx):
+            pass
+        def tx_confirmed(self, tx):
+            pass
+
     service = bitcoin.async_service(1)
     prefix = "/home/genjix/libbitcoin/database.old"
     chain = bitcoin.bdb_blockchain(service, prefix, blockchain_started)
     txpool = bitcoin.transaction_pool(service, chain)
-    membuf = MemoryPoolBuffer(txpool, chain)
+    membuf = MemoryPoolBuffer(txpool, chain, FakeMonitor())
     membuf.recv_tx(tx_a, store_tx)
     membuf.recv_tx(tx_b, store_tx)
     raw_input()
-    address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "1EMnecJFwihf2pf4nE2m8fUNFKVRMWKqhR"
+    address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "18auo3rqfsjth3w2H9zyEz467DDFNNpMJP"
     #address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"
     print "Looking up", address
     payment_history(chain, txpool, membuf, address[0], finish)

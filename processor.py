@@ -40,7 +40,8 @@ class Processor(threading.Thread):
         pass
 
     def push_response(self, response):
-        self.dispatcher.request_dispatcher.push_response(response)
+        print "response", response
+        #self.dispatcher.request_dispatcher.push_response(response)
 
 
 
