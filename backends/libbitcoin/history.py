@@ -54,39 +54,40 @@ class MemoryPoolBuffer:
 
     def mempool_stored(self, ec, desc, handle_store):
         tx_hash, prevouts, addrs = desc
-        tx_hash = bitcoin.hash_digest(tx_hash)
         if ec:
             handle_store(ec)
             return
         for idx, prevout in enumerate(prevouts):
-            inpoint = bitcoin.input_point()
-            inpoint.hash, inpoint.index = tx_hash, idx
-            self.lookup_input[str(prevout)] = inpoint
+            #inpoint = bitcoin.input_point()
+            #inpoint.hash, inpoint.index = tx_hash, idx
+            prevout = "%s:%s" % prevout
+            self.lookup_input[prevout] = tx_hash, idx
         for idx, address in addrs:
-            outpoint = bitcoin.output_point()
-            outpoint.hash, outpoint.index = tx_hash, idx
-            self.lookup_address[str(address)] = outpoint
-        self.timestamps[str(tx_hash)] = int(time.time())
+            #outpoint = bitcoin.output_point()
+            #outpoint.hash, outpoint.index = tx_hash, idx
+            self.lookup_address[str(address)] = tx_hash, idx
+        self.timestamps[tx_hash] = int(time.time())
         handle_store(ec)
         self.monitor.tx_stored(desc)
 
     def confirmed(self, ec, desc):
         tx_hash, prevouts, addrs = desc
-        tx_hash = bitcoin.hash_digest(tx_hash)
         if ec:
             print "Problem confirming transaction", tx_hash, ec
             return
         print "Confirmed", tx_hash
         for idx, prevout in enumerate(prevouts):
-            inpoint = bitcoin.input_point()
-            inpoint.hash, inpoint.index = tx_hash, idx
-            assert self.lookup_input[str(prevout)] == inpoint
-            del self.lookup_input[str(prevout)]
+            #inpoint = bitcoin.input_point()
+            #inpoint.hash, inpoint.index = tx_hash, idx
+            prevout = "%s:%s" % prevout
+            assert self.lookup_input[prevout] == (tx_hash, idx)
+            del self.lookup_input[prevout]
         for idx, address in addrs:
-            outpoint = bitcoin.output_point()
-            outpoint.hash, outpoint.index = tx_hash, idx
+            #outpoint = bitcoin.output_point()
+            #outpoint.hash, outpoint.index = tx_hash, idx
+            outpoint = tx_hash, idx
             self.lookup_address.delete(str(address), outpoint)
-        del self.timestamps[str(tx_hash)]
+        del self.timestamps[tx_hash]
         self.monitor.tx_confirmed(desc)
 
     def check(self, output_points, address, handle):
@@ -97,8 +98,8 @@ class MemoryPoolBuffer:
             if self.lookup_input.has_key(str(outpoint)):
                 point = self.lookup_input[str(outpoint)]
                 info = ExtendableDict()
-                info["tx_hash"] = str(point.hash)
-                info["index"] = point.index
+                info["tx_hash"] = point[0]
+                info["index"] = point[1]
                 info["is_input"] = 1
                 info["timestamp"] = self.timestamps[info["tx_hash"]]
                 result.append(info)
@@ -312,6 +313,10 @@ class History:
         if self.inputs_all_loaded(info["inputs"]):
             # We are the sole input
             assert(info["is_input"] == 1)
+            # No more inputs left to load
+            # This info has finished loading
+            info["height"] = None
+            info["block_hash"] = "mempool"
             self.finish_if_done()
         create_handler = lambda prevout_index, input_index: \
             bind(self.load_input_pool_tx, _1, _2,
@@ -448,18 +453,26 @@ if __name__ == "__main__":
             pass
 
     service = bitcoin.async_service(1)
-    prefix = "/home/genjix/libbitcoin/database.old"
+    prefix = "/home/genjix/libbitcoin/database"
     chain = bitcoin.bdb_blockchain(service, prefix, blockchain_started)
     txpool = bitcoin.transaction_pool(service, chain)
     membuf = MemoryPoolBuffer(txpool, chain, FakeMonitor())
     membuf.recv_tx(tx_a, store_tx)
     membuf.recv_tx(tx_b, store_tx)
+
+    txdat = bitcoin.data_chunk("0100000001d6cad920a04acd6c0609cd91fe4dafa1f3b933ac90e032c78fdc19d98785f2bb010000008b483045022043f8ce02784bd7231cb362a602920f2566c18e1877320bf17d4eabdac1019b2f022100f1fd06c57330683dff50e1b4571fb0cdab9592f36e3d7e98d8ce3f94ce3f255b01410453aa8d5ddef56731177915b7b902336109326f883be759ec9da9c8f1212c6fa3387629d06e5bf5e6bcc62ec5a70d650c3b1266bb0bcc65ca900cff5311cb958bffffffff0280969800000000001976a9146025cabdbf823949f85595f3d1c54c54cd67058b88ac602d2d1d000000001976a914c55c43631ab14f7c4fd9c5f153f6b9123ec32c8888ac00000000")
+    req = {"id": 110, "params": ["1GULoCDnGjhfSWzHs6zDzBxbKt9DR7uRbt"]}
+    ex = bitcoin.satoshi_exporter()
+    tx = ex.load_transaction(txdat)
+    time.sleep(4)
+    membuf.recv_tx(tx, store_tx)
+
     raw_input()
-    address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "18auo3rqfsjth3w2H9zyEz467DDFNNpMJP"
+    address = "1Jqu2PVGDvNv4La113hgCJsvRUCDb3W65D", "1GULoCDnGjhfSWzHs6zDzBxbKt9DR7uRbt"
     #address = "1Pbn3DLXfjqF1fFV9YPdvpvyzejZwkHhZE"
     print "Looking up", address
     payment_history(chain, txpool, membuf, address[0], finish)
-    payment_history(chain, txpool, membuf, address[1], finish)
+    #payment_history(chain, txpool, membuf, address[1], finish)
     raw_input()
     print "Stopping..."
 
