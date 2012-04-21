@@ -4,8 +4,9 @@ import history1 as history
 def blockchain_started(ec, chain):
     print "Blockchain initialisation:", ec
 
-def finish(ec):
+def finish(ec, result):
     print "Finish:", ec
+    print result
 
 a = bitcoin.async_service(1)
 chain = bitcoin.bdb_blockchain(a, "/home/genjix/libbitcoin/database",

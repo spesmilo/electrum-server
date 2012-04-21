@@ -1,11 +1,12 @@
 import _history
-from bitcoin import bind, _1
+from bitcoin import bind, _1, _2
+import json
 
-def wrap_finish(handle_finish, ec):
-    handle_finish(ec)
+def wrap_finish(handle_finish, ec, result_json):
+    handle_finish(ec, json.loads(result_json))
 
 def payment_history(service, chain, txpool, address, finish):
     _history.payment_history(service.internal_ptr, chain.internal_ptr,
                              txpool.internal_ptr, address,
-                             bind(wrap_finish, finish, _1))
+                             bind(wrap_finish, finish, _1, _2))
 
