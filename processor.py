@@ -51,7 +51,8 @@ class Dispatcher:
         self.shared = Shared()
         self.request_dispatcher = RequestDispatcher(self.shared)
         self.request_dispatcher.start()
-        self.response_dispatcher = ResponseDispatcher(self.shared, self.request_dispatcher)
+        self.response_dispatcher = \
+            ResponseDispatcher(self.shared, self.request_dispatcher)
         self.response_dispatcher.start()
 
     def register(self, prefix, processor):
@@ -163,25 +164,45 @@ class Session:
         self.subscriptions = []
         self.address = ''
         self.name = ''
-        threading.Timer(2, self.info).start()
+        #threading.Timer(2, self.info).start()
 
+    # Debugging method. Doesn't need to be threadsafe.
     def info(self):
-        for s in self.subscriptions:
-            m, p = s
-            if m == 'blockchain.address.subscribe':
-                addr = p[0]
+        for sub in self.subscriptions:
+            print sub
+            method, params = sub
+            if method == 'blockchain.address.subscribe':
+                addr = params[0]
                 break
         else:
             addr = None
-        print timestr(), self.name, self.address, addr, len(self.subscriptions), self.version
+        print (timestr(), self.name, self.address, addr,
+               len(self.subscriptions), self.version)
 
     def stopped(self):
         with self.lock:
             return self._stopped
 
     def subscribe_to_service(self, method, params):
+        subdesc = self.build_subdesc(method, params)
         with self.lock:
-            self.subscriptions.append((method, params))
+            self.subscriptions.append(subdesc)
+
+    # subdesc = A subscription description
+    def build_subdesc(self, method, params):
+        if method == "blockchain.numblocks.subscribe":
+            return method,
+        elif method == "blockchain.address.get_history":
+            if not params:
+                return None
+            else:
+                return method, params[0]
+        else:
+            return None
+
+    def contains_subscription(self, subdesc):
+        with self.lock:
+            return subdesc in self.subscriptions
     
 
 class ResponseDispatcher(threading.Thread):
@@ -194,25 +215,33 @@ class ResponseDispatcher(threading.Thread):
 
     def run(self):
         while not self.shared.stopped():
-            response = self.processor.pop_response()
-            #print "pop response", response
-            internal_id = response.get('id')
-            params = response.get('params', [])
+            self.update()
 
-            # This is wrong. "params" and "method" should never
-            # be in a response.
-            if internal_id is None:
-                method = response.get('method')
-                if method is None:
-                    print "no method", response
-                    continue
-                for session in self.processor.sessions:
-                    if not session.stopped():
-                        if (method,params) in session.subscriptions:
-                            session.send_response(response)
+    def update(self):
+        response = self.processor.pop_response()
+        #print "pop response", response
+        internal_id = response.get('id')
+        method = response.get('method')
+        params = response.get('params', [])
+
+        # A notification
+        if internal_id is None and method is None:
+            self.notification(response)
+        elif internal_id is not None:
+            self.send_response(internal_id, response)
+        else:
+            print "no method", response
+
+    def notification(self, response):
+        subdesc = self.build_subdesc(method, params)
+        for session in self.processor.sessions:
+            if session.stopped():
                 continue
+            if session.contains_subscription(subdesc):
+                session.send_response(response)
 
-            session, message_id = self.processor.get_session_id(internal_id)
-            response['id'] = message_id
-            session.send_response(response)
+    def send_response(self, internal_id, response):
+        session, message_id = self.processor.get_session_id(internal_id)
+        response['id'] = message_id
+        session.send_response(response)
 
