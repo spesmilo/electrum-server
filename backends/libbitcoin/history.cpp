@@ -542,10 +542,14 @@ void keep_query_alive_proxy(const std::error_code& ec,
             write_info(json, entry->loaded_input);
         }
     }
-    for (info_unit_ptr info: membuf_result)
-    {
+    // A bit of super glue
+    if (!statement.empty() && !membuf_result.empty())
         json += ",";
-        write_info(json, info);
+    for (auto it = membuf_result.begin(); it != membuf_result.end(); ++it)
+    {
+        if (it != membuf_result.begin())
+            json += ",";
+        write_info(json, *it);
     }
     json += "]";
     pyfunction<const std::error_code&, const std::string&> f(handle_finish);

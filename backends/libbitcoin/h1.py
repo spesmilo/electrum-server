@@ -25,7 +25,7 @@ def stored(ec):
 mbuff = membuf.memory_buffer(a.internal_ptr, chain.internal_ptr,
                              txpool.internal_ptr)
 mbuff.receive(tx, stored)
-address = "1GULoCDnGjhfSWzHs6zDzBxbKt9DR7uRbt"
+address = "1AA6mgxqSrvJTxRrYrikSnLaAGupVzvx4f"
 raw_input()
 history.payment_history(a, chain, txpool, mbuff, address, finish)
 raw_input()

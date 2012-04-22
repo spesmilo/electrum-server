@@ -89,7 +89,7 @@ class MonitorAddress:
         self.cache.clear(affected_addrs)
         self.notify(affected_addrs)
 
-    def tx_confirmed(self, tx_desc):
+    def tx_confirmed(self, tx):
         tx_hash, previous_outputs, addrs = self.unpack(tx)
         with self.lock:
             affected_addrs = self.affected[tx_hash]
@@ -109,16 +109,14 @@ class MonitorAddress:
                     del self.monitor_output[prevout]
 
     def notify(self, affected_addrs):
-        templ_response = {"id": None,
-                          "method": "blockchain.address.subscribe",
-                          "params": []}
         service = self.backend.mempool_service
         chain = self.backend.blockchain
         txpool = self.backend.transaction_pool
         memory_buff = self.backend.memory_buffer
         for address in affected_addrs:
-            response = templ_response.copy()
-            response["params"].append(address)
+            response = {"id": None,
+                        "method": "blockchain.address.subscribe",
+                        "params": [str(address)]}
             history.payment_history(service, chain, txpool, memory_buff,
                 address, bind(self.send_notify, _1, _2, response))
 
@@ -139,6 +137,7 @@ class MonitorAddress:
         if ec:
             print "Error: Monitor.send_notify()", ec
             return
+        assert len(response["params"]) == 1
         response["params"].append(self.mempool_n(result))
         self.processor.push_response(response)
 
@@ -351,7 +350,7 @@ class BlockchainProcessor(Processor):
             self.broadcast_transaction(request)
 
     def broadcast_transaction(self, request):
-        raw_tx = bitcoin.data_chunk(str(request["params"]))
+        raw_tx = bitcoin.data_chunk(str(request["params"][0]))
         exporter = bitcoin.satoshi_exporter()
         try:
             tx = exporter.load_transaction(raw_tx)
