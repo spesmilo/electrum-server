@@ -7,7 +7,7 @@ using namespace libbitcoin;
 #include <boost/python.hpp>
 namespace python = boost::python;
 
-#include "/home/genjix/python-bitcoin/src/primitive.h"
+#include "memory_buffer.hpp"
 
 namespace ph = std::placeholders;
 
@@ -68,8 +68,8 @@ class query_history
   : public std::enable_shared_from_this<query_history>
 {
 public:
-    query_history(async_service& service,
-        blockchain_ptr chain, transaction_pool_ptr txpool)
+    query_history(async_service& service, blockchain_ptr chain,
+        transaction_pool_ptr txpool, memory_buffer_ptr membuf)
       : strand_(service.get_service()), chain_(chain),
         txpool_(txpool), stopped_(false)
     {
@@ -158,7 +158,7 @@ private:
                 BITCOIN_ASSERT(entry->loaded_input && entry->loaded_output);
                 // value of the input is simply the inverse of
                 // the corresponding output
-                entry->loaded_input->value = -entry->loaded_output->value;
+                entry->loaded_input->value = entry->loaded_output->value;
                 // Unspent outputs have a raw_output_script field
                 // Blank this field as it isn't used
                 entry->loaded_output->raw_output_script.clear();
@@ -351,7 +351,8 @@ void write_info(std::string& json, info_unit_ptr info)
         << "\"tx_hash\": \"" << pretty_hex(info->tx_hash) << "\","
         << "\"block_hash\": \"" << pretty_hex(info->block_hash) << "\","
         << "\"index\": " << info->index << ","
-        << "\"value\": " << info->value << ","
+        // x for received, and -x for sent amounts
+        << "\"value\": " << (info->is_input ? "-" : "") << info->value << ","
         << "\"height\": " << info->height << ","
         << "\"timestamp\": " << info->timestamp << ","
         << "\"is_input\": " << info->is_input << ",";
@@ -378,6 +379,12 @@ void keep_query_alive_proxy(const std::error_code& ec,
         auto entry = *it;
         BITCOIN_ASSERT(entry->loaded_output);
         write_info(json, entry->loaded_output);
+        if (entry->input_exists)
+        {
+            BITCOIN_ASSERT(entry->loaded_input);
+            json += ",";
+            write_info(json, entry->loaded_input);
+        }
     }
     json += "]";
     pyfunction<const std::error_code&, const std::string&> f(handle_finish);
@@ -385,11 +392,11 @@ void keep_query_alive_proxy(const std::error_code& ec,
 }
 
 void payment_history(async_service_ptr service, blockchain_ptr chain,
-    transaction_pool_ptr txpool, const std::string& address,
-    python::object handle_finish)
+    transaction_pool_ptr txpool, memory_buffer_ptr membuf,
+    const std::string& address, python::object handle_finish)
 {
     query_history_ptr history =
-        std::make_shared<query_history>(*service, chain, txpool);
+        std::make_shared<query_history>(*service, chain, txpool, membuf);
     history->start(address,
         std::bind(keep_query_alive_proxy, ph::_1, ph::_2,
             handle_finish, history));
