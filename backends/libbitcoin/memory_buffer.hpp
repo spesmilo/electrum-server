@@ -53,16 +53,13 @@ public:
         size_t index;
         bool is_input;
         uint64_t timestamp;
-        // Convenient storage
-        message::output_point previous_output;
     };
     typedef std::vector<check_item> check_result;
-    typedef std::shared_ptr<check_result> check_result_ptr;
 
     typedef std::function<
         void (const std::error_code&)> receive_handler;
     typedef std::function<
-        void (const std::error_code&, check_result_ptr)> check_handler;
+        void (const std::error_code&, const check_result&)> check_handler;
 
     memory_buffer(async_service_ptr service, blockchain_ptr chain,
         transaction_pool_ptr txpool)
@@ -93,8 +90,38 @@ public:
     }
 
     void check(const message::output_point_list& output_points,
-        const std::string& address, check_handler handle_check)
+        const payment_address& address, check_handler handle_check)
     {
+        auto this_ptr = shared_from_this();
+        strand_.post(
+            [&, this_ptr, output_points, address, handle_check]()
+            {
+                check_result result;
+                for (auto& outpoint: output_points)
+                {
+                    auto it = lookup_input_.find(outpoint);
+                    if (it != lookup_input_.end())
+                    {
+                        check_item item;
+                        item.tx_hash = it->second.hash;
+                        item.index = it->second.index;
+                        item.is_input = true;
+                        item.timestamp = timestamps_[item.tx_hash];
+                        result.push_back(item);
+                    }
+                }
+                auto range = lookup_address_.equal_range(address);
+                for (auto it = range.first; it != range.second; ++it)
+                {
+                    check_item item;
+                    item.tx_hash = it->second.hash;
+                    item.index = it->second.index;
+                    item.is_input = false;
+                    item.timestamp = timestamps_[item.tx_hash];
+                    result.push_back(item);
+                }
+                handle_check(std::error_code(), result);
+            });
     }
 
 private:

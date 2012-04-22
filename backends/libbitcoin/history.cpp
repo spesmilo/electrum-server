@@ -25,9 +25,13 @@ struct info_unit
     bool is_input;
     // set to empty if unused
     data_chunk raw_output_script;
+
+    // Convenient storage used by pool txs
+    message::output_point previous_output;
 };
 
 typedef std::shared_ptr<info_unit> info_unit_ptr;
+typedef std::vector<info_unit_ptr> info_unit_list;
 
 bool inputs_all_loaded(info_unit::string_list inputs)
 {
@@ -62,7 +66,8 @@ typedef std::shared_ptr<payment_entry> payment_entry_ptr;
 typedef std::vector<payment_entry_ptr> statement_entry;
 
 typedef std::function<
-    void (const std::error_code&, const statement_entry&)> finish_handler;
+    void (const std::error_code&, const statement_entry&,
+        const info_unit_list&)> finish_handler;
 
 class query_history
   : public std::enable_shared_from_this<query_history>
@@ -71,7 +76,7 @@ public:
     query_history(async_service& service, blockchain_ptr chain,
         transaction_pool_ptr txpool, memory_buffer_ptr membuf)
       : strand_(service.get_service()), chain_(chain),
-        txpool_(txpool), stopped_(false)
+        txpool_(txpool), membuf_(membuf), stopped_(false)
     {
     }
 
@@ -80,12 +85,12 @@ public:
         if (!address_.set_encoded(address))
         {
             handle_finish(make_error_code(std::errc::address_not_available),
-                statement_entry());
+                statement_entry(), info_unit_list());
             return;
         }
         handle_finish_ = handle_finish;
         chain_->fetch_outputs(address_,
-            strand_.wrap(std::bind(&query_history::start_loading,
+            strand_.wrap(std::bind(&query_history::check_membuf,
                 shared_from_this(), ph::_1, ph::_2)));
     }
 
@@ -101,20 +106,33 @@ private:
     {
         if (ec)
         {
-            handle_finish_(ec, statement_entry());
+            handle_finish_(ec, statement_entry(), info_unit_list());
             stop();
         }
         return stopped_;
     }
 
-    void start_loading(const std::error_code& ec,
+    void check_membuf(const std::error_code& ec,
         const message::output_point_list& outpoints)
     {
         if (stop_on_error(ec))
             return;
-        else if (outpoints.empty())
+        membuf_->check(outpoints, address_,
+            strand_.wrap(std::bind(&query_history::start_loading,
+                shared_from_this(), ph::_1, ph::_2, outpoints)));
+    }
+
+    void start_loading(const std::error_code& ec,
+        const memory_buffer::check_result& membuf_result,
+        const message::output_point_list& outpoints)
+    {
+        if (stop_on_error(ec))
+            return;
+        else if (outpoints.empty() && membuf_result.empty())
         {
-            handle_finish_(std::error_code(), statement_entry());
+            handle_finish_(std::error_code(),
+                statement_entry(), info_unit_list());
+            stop();
             return;
         }
         for (auto outpoint: outpoints)
@@ -126,6 +144,18 @@ private:
                 strand_.wrap(std::bind(&query_history::load_spend,
                     shared_from_this(), ph::_1, ph::_2, entry)));
             load_tx_info(outpoint, entry, false);
+        }
+        for (const auto& item: membuf_result)
+        {
+            auto info = std::make_shared<info_unit>();
+            info->tx_hash = std::move(item.tx_hash);
+            info->index = item.index;
+            info->is_input = item.is_input;
+            info->timestamp = item.timestamp;
+            membuf_result_.push_back(info);
+            txpool_->fetch(item.tx_hash,
+                strand_.wrap(std::bind(&query_history::load_pool_tx,
+                    shared_from_this(), ph::_1, ph::_2, info)));
         }
     }
 
@@ -155,6 +185,33 @@ private:
         }
     }
 
+    bool find_set_value_from_prevout(info_unit_ptr info)
+    {
+        const hash_digest& prev_hash = info->previous_output.hash;
+        for (auto entry: statement_)
+        {
+            BITCOIN_ASSERT(entry->loaded_output);
+            if (entry->loaded_output->tx_hash == prev_hash)
+            {
+                info->value = entry->loaded_output->value;
+                return true;
+            }
+            else if (entry->input_exists &&
+                entry->loaded_input->tx_hash == prev_hash)
+            {
+                info->value = entry->loaded_output->value;
+                return true;
+            }
+        }
+        for (auto other_info: membuf_result_)
+            if (other_info->tx_hash == prev_hash)
+            {
+                info->value = other_info->value;
+                return true;
+            }
+        return false;
+    }
+
     void finish_if_done()
     {
         for (auto entry: statement_)
@@ -178,7 +235,16 @@ private:
                 // Unspent outputs have a raw_output_script field
             }
         }
-        handle_finish_(std::error_code(), statement_);
+        for (auto info: membuf_result_)
+        {
+            // Lookup prevout to set the value field
+            if (info->is_input)
+            {
+                bool set_prevout_value = find_set_value_from_prevout(info);
+                BITCOIN_ASSERT(set_prevout_value);
+            }
+        }
+        handle_finish_(std::error_code(), statement_, membuf_result_);
         stop();
     }
 
@@ -293,6 +359,59 @@ private:
         }
     }
 
+    void load_pool_tx(const std::error_code& ec,
+        const message::transaction& tx, info_unit_ptr info)
+    {
+        if (stop_on_error(ec))
+            return;
+        // block_hash = mempool:5
+        // inputs (load from prevtx)
+        // outputs (load from tx)
+        // raw_output_script (load from tx)
+        // height is always None
+        // value (get from finish_if_done)
+        load_tx(tx, info);
+        if (info->is_input)
+        {
+            BITCOIN_ASSERT(info->index < tx.inputs.size());
+            info->previous_output = tx.inputs[info->index].previous_output;
+        }
+        else
+        {
+            const auto& our_output = tx.outputs[info->index];
+            info->value = our_output.value;
+            info->raw_output_script = save_script(our_output.output_script);
+        }
+        // If all the inputs are loaded
+        if (inputs_all_loaded(info->inputs))
+        {
+            // We are the sole input
+            BITCOIN_ASSERT(info->is_input);
+            // No more inputs left to load
+            // This info has finished loading
+            info->height = 0;
+            info->block_hash = null_hash;
+            finish_if_done();
+        }
+
+        // *********
+        // fetch_input_txs
+
+        // Load the previous_output for every input so we can get
+        // the output address
+        for (size_t input_index = 0;
+            input_index < tx.inputs.size(); ++input_index)
+        {
+            if (info->is_input && info->index == input_index)
+                continue;
+            const auto& prevout = tx.inputs[input_index].previous_output;
+            chain_->fetch_transaction(prevout.hash,
+                strand_.wrap(std::bind(&query_history::load_input_pool_tx,
+                    shared_from_this(), ph::_1, ph::_2, prevout.index,
+                        info, input_index)));
+        }
+    }
+
     void load_input_tx(const message::transaction& tx, size_t output_index,
         info_unit_ptr info, size_t input_index)
     {
@@ -328,13 +447,32 @@ private:
         finish_if_done();
     }
 
+    void load_input_pool_tx(const std::error_code& ec,
+        const message::transaction& tx, size_t output_index,
+        info_unit_ptr info, size_t input_index)
+    {
+        if (stop_on_error(ec))
+            return;
+        load_input_tx(tx, output_index, info, input_index);
+        if (inputs_all_loaded(info->inputs))
+        {
+            // No more inputs left to load
+            // This info has finished loading
+            info->height = 0;
+            info->block_hash = null_hash;
+        }
+        finish_if_done();
+    }
+
     io_service::strand strand_;
 
     blockchain_ptr chain_;
     transaction_pool_ptr txpool_;
+    memory_buffer_ptr membuf_;
     bool stopped_;
 
     statement_entry statement_;
+    info_unit_list membuf_result_;
     payment_address address_;
     finish_handler handle_finish_;
 };
@@ -359,13 +497,21 @@ void write_info(std::string& json, info_unit_ptr info)
     std::stringstream ss;
     ss << "{"
         << "\"tx_hash\": \"" << pretty_hex(info->tx_hash) << "\","
-        << "\"block_hash\": \"" << pretty_hex(info->block_hash) << "\","
         << "\"index\": " << info->index << ","
         // x for received, and -x for sent amounts
         << "\"value\": " << (info->is_input ? "-" : "") << info->value << ","
-        << "\"height\": " << info->height << ","
         << "\"timestamp\": " << info->timestamp << ","
         << "\"is_input\": " << info->is_input << ",";
+    if (info->height == 0 && info->block_hash == null_hash)
+    {
+        ss << "\"block_hash\": \"mempool\","
+            << "\"height\": null,";
+    }
+    else
+    {
+        ss << "\"block_hash\": \"" << pretty_hex(info->block_hash) << "\","
+            << "\"height\": " << info->height << ",";
+    }
     write_xputs_strings(ss, "inputs", info->inputs);
     ss << ",";
     write_xputs_strings(ss, "outputs", info->outputs);
@@ -378,7 +524,7 @@ void write_info(std::string& json, info_unit_ptr info)
 }
 
 void keep_query_alive_proxy(const std::error_code& ec,
-    const statement_entry& statement,
+    const statement_entry& statement, const info_unit_list& membuf_result,
     python::object handle_finish, query_history_ptr history)
 {
     std::string json = "[";
@@ -396,6 +542,11 @@ void keep_query_alive_proxy(const std::error_code& ec,
             write_info(json, entry->loaded_input);
         }
     }
+    for (info_unit_ptr info: membuf_result)
+    {
+        json += ",";
+        write_info(json, info);
+    }
     json += "]";
     pyfunction<const std::error_code&, const std::string&> f(handle_finish);
     f(ec, json);
@@ -408,7 +559,7 @@ void payment_history(async_service_ptr service, blockchain_ptr chain,
     query_history_ptr history =
         std::make_shared<query_history>(*service, chain, txpool, membuf);
     history->start(address,
-        std::bind(keep_query_alive_proxy, ph::_1, ph::_2,
+        std::bind(keep_query_alive_proxy, ph::_1, ph::_2, ph::_3,
             handle_finish, history));
 }
 
