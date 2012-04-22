@@ -77,7 +77,12 @@ public:
 
     void start(const std::string& address, finish_handler handle_finish)
     {
-        address_.set_encoded(address);
+        if (!address_.set_encoded(address))
+        {
+            handle_finish(make_error_code(std::errc::address_not_available),
+                statement_entry());
+            return;
+        }
         handle_finish_ = handle_finish;
         chain_->fetch_outputs(address_,
             strand_.wrap(std::bind(&query_history::start_loading,
@@ -107,6 +112,11 @@ private:
     {
         if (stop_on_error(ec))
             return;
+        else if (outpoints.empty())
+        {
+            handle_finish_(std::error_code(), statement_entry());
+            return;
+        }
         for (auto outpoint: outpoints)
         {
             auto entry = std::make_shared<payment_entry>();
