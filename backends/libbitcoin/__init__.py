@@ -247,7 +247,7 @@ class NumblocksSubscribe:
         latest = fork_point + len(arrivals)
         self.latest.set(latest)
         response = {"id": None, "method": "blockchain.numblocks.subscribe",
-                    "result": latest}
+                    "params": [latest]}
         self.processor.push_response(response)
         self.backend.blockchain.subscribe_reorganize(self.reorganize)
 
