@@ -189,7 +189,8 @@ class Session:
             self.subscriptions.append(subdesc)
 
     # subdesc = A subscription description
-    def build_subdesc(self, method, params):
+    @staticmethod
+    def build_subdesc(method, params):
         if method == "blockchain.numblocks.subscribe":
             return method,
         elif method == "blockchain.address.get_history":
@@ -222,18 +223,19 @@ class ResponseDispatcher(threading.Thread):
         #print "pop response", response
         internal_id = response.get('id')
         method = response.get('method')
-        params = response.get('params', [])
+        params = response.get('params')
 
         # A notification
-        if internal_id is None and method is None:
-            self.notification(response)
-        elif internal_id is not None:
+        if internal_id is None and method is not None and params is not None:
+            self.notification(method, params, response)
+        # A response
+        elif internal_id is not None and method is None and params is None:
             self.send_response(internal_id, response)
         else:
             print "no method", response
 
-    def notification(self, response):
-        subdesc = self.build_subdesc(method, params)
+    def notification(self, method, params, response):
+        subdesc = Session.build_subdesc(method, params)
         for session in self.processor.sessions:
             if session.stopped():
                 continue

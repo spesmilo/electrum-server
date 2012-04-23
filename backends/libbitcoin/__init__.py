@@ -254,7 +254,6 @@ class NumblocksSubscribe:
     def subscribe(self, request):
         latest = self.latest.get()
         response = {"id": request["id"],
-                    "method": "blockchain.numblocks.subscribe",
                     "result": latest,
                     "error": None}
         self.processor.push_response(response)
