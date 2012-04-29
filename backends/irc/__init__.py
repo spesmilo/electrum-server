@@ -76,7 +76,7 @@ class ServerProcessor(Processor):
                         ports  = line[k+10:]
                         self.peers[name] = (ip, host, ports)
                     if time.time() - t > 5*60:
-                        self.push_response({'method':'server.peers', 'result':[self.get_peers()]})
+                        self.push_response({'method':'server.peers', 'params':[self.get_peers()]})
                         s.send('NAMES #electrum\n')
                         t = time.time()
                         self.peers = {}
