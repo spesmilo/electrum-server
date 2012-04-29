@@ -428,7 +428,6 @@ class BlockchainProcessor(Processor):
                     break
                 if addr in self.watched_addresses:
                     status = self.store.get_status( addr )
-                    print "push_response", addr
                     self.push_response({ 'method':'blockchain.address.subscribe', 'params':[addr, status] })
 
             time.sleep(10)
