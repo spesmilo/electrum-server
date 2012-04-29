@@ -40,7 +40,7 @@ class Processor(threading.Thread):
         pass
 
     def push_response(self, response):
-        print "response", response
+        #print "response", response
         self.dispatcher.request_dispatcher.push_response(response)
 
 
@@ -164,20 +164,21 @@ class Session:
         self.subscriptions = []
         self.address = ''
         self.name = ''
-        #threading.Timer(2, self.info).start()
+        threading.Timer(2, self.info).start()
 
     # Debugging method. Doesn't need to be threadsafe.
     def info(self):
         for sub in self.subscriptions:
-            print sub
-            method, params = sub
+            #print sub
+            method = sub[0]
             if method == 'blockchain.address.subscribe':
+                params = sub[1]
                 addr = params[0]
                 break
         else:
             addr = None
-        print (timestr(), self.name, self.address, addr,
-               len(self.subscriptions), self.version)
+        print timestr(), self.name, self.address, addr,\
+            len(self.subscriptions), self.version
 
     def stopped(self):
         with self.lock:
@@ -186,7 +187,8 @@ class Session:
     def subscribe_to_service(self, method, params):
         subdesc = self.build_subdesc(method, params)
         with self.lock:
-            self.subscriptions.append(subdesc)
+            if subdesc is not None:
+                self.subscriptions.append(subdesc)
 
     # subdesc = A subscription description
     @staticmethod
@@ -226,10 +228,10 @@ class ResponseDispatcher(threading.Thread):
         params = response.get('params')
 
         # A notification
-        if internal_id is None and method is not None and params is not None:
+        if internal_id is None: # and method is not None and params is not None:
             self.notification(method, params, response)
         # A response
-        elif internal_id is not None and method is None and params is None:
+        elif internal_id is not None: # and method is None and params is None:
             self.send_response(internal_id, response)
         else:
             print "no method", response
