@@ -172,8 +172,7 @@ class Session:
             #print sub
             method = sub[0]
             if method == 'blockchain.address.subscribe':
-                params = sub[1]
-                addr = params[0]
+                addr = sub[1]
                 break
         else:
             addr = None
