@@ -164,6 +164,7 @@ class Session:
         self.subscriptions = []
         self.address = ''
         self.name = ''
+        self.version = 'unknown'
         threading.Timer(2, self.info).start()
 
     # Debugging method. Doesn't need to be threadsafe.

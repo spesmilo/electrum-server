@@ -54,14 +54,16 @@ def create_config():
 
     return config
 
-def run_rpc_command(command, stratum_http_port):
-    import jsonrpclib
-    server = jsonrpclib.Server('http://%s:%s'%(host, stratum_http_port))
-    if command == 'stop':
-        result = server.server.stop(password)
-    else:
-        result = "Unknown command: '%s'" % command
-    print result
+def run_rpc_command(command, stratum_tcp_port):
+    import socket, json
+    s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+    s.connect(( host, int(stratum_tcp_port )))
+    method = 'server.' + command
+    request = json.dumps( { 'id':0, 'method':method, 'params':[password] } )
+    s.send(request + '\n')
+    msg = s.recv(1024)
+    s.close()
+    print json.loads(msg).get('result')
 
 if __name__ == '__main__':
     config = create_config()
@@ -72,7 +74,7 @@ if __name__ == '__main__':
     stratum_http_port = config.get('server', 'stratum_http_port')
 
     if len(sys.argv) > 1:
-        run_rpc_command(sys.argv[1], stratum_http_port)
+        run_rpc_command(sys.argv[1], stratum_tcp_port)
         sys.exit(0)
 
     from processor import Dispatcher

@@ -12,7 +12,6 @@ class TcpSession(Session):
         Session.__init__(self)
         self._connection = connection
         self.address = address[0]
-        self.version = 'unknown'
         self.name = "TCP session"
 
     def connection(self):

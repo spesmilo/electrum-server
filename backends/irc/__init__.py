@@ -111,6 +111,10 @@ class ServerProcessor(Processor):
             if password == self.password:
                 self.shared.stop()
                 result = 'ok'
+
+        elif method == 'server.info':
+            result = map(lambda s: s.address, self.dispatcher.request_dispatcher.sessions)
+
         else:
             print "unknown method", request
 

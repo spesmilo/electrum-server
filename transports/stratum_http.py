@@ -303,6 +303,7 @@ class HttpServer(threading.Thread):
         self.server = StratumThreadedJSONRPCServer(( self.host, self.port))
         self.server.dispatcher = self.dispatcher
         self.server.register_function(None, 'server.stop')
+        self.server.register_function(None, 'server.info')
 
         print "HTTP server started."
         self.server.serve_forever()
