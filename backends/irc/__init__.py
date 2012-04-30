@@ -93,6 +93,17 @@ class ServerProcessor(Processor):
         params = request['params']
         result = None
 
+        if method in ['server.stop', 'server.info']:
+            try:
+                password = request['params'][0]
+            except:
+                password = None
+
+            if password != self.password:
+                response = { 'id':request['id'], 'result':None,  'error':'incorrect password'}
+                self.push_response(response)
+                return
+
         if method == 'server.banner':
             result = self.banner.replace('\\n','\n')
 
@@ -103,17 +114,11 @@ class ServerProcessor(Processor):
             pass
 
         elif method == 'server.stop':
-            print "stopping..."
-            try:
-                password = request['params'][0]
-            except:
-                password = None
-            if password == self.password:
-                self.shared.stop()
-                result = 'ok'
+            self.shared.stop()
+            result = 'ok'
 
         elif method == 'server.info':
-            result = map(lambda s: s.address, self.dispatcher.request_dispatcher.sessions)
+            result = map(lambda s: { "address":s.address, "version":s.version, "subscriptions":len(s.subscriptions)}, self.dispatcher.request_dispatcher.sessions)
 
         else:
             print "unknown method", request
