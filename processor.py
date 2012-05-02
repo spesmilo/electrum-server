@@ -177,8 +177,10 @@ class Session:
                 break
         else:
             addr = None
-        print timestr(), self.name, self.address, addr,\
-            len(self.subscriptions), self.version
+
+        if self.subscriptions:
+            print timestr(), self.name, self.address, addr,\
+                len(self.subscriptions), self.version
 
     def stopped(self):
         with self.lock:
