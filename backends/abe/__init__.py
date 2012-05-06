@@ -344,7 +344,8 @@ class AbeStore(Datastore_class):
         respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
         r = loads(respdata)
         if r['error'] != None:
-            out = "error: transaction rejected by memorypool\n"+tx
+            msg = r['error'].get('message')
+            out = "error: transaction rejected by memorypool: " + msg + "\n" + tx
         else:
             out = r['result']
         return out
