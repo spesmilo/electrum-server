@@ -248,6 +248,9 @@ class ResponseDispatcher(threading.Thread):
 
     def send_response(self, internal_id, response):
         session, message_id = self.processor.get_session_id(internal_id)
-        response['id'] = message_id
-        session.send_response(response)
+        if session:
+            response['id'] = message_id
+            session.send_response(response)
+        else:
+            print "send_response: no session", message_id, internal_id, response
 

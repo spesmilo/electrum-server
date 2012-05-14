@@ -164,6 +164,7 @@ class StratumJSONRPCRequestHandler(
             self.send_header("Set-Cookie", "SESSION=%s"%session_id)
 
         self.send_header("Content-type", "application/json-rpc")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-length", str(len(response)))
         self.end_headers()
         self.wfile.write(response)
@@ -212,6 +213,7 @@ class StratumJSONRPCRequestHandler(
             self.send_header("Set-Cookie", "SESSION=%s"%session_id)
 
         self.send_header("Content-type", "application/json-rpc")
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-length", str(len(response)))
         self.end_headers()
         self.wfile.write(response)
