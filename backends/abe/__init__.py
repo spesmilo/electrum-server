@@ -403,7 +403,7 @@ class BlockchainProcessor(Processor):
             print "unknown method", request
 
         if result != '':
-            response = { 'id':message_id, 'method':method, 'params':params, 'result':result }
+            response = { 'id':message_id, 'result':result }
             self.push_response(response)
 
 
