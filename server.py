@@ -112,17 +112,17 @@ if __name__ == '__main__':
 
     transports = []
     # Create various transports we need
-    if native_port is not None:
+    if native_port:
         server_banner = config.get('server','banner')
         native_server = NativeServer(shared, chain_proc, server_proc,
                                      server_banner, host, int(native_port))
         transports.append(native_server)
 
-    if stratum_tcp_port is not None:
+    if stratum_tcp_port:
         tcp_server = TcpServer(dispatcher, host, int(stratum_tcp_port))
         transports.append(tcp_server)
 
-    if stratum_http_port is not None:
+    if stratum_http_port:
         http_server = HttpServer(dispatcher, host, int(stratum_http_port))
         transports.append(http_server)
 
