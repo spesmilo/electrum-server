@@ -124,6 +124,6 @@ class ServerProcessor(Processor):
             print "unknown method", request
 
         if result!='':
-            response = { 'id':request['id'], 'method':method, 'params':params, 'result':result }
+            response = { 'id':request['id'], 'result':result }
             self.push_response(response)
 
