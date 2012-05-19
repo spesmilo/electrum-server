@@ -27,13 +27,15 @@ class TcpSession(Session):
             self._stopped = True
 
     def send_response(self, response):
-        raw_response = json.dumps(response)
+        data = json.dumps(response) + "\n"
         # Possible race condition here by having session
         # close connection?
         # I assume Python connections are thread safe interfaces
         try:
             connection = self.connection()
-            connection.send(raw_response + "\n")
+            while data:
+                l = connection.send(data)
+                data = data[l:]
         except:
             self.stop()
 
@@ -68,7 +70,7 @@ class TcpClientRequestor(threading.Thread):
 
     def receive(self):
         try:
-            return self.session.connection().recv(1024)
+            return self.session.connection().recv(2048)
         except:
             return ''
 
