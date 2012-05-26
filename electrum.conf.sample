@@ -1,6 +1,6 @@
 [server]
 host = localhost
-native_port = 50000
+native_port = 
 stratum_tcp_port = 50001
 stratum_http_port = 8081
 password = secret
