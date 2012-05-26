@@ -61,7 +61,11 @@ def run_rpc_command(command, stratum_tcp_port):
     method = 'server.' + command
     request = json.dumps( { 'id':0, 'method':method, 'params':[password] } )
     s.send(request + '\n')
-    msg = s.recv(1024)
+    msg = ''
+    while True:
+        o = s.recv(1024)
+        msg += o
+        if msg.find('\n') != -1: break
     s.close()
     r = json.loads(msg).get('result')
     if command == 'stop': print r
