@@ -123,11 +123,8 @@ class TcpServer(threading.Thread):
         sock.listen(1)
         while not self.shared.stopped():
             session = TcpSession(*sock.accept())
-            client_req = TcpClientRequestor(self.dispatcher, session)
-            client_req.start()
             self.dispatcher.add_session(session)
             self.dispatcher.collect_garbage()
-
-
-
+            client_req = TcpClientRequestor(self.dispatcher, session)
+            client_req.start()
 
