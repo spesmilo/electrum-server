@@ -72,11 +72,14 @@ class AbeStore(Datastore_class):
         try:
             if lock: self.dblock.acquire()
             ret = self.selectall(sql,params)
-            if lock: self.dblock.release()
-            return ret
         except:
             print "sql error", sql
-            return []
+            ret = []
+        finally:
+            if lock: self.dblock.release()
+
+        return ret
+            
 
     def get_tx_outputs(self, tx_id, lock=True):
         return self.safe_sql("""SELECT
