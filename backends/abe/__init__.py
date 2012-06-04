@@ -436,6 +436,7 @@ class BlockchainProcessor(Processor):
 
             if self.block_number != old_block_number:
                 old_block_number = self.block_number
+                print "block number:", self.block_number
                 self.push_response({ 'method':'blockchain.numblocks.subscribe', 'params':[self.block_number] })
 
             while True:
