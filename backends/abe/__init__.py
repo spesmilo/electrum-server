@@ -373,6 +373,19 @@ class AbeStore(Datastore_class):
         return block_number
 
 
+    def catch_up(store):
+        # if there is an exception, do rollback and then re-raise the exception
+        for dircfg in store.datadirs:
+            try:
+                store.catch_up_dir(dircfg)
+            except Exception, e:
+                store.log.exception("Failed to catch up %s", dircfg)
+                store.rollback()
+                raise e
+
+
+
+
 from processor import Processor
 
 class BlockchainProcessor(Processor):
