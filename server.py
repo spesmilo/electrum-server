@@ -18,6 +18,9 @@
 import time, sys, traceback
 import ConfigParser
 
+import logging
+logging.basicConfig()
+
 def attempt_read_config(config, filename):
     try:
         with open(filename, 'r') as f:
