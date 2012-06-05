@@ -119,6 +119,7 @@ class ServerProcessor(Processor):
 
         elif method == 'server.info':
             result = map(lambda s: { "time":s.time, 
+                                     "name":s.name,
                                      "address":s.address, 
                                      "version":s.version, 
                                      "subscriptions":len(s.subscriptions)}, 

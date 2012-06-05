@@ -12,7 +12,7 @@ class TcpSession(Session):
         Session.__init__(self)
         self._connection = connection
         self.address = address[0]
-        self.name = "TCP session"
+        self.name = "TCP"
 
     def connection(self):
         if self.stopped():

@@ -285,7 +285,7 @@ class HttpSession(Session):
         Session.__init__(self)
         self.pending_responses = Queue.Queue()
         self.address = session_id
-        self.name = "HTTP session"
+        self.name = "HTTP"
 
     def send_response(self, response):
         raw_response = json.dumps(response)
