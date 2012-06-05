@@ -89,6 +89,11 @@ class RequestDispatcher(threading.Thread):
     def pop_request(self):
         return self.request_queue.get()
 
+    def get_session_by_address(self, address):
+        for x in self.sessions:
+            if x.address == address:
+                return x
+
     def get_session_id(self, internal_id):
         with self.lock:
             return self.internal_ids.pop(internal_id)

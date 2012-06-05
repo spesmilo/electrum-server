@@ -107,7 +107,7 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
                 responses.append(result.response())
                 continue
 
-            session = self.sessions.get(session_id)
+            session = self.dispatcher.get_session_by_address(session_id)
             self.dispatcher.process(session, req_entry)
                 
             if req_entry['method'] == 'server.stop':
@@ -254,16 +254,17 @@ class StratumJSONRPCServer(SocketServer.TCPServer, StratumJSONRPCDispatcher):
             flags |= fcntl.FD_CLOEXEC
             fcntl.fcntl(self.fileno(), fcntl.F_SETFD, flags)
 
-        self.sessions = {}
 
 
     def create_session(self):
         session_id = random_string(10)
-        self.sessions[session_id] = HttpSession(session_id)
+        session = HttpSession(session_id)
+        self.dispatcher.add_session(session)
         return session_id
 
     def poll_session(self, session_id):
-        q = self.sessions[session_id].pending_responses
+        session = self.dispatcher.get_session_by_address(session_id)
+        q = session.pending_responses
         responses = []
         while not q.empty():
             r = q.get()
