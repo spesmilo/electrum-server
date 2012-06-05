@@ -55,6 +55,8 @@ class TcpClientRequestor(threading.Thread):
             if not self.update():
                 break
 
+            self.session.time = time.time()
+
             while self.parse():
                 pass
 

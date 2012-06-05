@@ -118,7 +118,11 @@ class ServerProcessor(Processor):
             result = 'ok'
 
         elif method == 'server.info':
-            result = map(lambda s: { "address":s.address, "version":s.version, "subscriptions":len(s.subscriptions)}, self.dispatcher.request_dispatcher.sessions)
+            result = map(lambda s: { "time":s.time, 
+                                     "address":s.address, 
+                                     "version":s.version, 
+                                     "subscriptions":len(s.subscriptions)}, 
+                         self.dispatcher.request_dispatcher.sessions)
 
         else:
             print "unknown method", request

@@ -170,6 +170,7 @@ class Session:
         self.address = ''
         self.name = ''
         self.version = 'unknown'
+        self.time = time.time()
         threading.Timer(2, self.info).start()
 
     # Debugging method. Doesn't need to be threadsafe.

@@ -72,8 +72,9 @@ def run_rpc_command(command, stratum_tcp_port):
     r = json.loads(msg).get('result')
     if command == 'stop': print r
     elif command == 'info': 
+        now = time.time()
         for item in r:
-            print '%15s   %3s  %7s'%( item.get('address'), item.get('subscriptions'), item.get('version') )
+            print '%15s   %3s  %7s  %.2f'%( item.get('address'), item.get('subscriptions'), item.get('version'), (now - item.get('time')) )
 
 if __name__ == '__main__':
     config = create_config()

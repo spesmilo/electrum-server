@@ -22,7 +22,7 @@ import SimpleXMLRPCServer
 import SocketServer
 import socket
 import logging
-import os
+import os, time
 import types
 import traceback
 import sys, threading
@@ -100,6 +100,7 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
         session = self.dispatcher.get_session_by_address(session_id)
         if not session:
             return 'Error: session not found'
+        session.time = time.time()
 
         responses = []
         if type(request) is not types.ListType:
@@ -289,6 +290,12 @@ class HttpSession(Session):
     def send_response(self, response):
         raw_response = json.dumps(response)
         self.pending_responses.put(response)
+
+    def stopped(self):
+        with self.lock:
+            if time.time() - self.time > 60:
+                self._stopped = True
+            return self._stopped
 
 class HttpServer(threading.Thread):
     def __init__(self, dispatcher, host, port):
