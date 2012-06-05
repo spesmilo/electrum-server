@@ -97,6 +97,10 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
             response = fault.response()
             return response
 
+        session = self.dispatcher.get_session_by_address(session_id)
+        if not session:
+            return 'Error: session not found'
+
         responses = []
         if type(request) is not types.ListType:
             request = [ request ]
@@ -107,13 +111,12 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
                 responses.append(result.response())
                 continue
 
-            session = self.dispatcher.get_session_by_address(session_id)
             self.dispatcher.process(session, req_entry)
                 
             if req_entry['method'] == 'server.stop':
                 return json.dumps({'result':'ok'})
 
-        r = self.poll_session(session_id)
+        r = self.poll_session(session)
         for item in r:
             responses.append(json.dumps(item))
             
@@ -262,8 +265,7 @@ class StratumJSONRPCServer(SocketServer.TCPServer, StratumJSONRPCDispatcher):
         self.dispatcher.add_session(session)
         return session_id
 
-    def poll_session(self, session_id):
-        session = self.dispatcher.get_session_by_address(session_id)
+    def poll_session(self, session):
         q = session.pending_responses
         responses = []
         while not q.empty():
