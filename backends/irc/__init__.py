@@ -16,7 +16,6 @@ class ServerProcessor(Processor):
         self.host = config.get('server','host')
         self.password = config.get('server','password')
 
-        self.native_port = config.get('server','native_port')
         self.stratum_tcp_port = config.get('server','stratum_tcp_port')
         self.stratum_http_port = config.get('server','stratum_http_port')
 
@@ -31,8 +30,6 @@ class ServerProcessor(Processor):
 
     def getname(self):
         s = ''
-        if self.native_port:
-            s+= 'n' + self.native_port + ' '
         if self.stratum_tcp_port:
             s += 't' + self.stratum_tcp_port + ' ' 
         if self.stratum_http_port:
