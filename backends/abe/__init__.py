@@ -53,6 +53,10 @@ class AbeStore(Datastore_class):
         inrows = self.get_tx_inputs(txid, False)
         for row in inrows:
             _hash = self.binout(row[6])
+            if not _hash:
+                print "WARNING: missing tx_in for tx", txid
+                continue
+
             address = hash_to_address(chr(0), _hash)
             if self.tx_cache.has_key(address):
                 print "cache: invalidating", address
@@ -62,6 +66,10 @@ class AbeStore(Datastore_class):
         outrows = self.get_tx_outputs(txid, False)
         for row in outrows:
             _hash = self.binout(row[6])
+            if not _hash:
+                print "WARNING: missing tx_out for tx", txid
+                continue
+
             address = hash_to_address(chr(0), _hash)
             if self.tx_cache.has_key(address):
                 print "cache: invalidating", address
