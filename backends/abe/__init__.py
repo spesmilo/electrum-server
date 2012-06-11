@@ -273,6 +273,9 @@ class AbeStore(Datastore_class):
             inrows = self.get_tx_inputs(tx_id)
             for row in inrows:
                 _hash = self.binout(row[6])
+                if not _hash:
+                    print "WARNING: missing tx_in for tx", tx_id, addr
+                    continue
                 address = hash_to_address(chr(0), _hash)
                 txinputs.append(address)
             txpoint['inputs'] = txinputs
@@ -280,6 +283,9 @@ class AbeStore(Datastore_class):
             outrows = self.get_tx_outputs(tx_id)
             for row in outrows:
                 _hash = self.binout(row[6])
+                if not _hash:
+                    print "WARNING: missing tx_out for tx", tx_id, addr
+                    continue
                 address = hash_to_address(chr(0), _hash)
                 txoutputs.append(address)
             txpoint['outputs'] = txoutputs
