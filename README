@@ -32,3 +32,8 @@ Note:
 You do not want to run bitcoin-abe and the server simultaneously, because they will both try to update the database. 
 If you want bitcoin-abe to be available on your website, run it with the --no-update option
 
+
+Upgrading Abe:
+if you upgrade abe, you might need to update the database. 
+in the abe directory, type:
+ python -m Abe.abe --config=abe.conf --upgrade
