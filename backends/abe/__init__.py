@@ -1,4 +1,4 @@
-from Abe.abe import hash_to_address, decode_check_address
+from Abe.util import hash_to_address, decode_check_address
 from Abe.DataStore import DataStore as Datastore_class
 from Abe import DataStore, readconf, BCDataStream,  deserialize, util, base58
 
