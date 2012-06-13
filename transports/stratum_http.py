@@ -112,7 +112,7 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
                 responses.append(result.response())
                 continue
 
-            self.dispatcher.process(session, req_entry)
+            self.dispatcher.do_dispatch(session, req_entry)
                 
             if req_entry['method'] == 'server.stop':
                 return json.dumps({'result':'ok'})
