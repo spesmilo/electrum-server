@@ -35,6 +35,7 @@ class Processor(threading.Thread):
         threading.Thread.__init__(self)
         self.daemon = True
         self.dispatcher = None
+        self.queue = queue.Queue()
 
     def process(self, request):
         pass
@@ -43,6 +44,16 @@ class Processor(threading.Thread):
         #print "response", response
         self.dispatcher.request_dispatcher.push_response(response)
 
+    def run(self):
+        while not self.shared.stopped():
+            request = self.queue.get(10000000000)
+            try:
+                self.process(request)
+            except:
+                traceback.print_exc(file=sys.stdout)
+
+        print "processor terminating"
+            
 
 
 class Dispatcher:
@@ -110,17 +121,18 @@ class RequestDispatcher(threading.Thread):
             raise TypeError("self.shared not set in Processor")
         while not self.shared.stopped():
             session, request = self.pop_request()
-            self.process(session, request)
+            self.do_dispatch(session, request)
 
         self.stop()
 
     def stop(self):
         pass
 
-    def process(self, session, request):
+    def do_dispatch(self, session, request):
+        """ dispatch request to the relevant processor """
+
         method = request['method']
         params = request.get('params',[])
-
         suffix = method.split('.')[-1]
         if suffix == 'subscribe':
             session.subscribe_to_service(method, params)
@@ -128,17 +140,14 @@ class RequestDispatcher(threading.Thread):
         # store session and id locally
         request['id'] = self.store_session_id(session, request['id'])
 
-        # dispatch request to the relevant module..
         prefix = request['method'].split('.')[0]
         try:
             p = self.processors[prefix]
         except:
             print "error: no processor for", prefix
             return
-        try:
-            p.process(request)
-        except:
-            traceback.print_exc(file=sys.stdout)
+
+        p.queue.put(request)
 
         if method in ['server.version']:
             session.version = params[0]

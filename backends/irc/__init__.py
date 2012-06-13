@@ -6,23 +6,19 @@ def random_string(N):
 
 from processor import Processor
 
-class ServerProcessor(Processor):
 
-    def __init__(self, config):
-        Processor.__init__(self)
+class IrcThread(threading.Thread):
+
+    def __init__(self, processor, config):
+        threading.Thread.__init__(self)
+        self.processor = processor
         self.daemon = True
-        self.peers = {}
-        self.banner = config.get('server','banner')
-        self.host = config.get('server','host')
-        self.password = config.get('server','password')
-
         self.stratum_tcp_port = config.get('server','stratum_tcp_port')
         self.stratum_http_port = config.get('server','stratum_http_port')
-
-        self.irc = config.get('server', 'irc') == 'yes'
-        self.nick = config.get('server', 'irc_nick') 
+        self.peers = {}
+        self.host = config.get('server','host')
+        self.nick = config.get('server', 'irc_nick')
         if not self.nick: self.nick = random_string(10)
-
 
     def get_peers(self):
         return self.peers.values()
@@ -38,12 +34,9 @@ class ServerProcessor(Processor):
 
 
     def run(self):
-        if not self.irc: 
-            return
-
         ircname = self.getname()
 
-        while not self.shared.stopped():
+        while not self.processor.shared.stopped():
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
@@ -52,7 +45,7 @@ class ServerProcessor(Processor):
                 s.send('JOIN #electrum\n')
                 sf = s.makefile('r', 0)
                 t = 0
-                while not self.shared.stopped():
+                while not self.processor.shared.stopped():
                     line = sf.readline()
                     line = line.rstrip('\r\n')
                     line = line.split()
@@ -73,7 +66,7 @@ class ServerProcessor(Processor):
                         ports  = line[k+10:]
                         self.peers[name] = (ip, host, ports)
                     if time.time() - t > 5*60:
-                        self.push_response({'method':'server.peers', 'params':[self.get_peers()]})
+                        self.processor.push_response({'method':'server.peers', 'params':[self.get_peers()]})
                         s.send('NAMES #electrum\n')
                         t = time.time()
                         self.peers = {}
@@ -83,7 +76,35 @@ class ServerProcessor(Processor):
                 sf.close()
                 s.close()
 
+        print "quitting IRC"
 
+
+
+class ServerProcessor(Processor):
+
+    def __init__(self, config):
+        Processor.__init__(self)
+        self.daemon = True
+        self.banner = config.get('server','banner')
+        self.password = config.get('server','password')
+
+        if config.get('server', 'irc') == 'yes':
+            self.irc = IrcThread(self, config)
+        else: 
+            self.irc = None
+
+
+    def get_peers(self):
+        if self.irc:
+            return self.irc.get_peers()
+        else:
+            return []
+
+
+    def run(self):
+        if self.irc:
+            self.irc.start()
+        Processor.run(self)
 
     def process(self, request):
         method = request['method']
