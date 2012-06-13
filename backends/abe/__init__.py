@@ -25,7 +25,6 @@ class AbeStore(Datastore_class):
         Datastore_class.__init__(self,args)
 
         self.tx_cache = {}
-        self.mempool_keys = {}
         self.bitcoind_url = 'http://%s:%s@%s:%s/' % ( config.get('bitcoind','user'), config.get('bitcoind','password'), config.get('bitcoind','host'), config.get('bitcoind','port'))
 
         self.address_queue = Queue()
@@ -191,7 +190,7 @@ class AbeStore(Datastore_class):
              WHERE pubkey.pubkey_hash = ? """, (dbhash,))
 
     def get_history(self, addr):
-        
+
         cached_version = self.tx_cache.get( addr )
         if cached_version is not None:
             return cached_version
@@ -239,6 +238,8 @@ class AbeStore(Datastore_class):
         rows += self.get_address_out_rows_memorypool( dbhash )
         address_has_mempool = False
 
+        current_id = self.new_id("tx")
+
         for row in rows:
             is_in, tx_hash, tx_id, pos, value = row
             tx_hash = self.hashout_hex(tx_hash)
@@ -248,9 +249,10 @@ class AbeStore(Datastore_class):
             # this means that pending transactions were added to the db, even if they are not returned by getmemorypool
             address_has_mempool = True
 
-            # this means pending transactions are returned by getmemorypool
-            if tx_hash not in self.mempool_keys:
+            # fixme: we need to detect transactions that became invalid
+            if current_id - tx_id > 10000:
                 continue
+
 
             #print "mempool", tx_hash
             txpoint = {
@@ -328,9 +330,6 @@ class AbeStore(Datastore_class):
     def memorypool_update(store):
 
         ds = BCDataStream.BCDataStream()
-        previous_transactions = store.mempool_keys
-        store.mempool_keys = []
-
         postdata = dumps({"method": 'getmemorypool', 'params': [], 'id':'jsonrpc'})
 
         respdata = urllib.urlopen(store.bitcoind_url, postdata).read()
@@ -346,7 +345,6 @@ class AbeStore(Datastore_class):
             tx['hash'] = util.double_sha256(tx['tx'])
             tx_hash = store.hashin(tx['hash'])
 
-            store.mempool_keys.append(tx_hash)
             if store.tx_find_id_and_value(tx):
                 pass
             else:
