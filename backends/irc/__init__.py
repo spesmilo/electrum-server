@@ -49,6 +49,7 @@ class IrcThread(threading.Thread):
                     line = sf.readline()
                     line = line.rstrip('\r\n')
                     line = line.split()
+                    if not line: continue
                     if line[0]=='PING': 
                         s.send('PONG '+line[1]+'\n')
                     elif '353' in line: # answer to /names
