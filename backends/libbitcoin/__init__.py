@@ -359,8 +359,3 @@ class BlockchainProcessor(Processor):
             response = {"id": request["id"], "result": tx_hash, "error": None}
         self.push_response(response)
 
-    def run(self):
-        print "Warning: pre-alpha prototype. Full of bugs."
-        while not self.shared.stopped():
-            time.sleep(1)
-
