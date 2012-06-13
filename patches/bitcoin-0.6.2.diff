@@ -1,4 +1,4 @@
---- main.cpp	2012-05-24 01:24:54.000000000 +0400
+--- main.cpp	2012-06-13 21:40:29.000000000 +0400
 +++ main.cpp.orig	2012-05-08 21:34:24.000000000 +0400
 @@ -3222,21 +3222,18 @@
  
@@ -26,7 +26,21 @@
              // Connecting shouldn't fail due to dependency on other memory pool transactions
              // because we're already processing them in order of dependency
              map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
---- bitcoinrpc.cpp	2012-06-10 20:54:28.000000000 +0400
+@@ -3295,13 +3292,6 @@
+     pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock.get());
+     pblock->nNonce         = 0;
+ 
+-
+-
+-    // Electrum: remove from mem pool
+-    BOOST_FOREACH(CTransaction& tx, pblock->vtx)
+-      mempool.remove(tx);
+-
+-
+     return pblock.release();
+ }
+ 
+--- bitcoinrpc.cpp	2012-06-13 21:37:34.000000000 +0400
 +++ bitcoinrpc.cpp.orig	2012-05-08 21:34:23.000000000 +0400
 @@ -1496,45 +1496,7 @@
      return entry;
