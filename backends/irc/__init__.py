@@ -143,6 +143,10 @@ class ServerProcessor(Processor):
                                      "subscriptions":len(s.subscriptions)}, 
                          self.dispatcher.request_dispatcher.get_sessions())
 
+        elif method == 'server.load':
+            p = self.dispatcher.request_dispatcher.processors['blockchain']
+            result = p.queue.qsize()
+
         else:
             print "unknown method", request
 

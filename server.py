@@ -70,8 +70,8 @@ def run_rpc_command(command, stratum_tcp_port):
         if msg.find('\n') != -1: break
     s.close()
     r = json.loads(msg).get('result')
-    if command == 'stop': print r
-    elif command == 'info': 
+
+    if command == 'info': 
         now = time.time()
         print 'type           address   sub  version  time' 
         for item in r:
@@ -80,6 +80,8 @@ def run_rpc_command(command, stratum_tcp_port):
                                                   item.get('subscriptions'), 
                                                   item.get('version'), 
                                                   (now - item.get('time')) )
+    else:
+        print r
 
 if __name__ == '__main__':
     config = create_config()
