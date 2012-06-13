@@ -143,6 +143,10 @@ class RequestDispatcher(threading.Thread):
         if method in ['server.version']:
             session.version = params[0]
 
+    def get_sessions(self):
+        with self.lock:
+            r = self.sessions[:]
+        return r
 
     def add_session(self, session):
         with self.lock:

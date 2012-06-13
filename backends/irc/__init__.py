@@ -120,7 +120,7 @@ class ServerProcessor(Processor):
                                      "address":s.address, 
                                      "version":s.version, 
                                      "subscriptions":len(s.subscriptions)}, 
-                         self.dispatcher.request_dispatcher.sessions)
+                         self.dispatcher.request_dispatcher.get_sessions())
 
         else:
             print "unknown method", request
