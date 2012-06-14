@@ -9,6 +9,9 @@ from json import dumps, loads
 from Queue import Queue
 import time, threading
 
+
+SQL_LIMIT=200
+
 class AbeStore(Datastore_class):
 
     def __init__(self, config):
@@ -53,7 +56,7 @@ class AbeStore(Datastore_class):
         for row in inrows:
             _hash = self.binout(row[6])
             if not _hash:
-                print "WARNING: missing tx_in for tx", txid
+                #print "WARNING: missing tx_in for tx", txid
                 continue
 
             address = hash_to_address(chr(0), _hash)
@@ -66,7 +69,7 @@ class AbeStore(Datastore_class):
         for row in outrows:
             _hash = self.binout(row[6])
             if not _hash:
-                print "WARNING: missing tx_out for tx", txid
+                #print "WARNING: missing tx_out for tx", txid
                 continue
 
             address = hash_to_address(chr(0), _hash)
@@ -76,14 +79,18 @@ class AbeStore(Datastore_class):
             self.address_queue.put(address)
 
     def safe_sql(self,sql, params=(), lock=True):
+
+        error = False
         try:
             if lock: self.dblock.acquire()
             ret = self.selectall(sql,params)
         except:
-            print "sql error", sql
-            ret = []
+            error = True
         finally:
             if lock: self.dblock.release()
+
+        if error: 
+            raise BaseException('sql error')
 
         return ret
             
@@ -123,8 +130,9 @@ class AbeStore(Datastore_class):
              ORDER BY txin.txin_pos
              """%(tx_id,), (), lock)
 
+
     def get_address_out_rows(self, dbhash):
-        return self.safe_sql(""" SELECT
+        out = self.safe_sql(""" SELECT
                 b.block_nTime,
                 cc.chain_id,
                 b.block_height,
@@ -142,10 +150,15 @@ class AbeStore(Datastore_class):
               JOIN txout prevout ON (txin.txout_id = prevout.txout_id)
               JOIN pubkey ON (pubkey.pubkey_id = prevout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
-               AND cc.in_longest = 1""", (dbhash,))
+               AND cc.in_longest = 1
+             LIMIT ? """, (dbhash,SQL_LIMIT))
+
+        if len(out)==SQL_LIMIT: 
+            raise BaseException('limit reached')
+        return out
 
     def get_address_out_rows_memorypool(self, dbhash):
-        return self.safe_sql(""" SELECT
+        out = self.safe_sql(""" SELECT
                 1,
                 tx.tx_hash,
                 tx.tx_id,
@@ -155,10 +168,15 @@ class AbeStore(Datastore_class):
               JOIN txin ON (txin.tx_id = tx.tx_id)
               JOIN txout prevout ON (txin.txout_id = prevout.txout_id)
               JOIN pubkey ON (pubkey.pubkey_id = prevout.pubkey_id)
-             WHERE pubkey.pubkey_hash = ? """, (dbhash,))
+             WHERE pubkey.pubkey_hash = ?
+             LIMIT ? """, (dbhash,SQL_LIMIT))
+
+        if len(out)==SQL_LIMIT: 
+            raise BaseException('limit reached')
+        return out
 
     def get_address_in_rows(self, dbhash):
-        return self.safe_sql(""" SELECT
+        out = self.safe_sql(""" SELECT
                 b.block_nTime,
                 cc.chain_id,
                 b.block_height,
@@ -175,10 +193,15 @@ class AbeStore(Datastore_class):
               JOIN txout ON (txout.tx_id = tx.tx_id)
               JOIN pubkey ON (pubkey.pubkey_id = txout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
-               AND cc.in_longest = 1""", (dbhash,))
+               AND cc.in_longest = 1
+               LIMIT ? """, (dbhash,SQL_LIMIT))
+
+        if len(out)==SQL_LIMIT: 
+            raise BaseException('limit reached')
+        return out
 
     def get_address_in_rows_memorypool(self, dbhash):
-        return self.safe_sql( """ SELECT
+        out = self.safe_sql( """ SELECT
                 0,
                 tx.tx_hash,
                 tx.tx_id,
@@ -187,7 +210,12 @@ class AbeStore(Datastore_class):
               FROM tx
               JOIN txout ON (txout.tx_id = tx.tx_id)
               JOIN pubkey ON (pubkey.pubkey_id = txout.pubkey_id)
-             WHERE pubkey.pubkey_hash = ? """, (dbhash,))
+             WHERE pubkey.pubkey_hash = ?
+             LIMIT ? """, (dbhash,SQL_LIMIT))
+
+        if len(out)==SQL_LIMIT: 
+            raise BaseException('limit reached')
+        return out
 
     def get_history(self, addr):
 
@@ -276,7 +304,7 @@ class AbeStore(Datastore_class):
             for row in inrows:
                 _hash = self.binout(row[6])
                 if not _hash:
-                    print "WARNING: missing tx_in for tx", tx_id, addr
+                    #print "WARNING: missing tx_in for tx", tx_id, addr
                     continue
                 address = hash_to_address(chr(0), _hash)
                 txinputs.append(address)
@@ -286,7 +314,7 @@ class AbeStore(Datastore_class):
             for row in outrows:
                 _hash = self.binout(row[6])
                 if not _hash:
-                    print "WARNING: missing tx_out for tx", tx_id, addr
+                    #print "WARNING: missing tx_out for tx", tx_id, addr
                     continue
                 address = hash_to_address(chr(0), _hash)
                 txoutputs.append(address)
@@ -416,25 +444,40 @@ class BlockchainProcessor(Processor):
         message_id = request['id']
         method = request['method']
         params = request.get('params',[])
-        result = ''
+        result = None
+        error = None
+
         if method == 'blockchain.numblocks.subscribe':
             result = self.block_number
+
         elif method == 'blockchain.address.subscribe':
-            address = params[0]
-            self.watch_address(address)
-            status = self.store.get_status(address)
-            result = status
+            try:
+                address = params[0]
+                result = self.store.get_status(address)
+                self.watch_address(address)
+            except BaseException, e:
+                error = str(e)
+
         elif method == 'blockchain.address.get_history':
-            address = params[0]
-            result = self.store.get_history( address ) 
+            try:
+                address = params[0]
+                result = self.store.get_history( address ) 
+            except BaseException, e:
+                error = str(e)
+
         elif method == 'blockchain.transaction.broadcast':
             txo = self.store.send_tx(params[0])
             print "sent tx:", txo
             result = txo 
-        else:
-            print "unknown method", request
 
-        if result != '':
+        else:
+            error = "unknown method:%s"%method
+
+
+        if error:
+            response = { 'id':message_id, 'error':error }
+            self.push_response(response)
+        elif result != '':
             response = { 'id':message_id, 'result':result }
             self.push_response(response)
 
