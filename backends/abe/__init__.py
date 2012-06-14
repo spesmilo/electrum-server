@@ -10,7 +10,6 @@ from Queue import Queue
 import time, threading
 
 
-SQL_LIMIT=500
 
 class AbeStore(Datastore_class):
 
@@ -26,6 +25,8 @@ class AbeStore(Datastore_class):
             args.connect_args = { 'database' : config.get('database','database') }
 
         Datastore_class.__init__(self,args)
+
+        self.sql_limit = config.get('database','limit')
 
         self.tx_cache = {}
         self.bitcoind_url = 'http://%s:%s@%s:%s/' % ( config.get('bitcoind','user'), config.get('bitcoind','password'), config.get('bitcoind','host'), config.get('bitcoind','port'))
@@ -151,9 +152,9 @@ class AbeStore(Datastore_class):
               JOIN pubkey ON (pubkey.pubkey_id = prevout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
                AND cc.in_longest = 1
-             LIMIT ? """, (dbhash,SQL_LIMIT))
+             LIMIT ? """, (dbhash,self.sql_limit))
 
-        if len(out)==SQL_LIMIT: 
+        if len(out)==self.sql_limit: 
             raise BaseException('limit reached')
         return out
 
@@ -169,9 +170,9 @@ class AbeStore(Datastore_class):
               JOIN txout prevout ON (txin.txout_id = prevout.txout_id)
               JOIN pubkey ON (pubkey.pubkey_id = prevout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
-             LIMIT ? """, (dbhash,SQL_LIMIT))
+             LIMIT ? """, (dbhash,self.sql_limit))
 
-        if len(out)==SQL_LIMIT: 
+        if len(out)==self.sql_limit: 
             raise BaseException('limit reached')
         return out
 
@@ -194,9 +195,9 @@ class AbeStore(Datastore_class):
               JOIN pubkey ON (pubkey.pubkey_id = txout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
                AND cc.in_longest = 1
-               LIMIT ? """, (dbhash,SQL_LIMIT))
+               LIMIT ? """, (dbhash,self.sql_limit))
 
-        if len(out)==SQL_LIMIT: 
+        if len(out)==self.sql_limit: 
             raise BaseException('limit reached')
         return out
 
@@ -211,9 +212,9 @@ class AbeStore(Datastore_class):
               JOIN txout ON (txout.tx_id = tx.tx_id)
               JOIN pubkey ON (pubkey.pubkey_id = txout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
-             LIMIT ? """, (dbhash,SQL_LIMIT))
+             LIMIT ? """, (dbhash,self.sql_limit))
 
-        if len(out)==SQL_LIMIT: 
+        if len(out)==self.sql_limit: 
             raise BaseException('limit reached')
         return out
 

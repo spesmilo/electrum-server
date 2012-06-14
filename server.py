@@ -42,6 +42,7 @@ def create_config():
     config.add_section('database')
     config.set('database', 'type', 'psycopg2')
     config.set('database', 'database', 'abe')
+    config.set('database', 'limit', '500')
     config.set('server', 'backend', 'abe')
 
     for path in ('/etc/', ''):
