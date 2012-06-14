@@ -10,7 +10,7 @@ from Queue import Queue
 import time, threading
 
 
-SQL_LIMIT=200
+SQL_LIMIT=500
 
 class AbeStore(Datastore_class):
 
@@ -456,14 +456,16 @@ class BlockchainProcessor(Processor):
                 result = self.store.get_status(address)
                 self.watch_address(address)
             except BaseException, e:
-                error = str(e)
+                error = str(e) + ': ' + address
+                print "error:", error
 
         elif method == 'blockchain.address.get_history':
             try:
                 address = params[0]
                 result = self.store.get_history( address ) 
             except BaseException, e:
-                error = str(e)
+                error = str(e) + ': ' + address
+                print "error:", error
 
         elif method == 'blockchain.transaction.broadcast':
             txo = self.store.send_tx(params[0])
