@@ -1,98 +1,122 @@
---- main.cpp	2012-06-13 21:40:29.000000000 +0400
-+++ main.cpp.orig	2012-05-08 21:34:24.000000000 +0400
-@@ -3222,21 +3222,18 @@
+diff --git a/src/bitcoinrpc.cpp b/src/bitcoinrpc.cpp
+index 15bcf1d..1ace361 100644
+--- a/src/bitcoinrpc.cpp
++++ b/src/bitcoinrpc.cpp
+@@ -1497,6 +1497,43 @@ Value gettransaction(const Array& params, bool fHelp)
+ }
+ 
+ 
++Value importtransaction(const Array& params, bool fHelp)
++{
++  string hexdump;
++  if (fHelp || params.size() != 1 || (hexdump=params[0].get_str()).size()&1)
++    throw runtime_error(
++            "importtransaction <hexdata>\n"
++            "Import an offline transaction to announce it into the network");
++
++  std::vector<unsigned char> rawtx;
++  for (int i=0; i<hexdump.size(); i+=2)
++    {
++      int v;
++      if (sscanf(hexdump.substr(i,2).c_str(), "%x", &v)!=1)
++	throw JSONRPCError(-4, "Error in hex data.");
++      rawtx.push_back((unsigned char)v);
++    }
++try
++  {
++    CDataStream ss(rawtx, SER_NETWORK, PROTOCOL_VERSION);
++    CTransaction tx;
++    ss >> tx;
++    CInv inv(MSG_TX, tx.GetHash());
++
++    CTxDB txdb("r");
++    if(! tx.AcceptToMemoryPool(txdb, true)) throw JSONRPCError(-4, "Transaction not accepted to memory pool.");
++    CDataStream msg(rawtx, SER_NETWORK, PROTOCOL_VERSION);
++    RelayMessage(inv, msg);
++    return tx.GetHash().GetHex();
++  }
++ catch (std::exception& e)
++   {
++     throw JSONRPCError(-4, "Exception while parsing the transaction data.");
++   }
++
++}
++
++
+ Value backupwallet(const Array& params, bool fHelp)
+ {
+     if (fHelp || params.size() != 1)
+@@ -2055,6 +2092,7 @@ static const CRPCCommand vRPCCommands[] =
+     { "listsinceblock",         &listsinceblock,         false },
+     { "dumpprivkey",            &dumpprivkey,            false },
+     { "importprivkey",          &importprivkey,          false },
++    { "importtransaction",      &importtransaction,      false },
+ };
+ 
+ CRPCTable::CRPCTable()
+diff --git a/src/main.cpp b/src/main.cpp
+index 427e435..35da486 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -3160,6 +3160,10 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
+             if (tx.IsCoinBase() || !tx.IsFinal())
+                 continue;
+ 
++	    if (tx.get_electrum_flag())
++	      continue;
++	    tx.set_electrum_flag(true);
++
+             COrphan* porphan = NULL;
+             double dPriority = 0;
+             BOOST_FOREACH(const CTxIn& txin, tx.vin)
+@@ -3222,18 +3226,21 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
  
              // Size limits
              unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
--            //if (nBlockSize + nTxSize >= MAX_BLOCK_SIZE_GEN)
--            //    continue;
-+            if (nBlockSize + nTxSize >= MAX_BLOCK_SIZE_GEN)
-+                continue;
+-            if (nBlockSize + nTxSize >= MAX_BLOCK_SIZE_GEN)
+-                continue;
++            //if (nBlockSize + nTxSize >= MAX_BLOCK_SIZE_GEN)
++            //    continue;
  
              // Legacy limits on sigOps:
              unsigned int nTxSigOps = tx.GetLegacySigOpCount();
--            //if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
--            //    continue;
-+            if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
-+                continue;
+-            if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
+-                continue;
++            //if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)
++            //    continue;
  
              // Transaction fee required depends on block size
              bool fAllowFree = (nBlockSize + nTxSize < 4000 || CTransaction::AllowFree(dPriority));
              int64 nMinFee = tx.GetMinFee(nBlockSize, fAllowFree, GMF_BLOCK);
  
--            // Electrum server: do not check fees
--            nMinFee = 0;
--
++            // Electrum server: do not check fees
++            nMinFee = 0;
++
              // Connecting shouldn't fail due to dependency on other memory pool transactions
              // because we're already processing them in order of dependency
              map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
-@@ -3295,13 +3292,6 @@
-     pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock.get());
-     pblock->nNonce         = 0;
+diff --git a/src/main.h b/src/main.h
+index 262e77e..fb79232 100644
+--- a/src/main.h
++++ b/src/main.h
+@@ -395,9 +395,20 @@ public:
+     mutable int nDoS;
+     bool DoS(int nDoSIn, bool fIn) const { nDoS += nDoSIn; return fIn; }
  
--
--
--    // Electrum: remove from mem pool
--    BOOST_FOREACH(CTransaction& tx, pblock->vtx)
--      mempool.remove(tx);
--
--
-     return pblock.release();
- }
++    bool electrum_flag;
++
++    void set_electrum_flag(bool x){
++      electrum_flag = x;
++    }
++
++    bool get_electrum_flag(){
++      return electrum_flag;
++    }
++
+     CTransaction()
+     {
+         SetNull();
++	set_electrum_flag(false);
+     }
  
---- bitcoinrpc.cpp	2012-06-13 21:37:34.000000000 +0400
-+++ bitcoinrpc.cpp.orig	2012-05-08 21:34:23.000000000 +0400
-@@ -1496,45 +1496,7 @@
-     return entry;
- }
- 
--Value importtransaction(const Array& params, bool fHelp)
--{
--  string hexdump;
--  if (fHelp || params.size() != 1 || (hexdump=params[0].get_str()).size()&1)
--    throw runtime_error(
--            "importtransaction <hexdata>\n"
--            "Import an offline transaction to announce it into the network");
--
--  std::vector<unsigned char> rawtx;
--  for (int i=0; i<hexdump.size(); i+=2)
--    {
--      int v;
--      if (sscanf(hexdump.substr(i,2).c_str(), "%x", &v)!=1)
--	throw JSONRPCError(-4, "Error in hex data.");
--      rawtx.push_back((unsigned char)v);
--    }
--try
--  {
--    CDataStream ss(rawtx, SER_NETWORK, PROTOCOL_VERSION);
--    CTransaction tx;
--    ss >> tx;
--    CInv inv(MSG_TX, tx.GetHash());
--
--    CTxDB txdb("r");
--    if(! tx.AcceptToMemoryPool(txdb, true)) throw JSONRPCError(-4, "Transaction not accepted to memory pool.");
--    CDataStream msg(rawtx, SER_NETWORK, PROTOCOL_VERSION);
--    RelayMessage(inv, msg);
--    return tx.GetHash().GetHex();
--  }
-- catch (std::exception& e)
--   {
--     throw JSONRPCError(-4, "Exception while parsing the transaction data.");
--   }
--
--}
--
--
- 
--  
- Value backupwallet(const Array& params, bool fHelp)
- {
-     if (fHelp || params.size() != 1)
-@@ -2093,7 +2055,6 @@
-     { "listsinceblock",         &listsinceblock,         false },
-     { "dumpprivkey",            &dumpprivkey,            false },
-     { "importprivkey",          &importprivkey,          false },
--    { "importtransaction",      &importtransaction,      false },
- };
- 
- CRPCTable::CRPCTable()
+     IMPLEMENT_SERIALIZE

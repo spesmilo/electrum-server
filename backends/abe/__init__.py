@@ -26,7 +26,7 @@ class AbeStore(Datastore_class):
 
         Datastore_class.__init__(self,args)
 
-        self.sql_limit = config.get('database','limit')
+        self.sql_limit = int( config.get('database','limit') )
 
         self.tx_cache = {}
         self.bitcoind_url = 'http://%s:%s@%s:%s/' % ( config.get('bitcoind','user'), config.get('bitcoind','password'), config.get('bitcoind','host'), config.get('bitcoind','port'))
