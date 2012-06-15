@@ -1,5 +1,5 @@
 diff --git a/src/bitcoinrpc.cpp b/src/bitcoinrpc.cpp
-index 15bcf1d..bd63593 100644
+index 15bcf1d..1ace361 100644
 --- a/src/bitcoinrpc.cpp
 +++ b/src/bitcoinrpc.cpp
 @@ -1497,6 +1497,43 @@ Value gettransaction(const Array& params, bool fHelp)
@@ -46,18 +46,7 @@ index 15bcf1d..bd63593 100644
  Value backupwallet(const Array& params, bool fHelp)
  {
      if (fHelp || params.size() != 1)
-@@ -1923,6 +1960,10 @@ Value getmemorypool(const Array& params, bool fHelp)
-             if(tx.IsCoinBase())
-                 continue;
- 
-+	    if (tx.get_electrum_flag())
-+	      continue;
-+	    tx.set_electrum_flag(true);
-+
-             CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
-             ssTx << tx;
- 
-@@ -2055,6 +2096,7 @@ static const CRPCCommand vRPCCommands[] =
+@@ -2055,6 +2092,7 @@ static const CRPCCommand vRPCCommands[] =
      { "listsinceblock",         &listsinceblock,         false },
      { "dumpprivkey",            &dumpprivkey,            false },
      { "importprivkey",          &importprivkey,          false },
@@ -66,7 +55,7 @@ index 15bcf1d..bd63593 100644
  
  CRPCTable::CRPCTable()
 diff --git a/src/main.cpp b/src/main.cpp
-index 427e435..19236ac 100644
+index 427e435..887e628 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
 @@ -3222,18 +3222,21 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
@@ -95,6 +84,27 @@ index 427e435..19236ac 100644
              // Connecting shouldn't fail due to dependency on other memory pool transactions
              // because we're already processing them in order of dependency
              map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
+@@ -3256,11 +3259,15 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
+             swap(mapTestPool, mapTestPoolTmp);
+ 
+             // Added
+-            pblock->vtx.push_back(tx);
+-            nBlockSize += nTxSize;
+-            ++nBlockTx;
+-            nBlockSigOps += nTxSigOps;
+-            nFees += nTxFees;
++	    if (!tx.get_electrum_flag())
++	      {
++		tx.set_electrum_flag(true);
++		pblock->vtx.push_back(tx);
++		nBlockSize += nTxSize;
++		++nBlockTx;
++		nBlockSigOps += nTxSigOps;
++		nFees += nTxFees;
++	      }
+ 
+             // Add transactions that depend on this one to the priority queue
+             uint256 hash = tx.GetHash();
 diff --git a/src/main.h b/src/main.h
 index 262e77e..4cc9319 100644
 --- a/src/main.h
