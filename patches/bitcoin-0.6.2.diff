@@ -1,5 +1,5 @@
 diff --git a/src/bitcoinrpc.cpp b/src/bitcoinrpc.cpp
-index 15bcf1d..1ace361 100644
+index 15bcf1d..bd63593 100644
 --- a/src/bitcoinrpc.cpp
 +++ b/src/bitcoinrpc.cpp
 @@ -1497,6 +1497,43 @@ Value gettransaction(const Array& params, bool fHelp)
@@ -46,7 +46,18 @@ index 15bcf1d..1ace361 100644
  Value backupwallet(const Array& params, bool fHelp)
  {
      if (fHelp || params.size() != 1)
-@@ -2055,6 +2092,7 @@ static const CRPCCommand vRPCCommands[] =
+@@ -1923,6 +1960,10 @@ Value getmemorypool(const Array& params, bool fHelp)
+             if(tx.IsCoinBase())
+                 continue;
+ 
++	    if (tx.get_electrum_flag())
++	      continue;
++	    tx.set_electrum_flag(true);
++
+             CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
+             ssTx << tx;
+ 
+@@ -2055,6 +2096,7 @@ static const CRPCCommand vRPCCommands[] =
      { "listsinceblock",         &listsinceblock,         false },
      { "dumpprivkey",            &dumpprivkey,            false },
      { "importprivkey",          &importprivkey,          false },
@@ -55,21 +66,10 @@ index 15bcf1d..1ace361 100644
  
  CRPCTable::CRPCTable()
 diff --git a/src/main.cpp b/src/main.cpp
-index 427e435..35da486 100644
+index 427e435..19236ac 100644
 --- a/src/main.cpp
 +++ b/src/main.cpp
-@@ -3160,6 +3160,10 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
-             if (tx.IsCoinBase() || !tx.IsFinal())
-                 continue;
- 
-+	    if (tx.get_electrum_flag())
-+	      continue;
-+	    tx.set_electrum_flag(true);
-+
-             COrphan* porphan = NULL;
-             double dPriority = 0;
-             BOOST_FOREACH(const CTxIn& txin, tx.vin)
-@@ -3222,18 +3226,21 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
+@@ -3222,18 +3222,21 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
  
              // Size limits
              unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
@@ -96,10 +96,10 @@ index 427e435..35da486 100644
              // because we're already processing them in order of dependency
              map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
 diff --git a/src/main.h b/src/main.h
-index 262e77e..fb79232 100644
+index 262e77e..4cc9319 100644
 --- a/src/main.h
 +++ b/src/main.h
-@@ -395,9 +395,20 @@ public:
+@@ -395,6 +395,16 @@ public:
      mutable int nDoS;
      bool DoS(int nDoSIn, bool fIn) const { nDoS += nDoSIn; return fIn; }
  
@@ -116,7 +116,11 @@ index 262e77e..fb79232 100644
      CTransaction()
      {
          SetNull();
+@@ -416,6 +426,7 @@ public:
+         vout.clear();
+         nLockTime = 0;
+         nDoS = 0;  // Denial-of-service prevention
 +	set_electrum_flag(false);
      }
  
-     IMPLEMENT_SERIALIZE
+     bool IsNull() const
