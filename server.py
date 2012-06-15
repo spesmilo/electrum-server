@@ -106,6 +106,8 @@ if __name__ == '__main__':
         sys.stderr.write("Unknown backend '%s' specified\n" % backend_name)
         raise
 
+    print "Starting Electrum server on", host
+
     # Create hub
     dispatcher = Dispatcher()
     shared = dispatcher.shared
@@ -113,6 +115,10 @@ if __name__ == '__main__':
     # Create and register processors
     chain_proc = backend.BlockchainProcessor(config)
     dispatcher.register('blockchain', chain_proc)
+
+    # catch_up first
+    n = chain_proc.store.main_iteration()
+    print "blockchain: %d blocks"%n
 
     server_proc = ServerProcessor(config)
     dispatcher.register('server', server_proc)
@@ -132,7 +138,6 @@ if __name__ == '__main__':
     for server in transports:
         server.start()
 
-    print "Starting Electrum server on", host
     while not shared.stopped():
         time.sleep(1)
     print "Server stopped"
