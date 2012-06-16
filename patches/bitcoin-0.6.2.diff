@@ -1,5 +1,5 @@
 diff --git a/src/bitcoinrpc.cpp b/src/bitcoinrpc.cpp
-index 15bcf1d..1ace361 100644
+index 15bcf1d..805dbda 100644
 --- a/src/bitcoinrpc.cpp
 +++ b/src/bitcoinrpc.cpp
 @@ -1497,6 +1497,43 @@ Value gettransaction(const Array& params, bool fHelp)
@@ -46,7 +46,16 @@ index 15bcf1d..1ace361 100644
  Value backupwallet(const Array& params, bool fHelp)
  {
      if (fHelp || params.size() != 1)
-@@ -2055,6 +2092,7 @@ static const CRPCCommand vRPCCommands[] =
+@@ -1933,8 +1970,6 @@ Value getmemorypool(const Array& params, bool fHelp)
+         result.push_back(Pair("version", pblock->nVersion));
+         result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
+         result.push_back(Pair("transactions", transactions));
+-        result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+-        result.push_back(Pair("coinbaseflags", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));
+         result.push_back(Pair("time", (int64_t)pblock->nTime));
+         result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
+         result.push_back(Pair("curtime", (int64_t)GetAdjustedTime()));
+@@ -2055,6 +2090,7 @@ static const CRPCCommand vRPCCommands[] =
      { "listsinceblock",         &listsinceblock,         false },
      { "dumpprivkey",            &dumpprivkey,            false },
      { "importprivkey",          &importprivkey,          false },
