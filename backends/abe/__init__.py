@@ -380,6 +380,7 @@ class AbeStore(Datastore_class):
             else:
                 tx_id = store.import_tx(tx, False)
                 store.update_tx_cache(tx_id)
+                #print tx_hash
     
         store.commit()
 
