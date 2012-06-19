@@ -87,6 +87,7 @@ class AbeStore(Datastore_class):
             ret = self.selectall(sql,params)
         except:
             error = True
+            traceback.print_exc(file=sys.stdout)
         finally:
             if lock: self.dblock.release()
 
@@ -267,7 +268,8 @@ class AbeStore(Datastore_class):
         rows += self.get_address_out_rows_memorypool( dbhash )
         address_has_mempool = False
 
-        current_id = self.new_id("tx")
+        current_id = self.safe_sql("""SELECT last_value FROM tx_seq""")
+        current_id = current_id[0][0]
 
         for row in rows:
             is_in, tx_hash, tx_id, pos, value = row
