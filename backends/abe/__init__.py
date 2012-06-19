@@ -400,22 +400,13 @@ class AbeStore(Datastore_class):
 
 
     def main_iteration(store):
-        try:
-            store.dblock.acquire()
+        with store.dblock:
             store.catch_up()
             store.memorypool_update()
             block_number = store.get_block_number(1)
+            return block_number
 
-        except IOError:
-            print "IOError: cannot reach bitcoind"
-            block_number = 0
-        except:
-            traceback.print_exc(file=sys.stdout)
-            block_number = 0
-        finally:
-            store.dblock.release()
 
-        return block_number
 
 
     def catch_up(store):
@@ -494,11 +485,18 @@ class BlockchainProcessor(Processor):
 
 
     def run_store_iteration(self):
+        
+        try:
+            block_number = self.store.main_iteration()
+        except:
+            traceback.print_exc(file=sys.stdout)
+            print "terminating"
+            self.shared.stop()
+
         if self.shared.stopped(): 
             print "exit timer"
             return
-        
-        block_number = self.store.main_iteration()
+
         if self.block_number != block_number:
             self.block_number = block_number
             print "block number:", self.block_number

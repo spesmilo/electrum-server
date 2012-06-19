@@ -144,6 +144,10 @@ class ServerProcessor(Processor):
                                      "subscriptions":len(s.subscriptions)}, 
                          self.dispatcher.request_dispatcher.get_sessions())
 
+        elif method == 'server.cache':
+            p = self.dispatcher.request_dispatcher.processors['blockchain']
+            result = len(repr(p.store.tx_cache))
+
         elif method == 'server.load':
             p = self.dispatcher.request_dispatcher.processors['blockchain']
             result = p.queue.qsize()
