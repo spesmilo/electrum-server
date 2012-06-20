@@ -130,7 +130,7 @@ class ServerProcessor(Processor):
             result = self.get_peers()
 
         elif method == 'server.version':
-            result = 'ok'
+            result = VERSION
 
         elif method == 'server.stop':
             self.shared.stop()
