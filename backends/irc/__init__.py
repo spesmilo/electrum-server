@@ -5,7 +5,7 @@ def random_string(N):
     return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(N))
 
 from processor import Processor
-
+from version import VERSION
 
 class IrcThread(threading.Thread):
 
@@ -25,7 +25,7 @@ class IrcThread(threading.Thread):
 
 
     def getname(self):
-        s = ''
+        s = 'v' + VERSION + ' '
         if self.stratum_tcp_port:
             s += 't' + self.stratum_tcp_port + ' ' 
         if self.stratum_http_port:
