@@ -336,6 +336,8 @@ class AbeStore(Datastore_class):
                 if row:
                     if not row[4]: txpoint['raw_output_script'] = row[1]
 
+            txpoint.pop('tx_id')
+
         # cache result
         # do not cache mempool results because statuses are ambiguous
         if not address_has_mempool:
