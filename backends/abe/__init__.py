@@ -34,6 +34,14 @@ class AbeStore(Datastore_class):
         self.address_queue = Queue()
 
         self.dblock = thread.allocate_lock()
+        self.last_tx_id = 0
+
+    
+    def import_tx(self, tx, is_coinbase):
+        tx_id = super(AbeStore, self).import_tx(tx, is_coinbase)
+        self.last_tx_id = tx_id
+        return tx_id
+        
 
 
 
@@ -268,9 +276,6 @@ class AbeStore(Datastore_class):
         rows += self.get_address_out_rows_memorypool( dbhash )
         address_has_mempool = False
 
-        current_id = self.safe_sql("""SELECT last_value FROM tx_seq""")
-        current_id = current_id[0][0]
-
         for row in rows:
             is_in, tx_hash, tx_id, pos, value = row
             tx_hash = self.hashout_hex(tx_hash)
@@ -280,8 +285,9 @@ class AbeStore(Datastore_class):
             # this means that pending transactions were added to the db, even if they are not returned by getmemorypool
             address_has_mempool = True
 
-            # fixme: we need to detect transactions that became invalid
-            if current_id - tx_id > 10000:
+            # discard transactions that are too old
+            if self.last_tx_id - tx_id > 10000:
+                print "discarding tx id", tx_id
                 continue
 
 
