@@ -282,14 +282,13 @@ class AbeStore(Datastore_class):
             if tx_hash in known_tx:
                 continue
 
-            # this means that pending transactions were added to the db, even if they are not returned by getmemorypool
-            address_has_mempool = True
-
             # discard transactions that are too old
             if self.last_tx_id - tx_id > 10000:
                 print "discarding tx id", tx_id
                 continue
 
+            # this means that pending transactions were added to the db, even if they are not returned by getmemorypool
+            address_has_mempool = True
 
             #print "mempool", tx_hash
             txpoint = {
