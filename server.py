@@ -116,10 +116,6 @@ if __name__ == '__main__':
     chain_proc = backend.BlockchainProcessor(config)
     dispatcher.register('blockchain', chain_proc)
 
-    # catch_up first
-    n = chain_proc.store.main_iteration()
-    print "blockchain: %d blocks"%n
-
     server_proc = ServerProcessor(config)
     dispatcher.register('server', server_proc)
 

@@ -438,6 +438,11 @@ class BlockchainProcessor(Processor):
         self.store = AbeStore(config)
         self.block_number = -1
         self.watched_addresses = []
+
+        # catch_up first
+        n = self.store.main_iteration()
+        print "blockchain: %d blocks"%n
+
         threading.Timer(10, self.run_store_iteration).start()
 
     def process(self, request):
