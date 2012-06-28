@@ -121,7 +121,11 @@ class RequestDispatcher(threading.Thread):
             raise TypeError("self.shared not set in Processor")
         while not self.shared.stopped():
             session, request = self.pop_request()
-            self.do_dispatch(session, request)
+            try:
+                self.do_dispatch(session, request)
+            except:
+                traceback.print_exc(file=sys.stdout)
+                
 
         self.stop()
 
