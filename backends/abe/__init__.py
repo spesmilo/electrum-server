@@ -283,7 +283,7 @@ class AbeStore(Datastore_class):
                 continue
 
             # discard transactions that are too old
-            if self.last_tx_id - tx_id > 10000:
+            if self.last_tx_id - tx_id > 50000:
                 print "discarding tx id", tx_id
                 continue
 
