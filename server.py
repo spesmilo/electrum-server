@@ -21,6 +21,10 @@ import ConfigParser
 import logging
 logging.basicConfig()
 
+if sys.maxsize <= 2**32:
+    print "Warning: it looks like you are using a 32bit system. You may experience crashes caused by mmap"
+
+
 def attempt_read_config(config, filename):
     try:
         with open(filename, 'r') as f:
