@@ -13,6 +13,8 @@ import time, threading
 
 class AbeStore(Datastore_class):
 
+    addrtype = 48
+
     def __init__(self, config):
         conf = DataStore.CONFIG_DEFAULTS
         args, argv = readconf.parse_argv( [], conf)
@@ -68,7 +70,7 @@ class AbeStore(Datastore_class):
                 #print "WARNING: missing tx_in for tx", txid
                 continue
 
-            address = hash_to_address(chr(0), _hash)
+            address = hash_to_address(chr(addrtype), _hash)
             if self.tx_cache.has_key(address):
                 print "cache: invalidating", address
                 self.tx_cache.pop(address)
@@ -81,7 +83,7 @@ class AbeStore(Datastore_class):
                 #print "WARNING: missing tx_out for tx", txid
                 continue
 
-            address = hash_to_address(chr(0), _hash)
+            address = hash_to_address(chr(addrtype), _hash)
             if self.tx_cache.has_key(address):
                 print "cache: invalidating", address
                 self.tx_cache.pop(address)
@@ -314,7 +316,7 @@ class AbeStore(Datastore_class):
                 if not _hash:
                     #print "WARNING: missing tx_in for tx", tx_id, addr
                     continue
-                address = hash_to_address(chr(0), _hash)
+                address = hash_to_address(chr(addrtype), _hash)
                 txinputs.append(address)
             txpoint['inputs'] = txinputs
             txoutputs = []
@@ -324,7 +326,7 @@ class AbeStore(Datastore_class):
                 if not _hash:
                     #print "WARNING: missing tx_out for tx", tx_id, addr
                     continue
-                address = hash_to_address(chr(0), _hash)
+                address = hash_to_address(chr(addrtype), _hash)
                 txoutputs.append(address)
             txpoint['outputs'] = txoutputs
 
