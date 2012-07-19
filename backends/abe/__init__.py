@@ -10,10 +10,7 @@ from Queue import Queue
 import time, threading
 
 
-
 class AbeStore(Datastore_class):
-
-    addrtype = 48
 
     def __init__(self, config):
         conf = DataStore.CONFIG_DEFAULTS
@@ -25,6 +22,16 @@ class AbeStore(Datastore_class):
             args.connect_args = { 'db' : config.get('database','database'), 'user' : config.get('database','username'), 'passwd' : config.get('database','password') }
         elif args.dbtype == 'psycopg2':
             args.connect_args = { 'database' : config.get('database','database') }
+
+        coin = config.get('server', 'coin')
+        self.addrtype = 0
+        if coin == 'litecoin':
+            print 'Litecoin settings:'
+            datadir = config.get('server','datadir')
+            print '  datadir = ' + datadir
+            args.datadir = [{"dirname":datadir,"chain":"Litecoin","code3":"LTC","address_version":"\u0030"}]
+            print '  addrtype = 48'
+            self.addrtype = 48
 
         Datastore_class.__init__(self,args)
 
@@ -70,7 +77,7 @@ class AbeStore(Datastore_class):
                 #print "WARNING: missing tx_in for tx", txid
                 continue
 
-            address = hash_to_address(chr(addrtype), _hash)
+            address = hash_to_address(chr(self.addrtype), _hash)
             if self.tx_cache.has_key(address):
                 print "cache: invalidating", address
                 self.tx_cache.pop(address)
@@ -83,7 +90,7 @@ class AbeStore(Datastore_class):
                 #print "WARNING: missing tx_out for tx", txid
                 continue
 
-            address = hash_to_address(chr(addrtype), _hash)
+            address = hash_to_address(chr(self.addrtype), _hash)
             if self.tx_cache.has_key(address):
                 print "cache: invalidating", address
                 self.tx_cache.pop(address)
@@ -316,7 +323,7 @@ class AbeStore(Datastore_class):
                 if not _hash:
                     #print "WARNING: missing tx_in for tx", tx_id, addr
                     continue
-                address = hash_to_address(chr(addrtype), _hash)
+                address = hash_to_address(chr(self.addrtype), _hash)
                 txinputs.append(address)
             txpoint['inputs'] = txinputs
             txoutputs = []
@@ -326,7 +333,7 @@ class AbeStore(Datastore_class):
                 if not _hash:
                     #print "WARNING: missing tx_out for tx", tx_id, addr
                     continue
-                address = hash_to_address(chr(addrtype), _hash)
+                address = hash_to_address(chr(self.addrtype), _hash)
                 txoutputs.append(address)
             txpoint['outputs'] = txoutputs
 

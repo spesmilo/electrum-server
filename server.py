@@ -43,6 +43,8 @@ def create_config():
     config.set('server', 'password', '')
     config.set('server', 'irc', 'yes')
     config.set('server', 'irc_nick', '')
+    config.set('server', 'coin', '')
+    config.set('server', 'datadir', '')
     config.add_section('database')
     config.set('database', 'type', 'psycopg2')
     config.set('database', 'database', 'abe')

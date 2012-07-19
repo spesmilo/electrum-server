@@ -19,6 +19,10 @@ class IrcThread(threading.Thread):
         self.host = config.get('server','host')
         self.nick = config.get('server', 'irc_nick')
         if not self.nick: self.nick = random_string(10)
+        self.prepend = 'E_'
+        if config.get('server', 'coin') == 'litecoin':
+            self.prepend = 'EL_'
+        self.nick = self.prepend + self.nick
 
     def get_peers(self):
         return self.peers.values()
@@ -41,7 +45,7 @@ class IrcThread(threading.Thread):
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
                 s.send('USER electrum 0 * :' + self.host + ' ' + ircname + '\n')
-                s.send('NICK EL_' + self.nick + '\n')
+                s.send('NICK ' + self.nick + '\n')
                 s.send('JOIN #electrum\n')
                 sf = s.makefile('r', 0)
                 t = 0
@@ -55,7 +59,7 @@ class IrcThread(threading.Thread):
                     elif '353' in line: # answer to /names
                         k = line.index('353')
                         for item in line[k+1:]:
-                            if item[0:2] == 'EL_':
+                            if item.startswith(self.prepend):
                                 s.send('WHO %s\n'%item)
                     elif '352' in line: # answer to /who
                         # warning: this is a horrible hack which apparently works
