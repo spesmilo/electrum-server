@@ -35,6 +35,9 @@ class AbeStore(Datastore_class):
 
         Datastore_class.__init__(self,args)
 
+        self.chain_id = self.datadirs[0]["chain_id"];
+        print 'Coin chain_id = %d' % self.chain_id
+
         self.sql_limit = int( config.get('database','limit') )
 
         self.tx_cache = {}
@@ -169,8 +172,9 @@ class AbeStore(Datastore_class):
               JOIN txout prevout ON (txin.txout_id = prevout.txout_id)
               JOIN pubkey ON (pubkey.pubkey_id = prevout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
+               AND cc.chain_id = ?
                AND cc.in_longest = 1
-             LIMIT ? """, (dbhash,self.sql_limit))
+             LIMIT ? """, (dbhash, self.chain_id, self.sql_limit))
 
         if len(out)==self.sql_limit: 
             raise BaseException('limit reached')
@@ -212,8 +216,9 @@ class AbeStore(Datastore_class):
               JOIN txout ON (txout.tx_id = tx.tx_id)
               JOIN pubkey ON (pubkey.pubkey_id = txout.pubkey_id)
              WHERE pubkey.pubkey_hash = ?
+               AND cc.chain_id = ?
                AND cc.in_longest = 1
-               LIMIT ? """, (dbhash,self.sql_limit))
+               LIMIT ? """, (dbhash, self.chain_id, self.sql_limit))
 
         if len(out)==self.sql_limit: 
             raise BaseException('limit reached')
