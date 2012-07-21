@@ -424,7 +424,7 @@ class AbeStore(Datastore_class):
         with store.dblock:
             store.catch_up()
             store.memorypool_update()
-            block_number = store.get_block_number(1)
+            block_number = store.get_block_number(self.chain_id)
             return block_number
 
 
