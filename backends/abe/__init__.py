@@ -35,7 +35,8 @@ class AbeStore(Datastore_class):
 
         Datastore_class.__init__(self,args)
 
-        self.chain_id = self.datadirs[0]["chain_id"];
+        # Use 1 (Bitcoin) if chain_id is not sent
+        self.chain_id = self.datadirs[0]["chain_id"] or 1
         print 'Coin chain_id = %d' % self.chain_id
 
         self.sql_limit = int( config.get('database','limit') )
