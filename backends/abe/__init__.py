@@ -527,7 +527,7 @@ class BlockchainProcessor(Processor):
         if self.block_number != block_number:
             self.block_number = block_number
             print "block number:", self.block_number
-            self.push_response({ 'method':'blockchain.numblocks.subscribe', 'params':[self.block_number] })
+            self.push_response({ 'id': None, 'method':'blockchain.numblocks.subscribe', 'params':[self.block_number] })
 
         while True:
             try:
@@ -536,7 +536,7 @@ class BlockchainProcessor(Processor):
                 break
             if addr in self.watched_addresses:
                 status = self.store.get_status( addr )
-                self.push_response({ 'method':'blockchain.address.subscribe', 'params':[addr, status] })
+                self.push_response({ 'id': None, 'method':'blockchain.address.subscribe', 'params':[addr, status] })
 
         threading.Timer(10, self.run_store_iteration).start()
 
