@@ -1,8 +1,7 @@
-diff --git a/src/bitcoinrpc.cpp b/src/bitcoinrpc.cpp
-index 15bcf1d..805dbda 100644
---- a/src/bitcoinrpc.cpp
-+++ b/src/bitcoinrpc.cpp
-@@ -1497,6 +1497,43 @@ Value gettransaction(const Array& params, bool fHelp)
+diff -ur bitcoin-0.6.3-orig/src/bitcoinrpc.cpp bitcoin-0.6.3/src/bitcoinrpc.cpp
+--- bitcoin-0.6.3-orig/src/bitcoinrpc.cpp	2012-06-19 13:44:55.000000000 -0700
++++ bitcoin-0.6.3/src/bitcoinrpc.cpp	2012-07-09 11:56:21.329502578 -0700
+@@ -1501,6 +1501,43 @@
  }
  
  
@@ -46,7 +45,7 @@ index 15bcf1d..805dbda 100644
  Value backupwallet(const Array& params, bool fHelp)
  {
      if (fHelp || params.size() != 1)
-@@ -1933,8 +1970,6 @@ Value getmemorypool(const Array& params, bool fHelp)
+@@ -1937,8 +1974,6 @@
          result.push_back(Pair("version", pblock->nVersion));
          result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
          result.push_back(Pair("transactions", transactions));
@@ -55,7 +54,7 @@ index 15bcf1d..805dbda 100644
          result.push_back(Pair("time", (int64_t)pblock->nTime));
          result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
          result.push_back(Pair("curtime", (int64_t)GetAdjustedTime()));
-@@ -2055,6 +2090,7 @@ static const CRPCCommand vRPCCommands[] =
+@@ -2059,6 +2094,7 @@
      { "listsinceblock",         &listsinceblock,         false },
      { "dumpprivkey",            &dumpprivkey,            false },
      { "importprivkey",          &importprivkey,          false },
@@ -63,11 +62,10 @@ index 15bcf1d..805dbda 100644
  };
  
  CRPCTable::CRPCTable()
-diff --git a/src/main.cpp b/src/main.cpp
-index 427e435..35a0aea 100644
---- a/src/main.cpp
-+++ b/src/main.cpp
-@@ -3134,156 +3134,28 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)
+diff -ur bitcoin-0.6.3-orig/src/main.cpp bitcoin-0.6.3/src/main.cpp
+--- bitcoin-0.6.3-orig/src/main.cpp	2012-06-19 13:44:55.000000000 -0700
++++ bitcoin-0.6.3/src/main.cpp	2012-07-09 12:00:26.989497203 -0700
+@@ -3189,156 +3189,28 @@
      if (!pblock.get())
          return NULL;
  
@@ -125,7 +123,7 @@ index 427e435..35a0aea 100644
 -                dPriority += (double)nValueIn * nConf;
 -
 -                if (fDebug && GetBoolArg("-printpriority"))
--                    printf("priority     nValueIn=%-12I64d nConf=%-5d dPriority=%-20.1f\n", nValueIn, nConf, dPriority);
+-                    printf("priority     nValueIn=%-12"PRI64d" nConf=%-5d dPriority=%-20.1f\n", nValueIn, nConf, dPriority);
 -            }
 -
 -            // Priority is sum(valuein * age) / txsize
@@ -171,7 +169,10 @@ index 427e435..35a0aea 100644
 -            // Transaction fee required depends on block size
 -            bool fAllowFree = (nBlockSize + nTxSize < 4000 || CTransaction::AllowFree(dPriority));
 -            int64 nMinFee = tx.GetMinFee(nBlockSize, fAllowFree, GMF_BLOCK);
--
++          CTransaction& tx = (*mi).second;
++          if (tx.IsCoinBase() || !tx.IsFinal())
++            continue;
+ 
 -            // Connecting shouldn't fail due to dependency on other memory pool transactions
 -            // because we're already processing them in order of dependency
 -            map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
@@ -179,10 +180,7 @@ index 427e435..35a0aea 100644
 -            bool fInvalid;
 -            if (!tx.FetchInputs(txdb, mapTestPoolTmp, false, true, mapInputs, fInvalid))
 -                continue;
-+	  CTransaction& tx = (*mi).second;
-+	  if (tx.IsCoinBase() || !tx.IsFinal())
-+	    continue;
- 
+-
 -            int64 nTxFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
 -            if (nTxFees < nMinFee)
 -                continue;
@@ -206,7 +204,8 @@ index 427e435..35a0aea 100644
 -            // Add transactions that depend on this one to the priority queue
 -            uint256 hash = tx.GetHash();
 -            if (mapDependers.count(hash))
--            {
++          if (!tx.get_electrum_flag())
+             {
 -                BOOST_FOREACH(COrphan* porphan, mapDependers[hash])
 -                {
 -                    if (!porphan->setDependsOn.empty())
@@ -216,13 +215,10 @@ index 427e435..35a0aea 100644
 -                            mapPriority.insert(make_pair(-porphan->dPriority, porphan->ptx));
 -                    }
 -                }
--            }
-+	  if (!tx.get_electrum_flag())
-+	    {
-+		tx.set_electrum_flag(true);
-+		pblock->vtx.push_back(tx);
-+		++nBlockTx;
-+	    }
++                tx.set_electrum_flag(true);
++                pblock->vtx.push_back(tx);
++                ++nBlockTx;
+             }
          }
  
 -        nLastBlockTx = nBlockTx;
@@ -235,11 +231,10 @@ index 427e435..35a0aea 100644
  
      // Fill in header
      pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
-diff --git a/src/main.h b/src/main.h
-index 262e77e..4cc9319 100644
---- a/src/main.h
-+++ b/src/main.h
-@@ -395,6 +395,16 @@ public:
+diff -ur bitcoin-0.6.3-orig/src/main.h bitcoin-0.6.3/src/main.h
+--- bitcoin-0.6.3-orig/src/main.h	2012-06-19 13:44:55.000000000 -0700
++++ bitcoin-0.6.3/src/main.h	2012-07-09 11:56:21.333502571 -0700
+@@ -395,6 +395,16 @@
      mutable int nDoS;
      bool DoS(int nDoSIn, bool fIn) const { nDoS += nDoSIn; return fIn; }
  
@@ -256,7 +251,7 @@ index 262e77e..4cc9319 100644
      CTransaction()
      {
          SetNull();
-@@ -416,6 +426,7 @@ public:
+@@ -416,6 +426,7 @@
          vout.clear();
          nLockTime = 0;
          nDoS = 0;  // Denial-of-service prevention
