@@ -97,6 +97,9 @@ The patch is included in the Electrum sources we just downloaded, now we
 will download the Bitcoin sources, patch, compile and install the binary to
 our `~/bin` directory.
 
+Note that updated versions may affect these instructions, so *be mindful of 
+what you are doing!*
+
     $ cd ~/src
     $ wget https://github.com/bitcoin/bitcoin/tarball/v0.6.0 -O bitcoin-0.6.0.tgz
     $ tar xvzf bitcoin-0.6.0.tgz
