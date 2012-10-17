@@ -8,9 +8,20 @@ from processor import Session, Dispatcher, timestr
 
 class TcpSession(Session):
 
-    def __init__(self, connection, address):
+    def __init__(self, connection, address, use_ssl, ssl_certfile, ssl_keyfile):
         Session.__init__(self)
-        self._connection = connection
+        print connection, address, use_ssl
+        if use_ssl:
+            import ssl
+            self._connection = ssl.wrap_socket(
+                connection,
+                server_side=True,
+                certfile=ssl_certfile,
+                keyfile=ssl_keyfile,
+                ssl_version=ssl.PROTOCOL_TLSv1)
+        else:
+            self._connection = connection
+
         self.address = address[0]
         self.name = "TCP"
 
@@ -108,7 +119,7 @@ class TcpClientRequestor(threading.Thread):
 
 class TcpServer(threading.Thread):
 
-    def __init__(self, dispatcher, host, port):
+    def __init__(self, dispatcher, host, port, use_ssl, ssl_certfile, ssl_keyfile):
         self.shared = dispatcher.shared
         self.dispatcher = dispatcher.request_dispatcher
         threading.Thread.__init__(self)
@@ -116,15 +127,18 @@ class TcpServer(threading.Thread):
         self.host = host
         self.port = port
         self.lock = threading.Lock()
+        self.use_ssl = use_ssl
+        self.ssl_keyfile = ssl_keyfile
+        self.ssl_certfile = ssl_certfile
 
     def run(self):
-        print "TCP server started."
+        print "TCP server started.", self.use_ssl
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self.host, self.port))
         sock.listen(1)
         while not self.shared.stopped():
-            session = TcpSession(*sock.accept())
+            session = TcpSession(*sock.accept(), use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
             self.dispatcher.add_session(session)
             self.dispatcher.collect_garbage()
             client_req = TcpClientRequestor(self.dispatcher, session)

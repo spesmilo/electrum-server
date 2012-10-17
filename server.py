@@ -40,6 +40,8 @@ def create_config():
     config.set('server', 'host', 'localhost')
     config.set('server', 'stratum_tcp_port', '50001')
     config.set('server', 'stratum_http_port', '8081')
+    config.set('server', 'stratum_tcp_ssl_port', '50002')
+    config.set('server', 'stratum_http_ssl_port', '8082')
     config.set('server', 'password', '')
     config.set('server', 'irc', 'yes')
     config.set('server', 'irc_nick', '')
@@ -96,6 +98,10 @@ if __name__ == '__main__':
     host = config.get('server', 'host')
     stratum_tcp_port = config.get('server', 'stratum_tcp_port')
     stratum_http_port = config.get('server', 'stratum_http_port')
+    stratum_tcp_ssl_port = config.get('server', 'stratum_tcp_ssl_port')
+    stratum_http_ssl_port = config.get('server', 'stratum_http_ssl_port')
+    ssl_certfile = config.get('server', 'ssl_certfile')
+    ssl_keyfile = config.get('server', 'ssl_keyfile')
 
     if len(sys.argv) > 1:
         run_rpc_command(sys.argv[1], stratum_tcp_port)
@@ -129,12 +135,22 @@ if __name__ == '__main__':
     # Create various transports we need
     if stratum_tcp_port:
         from transports.stratum_tcp import TcpServer
-        tcp_server = TcpServer(dispatcher, host, int(stratum_tcp_port))
+        tcp_server = TcpServer(dispatcher, host, int(stratum_tcp_port), False, None, None)
+        transports.append(tcp_server)
+
+    if stratum_tcp_ssl_port:
+        from transports.stratum_tcp import TcpServer
+        tcp_server = TcpServer(dispatcher, host, int(stratum_tcp_ssl_port), True, ssl_certfile, ssl_keyfile)
         transports.append(tcp_server)
 
     if stratum_http_port:
         from transports.stratum_http import HttpServer
-        http_server = HttpServer(dispatcher, host, int(stratum_http_port))
+        http_server = HttpServer(dispatcher, host, int(stratum_http_port), False, None, None)
+        transports.append(http_server)
+
+    if stratum_http_ssl_port:
+        from transports.stratum_http import HttpServer
+        http_server = HttpServer(dispatcher, host, int(stratum_http_ssl_port), True, ssl_certfile, ssl_keyfile)
         transports.append(http_server)
 
     for server in transports:

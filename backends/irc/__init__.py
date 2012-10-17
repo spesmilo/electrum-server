@@ -15,6 +15,8 @@ class IrcThread(threading.Thread):
         self.daemon = True
         self.stratum_tcp_port = config.get('server','stratum_tcp_port')
         self.stratum_http_port = config.get('server','stratum_http_port')
+        self.stratum_tcp_ssl_port = config.get('server','stratum_tcp_ssl_port')
+        self.stratum_http_ssl_port = config.get('server','stratum_http_ssl_port')
         self.peers = {}
         self.host = config.get('server','host')
         self.nick = config.get('server', 'irc_nick')
@@ -34,6 +36,10 @@ class IrcThread(threading.Thread):
             s += 't' + self.stratum_tcp_port + ' ' 
         if self.stratum_http_port:
             s += 'h' + self.stratum_http_port + ' '
+        if self.stratum_tcp_port:
+            s += 's' + self.stratum_tcp_ssl_port + ' ' 
+        if self.stratum_http_port:
+            s += 'g' + self.stratum_http_ssl_port + ' '
         return s
 
 
