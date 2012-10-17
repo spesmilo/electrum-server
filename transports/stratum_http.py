@@ -192,7 +192,7 @@ class StratumJSONRPCRequestHandler(
         self.end_headers()
         self.wfile.write(response)
         self.wfile.flush()
-        self.connection.shutdown(1)
+        self.shutdown_connection()
 
 
     def do_POST(self):
@@ -241,13 +241,23 @@ class StratumJSONRPCRequestHandler(
         self.end_headers()
         self.wfile.write(response)
         self.wfile.flush()
+        self.shutdown_connection()
+
+    def shutdown_connection(self):
         self.connection.shutdown(1)
 
 
+class SSLRequestHandler(StratumJSONRPCRequestHandler):
+    def setup(self):
+        self.connection = self.request
+        self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
+        self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
+
+    def shutdown_connection(self):
+        self.connection.shutdown()
 
 
 class SSLTCPServer(SocketServer.TCPServer):
-
     def __init__(self, server_address, certfile, keyfile, RequestHandlerClass, bind_and_activate=True):
         SocketServer.BaseServer.__init__(self, server_address, RequestHandlerClass)
         ctx = SSL.Context(SSL.SSLv3_METHOD)
@@ -259,7 +269,8 @@ class SSLTCPServer(SocketServer.TCPServer):
             self.server_activate()
 
     def shutdown_request(self,request):
-        request.shutdown()
+        #request.shutdown()
+        pass
 
 
 class StratumHTTPServer(SocketServer.TCPServer, StratumJSONRPCDispatcher):
@@ -298,7 +309,7 @@ class StratumHTTPSSLServer(SSLTCPServer, StratumJSONRPCDispatcher):
     allow_reuse_address = True
 
     def __init__(self, addr, certfile, keyfile,
-                 requestHandler=StratumJSONRPCRequestHandler,
+                 requestHandler=SSLRequestHandler,
                  logRequests=False, encoding=None, bind_and_activate=True,
                  address_family=socket.AF_INET):
 
