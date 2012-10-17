@@ -251,10 +251,6 @@ class SSLTCPServer(SocketServer.TCPServer):
     def __init__(self, server_address, certfile, keyfile, RequestHandlerClass, bind_and_activate=True):
         SocketServer.BaseServer.__init__(self, server_address, RequestHandlerClass)
         ctx = SSL.Context(SSL.SSLv3_METHOD)
-        self.certfile = certfile
-        self.keyfile = keyfile
-        #certfile = '/etc/ssl/certs/cacert.pem'
-        #keyfile = '/etc/ssl/private/cakey.pem'
         ctx.use_privatekey_file(keyfile)
         ctx.use_certificate_file(certfile)
         self.socket = SSL.Connection(ctx, socket.socket(self.address_family, self.socket_type))
