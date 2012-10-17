@@ -18,7 +18,7 @@ class TcpSession(Session):
                 server_side=True,
                 certfile=ssl_certfile,
                 keyfile=ssl_keyfile,
-                ssl_version=ssl.PROTOCOL_TLSv1)
+                ssl_version=ssl.PROTOCOL_SSLv23)
         else:
             self._connection = connection
 
