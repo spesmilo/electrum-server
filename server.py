@@ -103,6 +103,8 @@ if __name__ == '__main__':
     ssl_certfile = config.get('server', 'ssl_certfile')
     ssl_keyfile = config.get('server', 'ssl_keyfile')
 
+    if stratum_tcp_ssl_port or stratum_http_ssl_port: assert ssl_certfile and ssl_keyfile 
+
     if len(sys.argv) > 1:
         run_rpc_command(sys.argv[1], stratum_tcp_port)
         sys.exit(0)
