@@ -380,6 +380,76 @@ class AbeStore(Datastore_class):
         return status
 
 
+    def get_block_header(self, block_height):
+        out = self.safe_sql("""
+            SELECT
+                block_hash,
+                block_version,
+                block_hashMerkleRoot,
+                block_nTime,
+                block_nBits,
+                block_nNonce,
+                block_height,
+                prev_block_hash,
+                block_id
+              FROM chain_summary
+             WHERE block_height = %d AND in_longest = 1"""%block_height)
+
+        if not out: raise BaseException("block not found")
+        row = out[0]
+        (block_hash, block_version, hashMerkleRoot, nTime, nBits, nNonce, height,prev_block_hash, block_id) \
+            = ( self.hashout_hex(row[0]), int(row[1]), self.hashout_hex(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]), self.hashout_hex(row[7]), int(row[8]) )
+
+        out = {"block_height":block_height, "version":block_version, "prev_block_hash":prev_block_hash, 
+                "merkle_root":hashMerkleRoot, "timestamp":nTime, "bits":nBits, "nonce":nNonce}
+        return out
+        
+
+    def get_tx_merkle(self, tx_hash):
+
+        out = self.safe_sql("""
+             SELECT block_tx.block_id FROM tx 
+             JOIN block_tx on tx.tx_id = block_tx.tx_id 
+             JOIN chain_summary on chain_summary.block_id = block_tx.block_id
+             WHERE tx_hash='%s' AND in_longest = 1"""%tx_hash)
+        block_id = out[0]
+
+        # get the block header
+        out = self.safe_sql("""
+            SELECT
+                block_hash,
+                block_version,
+                block_hashMerkleRoot,
+                block_nTime,
+                block_nBits,
+                block_nNonce,
+                block_height,
+                prev_block_hash,
+                block_height
+              FROM chain_summary
+             WHERE block_id = %d AND in_longest = 1"""%block_id)
+
+        if not out: raise BaseException("block not found")
+        row = out[0]
+        (block_hash, block_version, hashMerkleRoot, nTime, nBits, nNonce, height, prev_block_hash, block_height) \
+            = ( self.hashout_hex(row[0]), int(row[1]), self.hashout_hex(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]), self.hashout_hex(row[7]), int(row[8]) )
+
+        merkle = []
+        # list all tx inputs in block
+        for row in self.safe_sql("""
+            SELECT DISTINCT tx_id, tx_pos, tx_hash
+              FROM txin_detail
+             WHERE block_id = ?
+             ORDER BY tx_pos""", (block_id,)):
+            tx_id, tx_pos, tx_hash = row
+            merkle.append(tx_hash)
+
+        out = {"block_height":block_height, "version":block_version, "prev_block":prev_block_hash, 
+                "merkle_root":hashMerkleRoot, "timestamp":nTime, "bits":nBits, "nonce":nNonce, "merkle":merkle}
+        return out
+
+
+
 
     def memorypool_update(store):
 
@@ -489,10 +559,26 @@ class BlockchainProcessor(Processor):
                 error = str(e) + ': ' + address
                 print "error:", error
 
+        elif method == 'blockchain.block.get_header':
+            try:
+                height = params[0]
+                result = self.store.get_block_header( height ) 
+            except BaseException, e:
+                error = str(e) + ': %d'% height
+                print "error:", error
+
         elif method == 'blockchain.transaction.broadcast':
             txo = self.store.send_tx(params[0])
             print "sent tx:", txo
             result = txo 
+
+        elif method == 'blockchain.transaction.get_merkle':
+            try:
+                tx_hash = params[0]
+                result = self.store.get_tx_merkle(tx_hash ) 
+            except BaseException, e:
+                error = str(e) + ': ' + tx_hash
+                print "error:", error
 
         else:
             error = "unknown method:%s"%method
