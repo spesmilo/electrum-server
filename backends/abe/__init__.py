@@ -435,17 +435,44 @@ class AbeStore(Datastore_class):
             = ( self.hashout_hex(row[0]), int(row[1]), self.hashout_hex(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]), self.hashout_hex(row[7]), int(row[8]) )
 
         merkle = []
-        # list all tx inputs in block
+        # list all tx in block
         for row in self.safe_sql("""
             SELECT DISTINCT tx_id, tx_pos, tx_hash
               FROM txin_detail
              WHERE block_id = ?
              ORDER BY tx_pos""", (block_id,)):
-            tx_id, tx_pos, tx_hash = row
-            merkle.append(tx_hash)
+            tx_id, tx_pos, tx_h = row
+            merkle.append(tx_h)
 
+        # find subset.
+        # TODO: do not compute this on client request, better store the hash tree of each block in a database...
+        import hashlib
+        encode = lambda x: x[::-1].encode('hex')
+        decode = lambda x: x.decode('hex')[::-1]
+        Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+
+        merkle = map(decode, merkle)
+        target_hash = decode(tx_hash)
+
+        s = []
+        while len(merkle) != 1:
+            if len(merkle)%2: merkle.append( merkle[-1] )
+            n = []
+            while merkle:
+                if merkle[0] == target_hash:
+                    s.append( "L" + encode(merkle[1]))
+                    n.append( target_hash )
+                elif merkle[1] == target_hash:
+                    s.append( "R" + encode(merkle[0]))
+                    n.append( target_hash)
+                else:
+                    n.append( Hash( merkle[0] + merkle[1] ) )
+                merkle = merkle[2:]
+            merkle = n
+
+        # send result
         out = {"block_height":block_height, "version":block_version, "prev_block":prev_block_hash, 
-                "merkle_root":hashMerkleRoot, "timestamp":nTime, "bits":nBits, "nonce":nNonce, "merkle":merkle}
+                "merkle_root":hashMerkleRoot, "timestamp":nTime, "bits":nBits, "nonce":nNonce, "merkle":s}
         return out
 
 
