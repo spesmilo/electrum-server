@@ -414,25 +414,11 @@ class AbeStore(Datastore_class):
              WHERE tx_hash='%s' AND in_longest = 1"""%tx_hash)
         block_id = out[0]
 
-        # get the block header
-        out = self.safe_sql("""
-            SELECT
-                block_hash,
-                block_version,
-                block_hashMerkleRoot,
-                block_nTime,
-                block_nBits,
-                block_nNonce,
-                block_height,
-                prev_block_hash,
-                block_height
-              FROM chain_summary
-             WHERE block_id = %d AND in_longest = 1"""%block_id)
+        # get block height
+        out = self.safe_sql("SELECT block_height FROM chain_summary WHERE block_id = %d AND in_longest = 1"%block_id)
 
         if not out: raise BaseException("block not found")
-        row = out[0]
-        (block_hash, block_version, hashMerkleRoot, nTime, nBits, nNonce, height, prev_block_hash, block_height) \
-            = ( self.hashout_hex(row[0]), int(row[1]), self.hashout_hex(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]), self.hashout_hex(row[7]), int(row[8]) )
+        block_height = int(out[0][0])
 
         merkle = []
         # list all tx in block
@@ -471,9 +457,7 @@ class AbeStore(Datastore_class):
             merkle = n
 
         # send result
-        out = {"block_height":block_height, "version":block_version, "prev_block":prev_block_hash, 
-                "merkle_root":hashMerkleRoot, "timestamp":nTime, "bits":nBits, "nonce":nNonce, "merkle":s}
-        return out
+        return {"block_height":block_height,"merkle":s}
 
 
 
