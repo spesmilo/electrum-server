@@ -48,6 +48,7 @@ class AbeStore(Datastore_class):
 
         self.dblock = thread.allocate_lock()
         self.last_tx_id = 0
+        self.known_mempool_hashes = []
 
     
     def import_tx(self, tx, is_coinbase):
@@ -465,29 +466,39 @@ class AbeStore(Datastore_class):
     def memorypool_update(store):
 
         ds = BCDataStream.BCDataStream()
-        postdata = dumps({"method": 'getmemorypool', 'params': [], 'id':'jsonrpc'})
-
+        postdata = dumps({"method": 'getrawmempool', 'params': [], 'id':'jsonrpc'})
         respdata = urllib.urlopen(store.bitcoind_url, postdata).read()
         r = loads(respdata)
         if r['error'] != None:
+            print r['error']
             return
 
-        v = r['result'].get('transactions')
-        for hextx in v:
+        mempool_hashes = r.get('result')
+        for tx_hash in mempool_hashes:
+
+            if tx_hash in store.known_mempool_hashes: continue
+            store.known_mempool_hashes.append(tx_hash)
+
+            postdata = dumps({"method": 'getrawtransaction', 'params': [tx_hash], 'id':'jsonrpc'})
+            respdata = urllib.urlopen(store.bitcoind_url, postdata).read()
+            r = loads(respdata)
+            if r['error'] != None:
+                continue
+            hextx = r.get('result')
             ds.clear()
             ds.write(hextx.decode('hex'))
             tx = deserialize.parse_Transaction(ds)
             tx['hash'] = util.double_sha256(tx['tx'])
-            tx_hash = store.hashin(tx['hash'])
-
+                
             if store.tx_find_id_and_value(tx):
                 pass
             else:
                 tx_id = store.import_tx(tx, False)
                 store.update_tx_cache(tx_id)
                 #print tx_hash
-    
+
         store.commit()
+        store.known_mempool_hashes = mempool_hashes
 
 
     def send_tx(self,tx):
