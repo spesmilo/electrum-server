@@ -502,7 +502,7 @@ class AbeStore(Datastore_class):
 
 
     def send_tx(self,tx):
-        postdata = dumps({"method": 'importtransaction', 'params': [tx], 'id':'jsonrpc'})
+        postdata = dumps({"method": 'sendrawtransaction', 'params': [tx], 'id':'jsonrpc'})
         respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
         r = loads(respdata)
         if r['error'] != None:
