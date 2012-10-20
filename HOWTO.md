@@ -34,14 +34,14 @@ should be copied verbatim or adapted, without the indentation tab.
 Prerequisites
 -------------
 
-**Expertise.** You should be familiar with Linux command line and standard
-Linux commands. You should have basic understanding of git, Python packages,
-compiling and applying patches to source code. You should have knowledge
-about how to install and configure software on your Linux distribution. You
-should be able to add commands to your distribution's startup scripts. If
-one of the commands included in this document is not available or does not
-perform the operation described here, you are expected to fix the issue so
-you can continue following this howto.
+**Expertise.** You should be familiar with Linux command line and
+standard Linux commands. You should have basic understanding of git,
+Python packages. You should have knowledge about how to install and
+configure software on your Linux distribution. You should be able to
+add commands to your distribution's startup scripts. If one of the
+commands included in this document is not available or does not
+perform the operation described here, you are expected to fix the
+issue so you can continue following this howto.
 
 **Software.** A recent Linux distribution with the following software
 installed: `python`, `easy_install`, `git`, a SQL server, standard C/C++
@@ -90,27 +90,7 @@ our ~/bin directory:
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum
 
-### Step 2. Install a patched version of bitcoind
-
-Electrum server requires some small modifications to the bitcoind daemon.
-The patch is included in the Electrum sources we just downloaded, now we
-will download the Bitcoin sources, patch, compile and install the binary to
-our `~/bin` directory.
-
-Note that updated versions may affect these instructions, so *be mindful of 
-what you are doing!*
-
-    $ cd ~/src
-    $ wget https://github.com/bitcoin/bitcoin/tarball/v0.6.0 -O bitcoin-0.6.0.tgz
-    $ tar xvzf bitcoin-0.6.0.tgz
-    $ mv bitcoin-bitcoin-b3b5ab1 bitcoin-0.6.0
-    $ cd bitcoin-0.6.0/src
-    $ patch -p 2 < ~/src/electrum/server/patches/bitcoin-0.6.0.diff
-    $ make -f makefile.unix
-    $ strip bitcoind
-    $ mv bitcoind ~/bin
-
-### Step 3. Configure and start bitcoind
+### Step 2. Configure and start bitcoind
 
 In order to allow Electrum to "talk" to `bitcoind`, we need to set up a RPC
 username and password for `bitcoind`. We will then start `bitcoind` and
@@ -138,7 +118,7 @@ You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
 
-### Step 4. Install Electrum dependencies
+### Step 3. Install Electrum dependencies
 
 Electrum server depends on various standard Python libraries. These will be
 already installed on your distribution, or can be installed with your
@@ -157,7 +137,7 @@ for example python2.6 or 2.8.
     $ sudo chmod +x /usr/local/lib/python2.7/dist-packages/Abe/abe.py
     $ ln -s /usr/local/lib/python2.7/dist-packages/Abe/abe.py ~/bin/abe
 
-### Step 5. Configure the database
+### Step 4. Configure the database
 
 Electrum server uses a SQL database to store the blockchain data. In theory,
 it supports all databases supported by Abe. At the time of this writing,
@@ -176,7 +156,7 @@ For PostgreSQL:
 
     TBW!
 
-### Step 6. Configure Abe and import blockchain into the database
+### Step 5. Configure Abe and import blockchain into the database
 
 When you run Electrum server for the first time, it will automatically
 import the blockchain into the database, so it is safe to skip this step.
@@ -224,7 +204,7 @@ expect it to take hours. Here are some benchmarks for importing
 	  * CPU: Intel Xeon X3430 @ 2.40GHz
 	  * HDD: 2 x SATA in a RAID1.
 
-### Step 7. Configure Electrum server
+### Step 6. Configure Electrum server
 
 Electrum reads a config file (/etc/electrum.conf) when starting up. This
 file includes the database setup, bitcoind RPC setup, and a few other
@@ -274,11 +254,11 @@ Write this in `electrum.conf`:
     user = <rpc-username>
     password = <rpc-password>
 
-### Step 8. (Finally!) Run Electrum server
+### Step 7. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server:
 
-    $ electrum-server
+    $ server
 
 You should see this on the screen:
 
@@ -293,7 +273,7 @@ You should also take a look at the 'start' and 'stop' scripts in
 `~/src/electrum/server`. You can use them as a starting point to create a
 init script for your system.
 
-### 9. Test the Electrum server
+### 8. Test the Electrum server
 
 We will assume you have a working Electrum client, a wallet and some
 transactions history. You should start the client and click on the green

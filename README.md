@@ -7,8 +7,7 @@ Electrum-server for the Electrum client
 Features
 --------
 
-  * The server uses a patched version of the Bitcoin daemon that can forward
-    transactions, and bitcoin-abe.
+  * The server uses a bitcoind and bitcoin-abe.
   * The server code is open source. Anyone can run a server, removing single
     points of failure concerns.
   * The server knows which set of Bitcoin addresses belong to the same wallet,
@@ -18,10 +17,9 @@ Features
 Installation
 ------------
 
-  1. Patch and recompile bitcoin: see `patches/` for any necessary patches.
-  2. Install [bitcoin-abe](https://github.com/jtobey/bitcoin-abe).
-  3. Install [jsonrpclib](https://code.google.com/p/jsonrpclib/).
-  4. Launch the server: `nohup python -u server.py > /var/log/electrum.log &`
+  1. Install [bitcoin-abe](https://github.com/jtobey/bitcoin-abe).
+  2. Install [jsonrpclib](https://code.google.com/p/jsonrpclib/).
+  3. Launch the server: `nohup python -u server.py > /var/log/electrum.log &`
      or use the included `start` script.
 
 See the included `HOWTO.md` for greater detail on the installation process.
