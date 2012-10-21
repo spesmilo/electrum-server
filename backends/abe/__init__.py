@@ -446,14 +446,14 @@ class AbeStore(Datastore_class):
             if len(merkle)%2: merkle.append( merkle[-1] )
             n = []
             while merkle:
+                new_hash = Hash( merkle[0] + merkle[1] )
                 if merkle[0] == target_hash:
                     s.append( "L" + encode(merkle[1]))
-                    n.append( target_hash )
+                    target_hash = new_hash
                 elif merkle[1] == target_hash:
                     s.append( "R" + encode(merkle[0]))
-                    n.append( target_hash)
-                else:
-                    n.append( Hash( merkle[0] + merkle[1] ) )
+                    target_hash = new_hash
+                n.append( new_hash )
                 merkle = merkle[2:]
             merkle = n
 
