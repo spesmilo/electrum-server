@@ -10,6 +10,29 @@ from Queue import Queue
 import time, threading
 
 
+import hashlib
+encode = lambda x: x[::-1].encode('hex')
+decode = lambda x: x.decode('hex')[::-1]
+Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+
+def rev_hex(s):
+    return s.decode('hex')[::-1].encode('hex')
+
+def int_to_hex(i, length=1):
+    s = hex(i)[2:].rstrip('L')
+    s = "0"*(2*length - len(s)) + s
+    return rev_hex(s)
+
+def header_to_string(res):
+    s = int_to_hex(res.get('version'),4) \
+        + rev_hex(res.get('prev_block_hash')) \
+        + rev_hex(res.get('merkle_root')) \
+        + int_to_hex(int(res.get('timestamp')),4) \
+        + int_to_hex(int(res.get('bits')),4) \
+        + int_to_hex(int(res.get('nonce')),4)
+    return s
+
+
 class AbeStore(Datastore_class):
 
     def __init__(self, config):
@@ -406,6 +429,40 @@ class AbeStore(Datastore_class):
         return out
         
 
+    def get_chunk(self, index):
+        sql = """
+            SELECT
+                block_hash,
+                block_version,
+                block_hashMerkleRoot,
+                block_nTime,
+                block_nBits,
+                block_nNonce,
+                block_height,
+                prev_block_hash,
+                block_height
+              FROM chain_summary
+             WHERE block_height >= %d AND block_height< %d AND in_longest = 1"""%(index*2016, (index+1)*2016)
+
+        out = self.safe_sql(sql)
+        msg = ''
+        for row in out:
+            (block_hash, block_version, hashMerkleRoot, nTime, nBits, nNonce, height, prev_block_hash, block_height) \
+                = ( self.hashout_hex(row[0]), int(row[1]), self.hashout_hex(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]), self.hashout_hex(row[7]), int(row[8]) )
+            h = {"block_height":block_height, "version":block_version, "prev_block_hash":prev_block_hash, 
+                   "merkle_root":hashMerkleRoot, "timestamp":nTime, "bits":nBits, "nonce":nNonce}
+
+            if h.get('block_height')==0: h['prev_block_hash'] = "0"*64
+            msg += header_to_string(h)
+
+            #print "hash", encode(Hash(msg.decode('hex')))
+            #if h.get('block_height')==1:break
+
+        print "get_chunk", index, len(msg)
+        return msg
+
+
+
     def get_tx_merkle(self, tx_hash):
 
         out = self.safe_sql("""
@@ -433,10 +490,6 @@ class AbeStore(Datastore_class):
 
         # find subset.
         # TODO: do not compute this on client request, better store the hash tree of each block in a database...
-        import hashlib
-        encode = lambda x: x[::-1].encode('hex')
-        decode = lambda x: x.decode('hex')[::-1]
-        Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
         merkle = map(decode, merkle)
         target_hash = decode(tx_hash)
@@ -587,6 +640,14 @@ class BlockchainProcessor(Processor):
                 result = self.store.get_block_header( height ) 
             except BaseException, e:
                 error = str(e) + ': %d'% height
+                print "error:", error
+
+        elif method == 'blockchain.block.get_chunk':
+            try:
+                index = params[0]
+                result = self.store.get_chunk( index ) 
+            except BaseException, e:
+                error = str(e) + ': %d'% index
                 print "error:", error
 
         elif method == 'blockchain.transaction.broadcast':
