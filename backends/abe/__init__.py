@@ -570,8 +570,10 @@ class AbeStore(Datastore_class):
         with store.dblock:
             store.catch_up()
             store.memorypool_update()
-            block_number = store.get_block_number(store.chain_id)
-            return block_number
+            height = store.get_block_number( store.chain_id )
+
+        block_header = store.get_block_header( height )
+        return block_header
 
 
 
@@ -596,12 +598,12 @@ class BlockchainProcessor(Processor):
     def __init__(self, config):
         Processor.__init__(self)
         self.store = AbeStore(config)
-        self.block_number = -1
         self.watched_addresses = []
 
         # catch_up first
-        n = self.store.main_iteration()
-        print "blockchain: %d blocks"%n
+        self.block_header = self.store.main_iteration()
+        self.block_number = self.block_header.get('block_height')
+        print "blockchain: %d blocks"%self.block_number
 
         threading.Timer(10, self.run_store_iteration).start()
 
@@ -616,6 +618,9 @@ class BlockchainProcessor(Processor):
 
         if method == 'blockchain.numblocks.subscribe':
             result = self.block_number
+
+        elif method == 'blockchain.headers.subscribe':
+            result = self.block_header
 
         elif method == 'blockchain.address.subscribe':
             try:
@@ -683,7 +688,7 @@ class BlockchainProcessor(Processor):
     def run_store_iteration(self):
         
         try:
-            block_number = self.store.main_iteration()
+            block_header = self.store.main_iteration()
         except:
             traceback.print_exc(file=sys.stdout)
             print "terminating"
@@ -693,10 +698,14 @@ class BlockchainProcessor(Processor):
             print "exit timer"
             return
 
-        if self.block_number != block_number:
-            self.block_number = block_number
+        if self.block_number != block_header.get('block_height'):
+            self.block_number = block_header.get('block_height')
             print "block number:", self.block_number
             self.push_response({ 'id': None, 'method':'blockchain.numblocks.subscribe', 'params':[self.block_number] })
+
+        if self.block_header != block_header:
+            self.block_header = block_header
+            self.push_response({ 'id': None, 'method':'blockchain.headers.subscribe', 'params':[self.block_header] })
 
         while True:
             try:

@@ -220,6 +220,8 @@ class Session:
     def build_subdesc(method, params):
         if method == "blockchain.numblocks.subscribe":
             return method,
+        elif method == "blockchain.headers.subscribe":
+            return method,
         elif method == "blockchain.address.subscribe":
             if not params:
                 return None
