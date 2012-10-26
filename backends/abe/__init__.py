@@ -479,14 +479,17 @@ class AbeStore(Datastore_class):
         block_height = int(out[0][0])
 
         merkle = []
+        tx_pos = None
+
         # list all tx in block
         for row in self.safe_sql("""
             SELECT DISTINCT tx_id, tx_pos, tx_hash
               FROM txin_detail
              WHERE block_id = ?
              ORDER BY tx_pos""", (block_id,)):
-            tx_id, tx_pos, tx_h = row
-            merkle.append(tx_h)
+            _id, _pos, _hash = row
+            merkle.append(_hash)
+            if _hash == tx_hash: tx_pos = int(_pos)
 
         # find subset.
         # TODO: do not compute this on client request, better store the hash tree of each block in a database...
@@ -501,17 +504,17 @@ class AbeStore(Datastore_class):
             while merkle:
                 new_hash = Hash( merkle[0] + merkle[1] )
                 if merkle[0] == target_hash:
-                    s.append( "L" + encode(merkle[1]))
+                    s.append( encode(merkle[1]))
                     target_hash = new_hash
                 elif merkle[1] == target_hash:
-                    s.append( "R" + encode(merkle[0]))
+                    s.append( encode(merkle[0]))
                     target_hash = new_hash
                 n.append( new_hash )
                 merkle = merkle[2:]
             merkle = n
 
         # send result
-        return {"block_height":block_height,"merkle":s}
+        return {"block_height":block_height, "merkle":s, "pos":tx_pos}
 
 
 
