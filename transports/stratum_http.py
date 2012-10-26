@@ -158,7 +158,7 @@ class StratumJSONRPCRequestHandler(
         self.send_response(200)
         self.send_header('Allow', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Headers', 'X-Request, X-Requested-With')
+        self.send_header('Access-Control-Allow-Headers', '*')
         self.send_header('Content-Length', '0')
         self.end_headers()
             
