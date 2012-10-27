@@ -10,7 +10,6 @@ class TcpSession(Session):
 
     def __init__(self, connection, address, use_ssl, ssl_certfile, ssl_keyfile):
         Session.__init__(self)
-        print connection, address, use_ssl
         if use_ssl:
             import ssl
             self._connection = ssl.wrap_socket(

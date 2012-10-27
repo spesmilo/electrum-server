@@ -470,7 +470,9 @@ class AbeStore(Datastore_class):
              JOIN block_tx on tx.tx_id = block_tx.tx_id 
              JOIN chain_summary on chain_summary.block_id = block_tx.block_id
              WHERE tx_hash='%s' AND in_longest = 1"""%tx_hash)
-        block_id = out[0]
+
+        if not out: raise BaseException("not in a block")
+        block_id = int(out[0][0])
 
         # get block height
         out = self.safe_sql("SELECT block_height FROM chain_summary WHERE block_id = %d AND in_longest = 1"%block_id)
@@ -691,7 +693,9 @@ class BlockchainProcessor(Processor):
     def run_store_iteration(self):
         
         try:
+            t1 = time.time()
             block_header = self.store.main_iteration()
+            t2 = time.time() - t1
         except:
             traceback.print_exc(file=sys.stdout)
             print "terminating"
@@ -703,12 +707,13 @@ class BlockchainProcessor(Processor):
 
         if self.block_number != block_header.get('block_height'):
             self.block_number = block_header.get('block_height')
-            print "block number:", self.block_number
+            print "block number: %d  (%.3f seconds)"%(self.block_number, t2)
             self.push_response({ 'id': None, 'method':'blockchain.numblocks.subscribe', 'params':[self.block_number] })
 
         if self.block_header != block_header:
             self.block_header = block_header
             self.push_response({ 'id': None, 'method':'blockchain.headers.subscribe', 'params':[self.block_header] })
+
 
         while True:
             try:
