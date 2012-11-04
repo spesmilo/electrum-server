@@ -268,6 +268,9 @@ class ResponseDispatcher(threading.Thread):
         method = response.get('method')
         params = response.get('params')
 
+        if method == "blockchain.address.subscribe2":
+            method = "blockchain.address.subscribe"
+
         # A notification
         if internal_id is None: # and method is not None and params is not None:
             self.notification(method, params, response)
