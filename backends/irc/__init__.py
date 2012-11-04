@@ -50,6 +50,11 @@ class IrcThread(threading.Thread):
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
+            except:
+                time.sleep(10)
+                continue
+
+            try:
                 s.send('USER electrum 0 * :' + self.host + ' ' + ircname + '\n')
                 s.send('NICK ' + self.nick + '\n')
                 s.send('JOIN #electrum\n')

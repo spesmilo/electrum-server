@@ -67,11 +67,14 @@ class AbeStore(Datastore_class):
         self.tx_cache = {}
         self.bitcoind_url = 'http://%s:%s@%s:%s/' % ( config.get('bitcoind','user'), config.get('bitcoind','password'), config.get('bitcoind','host'), config.get('bitcoind','port'))
 
+        self.chunk_cache = {}
+
         self.address_queue = Queue()
 
-        self.dblock = thread.allocate_lock()
+        self.lock = threading.Lock()
         self.last_tx_id = 0
         self.known_mempool_hashes = []
+
 
     
     def import_tx(self, tx, is_coinbase):
@@ -128,13 +131,13 @@ class AbeStore(Datastore_class):
 
         error = False
         try:
-            if lock: self.dblock.acquire()
+            if lock: self.lock.acquire()
             ret = self.selectall(sql,params)
         except:
             error = True
             traceback.print_exc(file=sys.stdout)
         finally:
-            if lock: self.dblock.release()
+            if lock: self.lock.release()
 
         if error: 
             raise BaseException('sql error')
@@ -268,9 +271,10 @@ class AbeStore(Datastore_class):
 
     def get_history(self, addr):
 
-        cached_version = self.tx_cache.get( addr )
-        if cached_version is not None:
-            return cached_version
+        with self.lock:
+            cached_version = self.tx_cache.get( addr )
+            if cached_version is not None:
+                return cached_version
 
         version, binaddr = decode_check_address(addr)
         if binaddr is None:
@@ -385,9 +389,18 @@ class AbeStore(Datastore_class):
         # cache result
         # do not cache mempool results because statuses are ambiguous
         if not address_has_mempool:
-            self.tx_cache[addr] = txpoints
+            with self.lock:
+                self.tx_cache[addr] = txpoints
         
         return txpoints
+
+    def get_history2(self, addr):
+        h = self.get_history(addr)
+        out = map(lambda x: {'tx_hash':x['tx_hash'], 'height':x['height']}, h)
+        out2 = []
+        for item in out:
+            if item not in out2: out2.append(item)
+        return out2
 
 
     def get_status(self,addr):
@@ -402,6 +415,17 @@ class AbeStore(Datastore_class):
             if status == 'mempool': # and session['version'] != "old":
                 status = status + ':%d'% len(tx_points)
         return status
+
+    def get_status2(self,addr):
+        # for 0.5 clients
+        tx_points = self.get_history2(addr)
+        if not tx_points:
+            return None
+
+        status = ''
+        for tx in tx_points:
+            status += tx.get('tx_hash') + ':%d:' % tx.get('height')
+        return hashlib.sha256( status ).digest().encode('hex')
 
 
     def get_block_header(self, block_height):
@@ -430,6 +454,10 @@ class AbeStore(Datastore_class):
         
 
     def get_chunk(self, index):
+        with self.lock:
+            msg = self.chunk_cache.get(index)
+            if msg: return msg
+
         sql = """
             SELECT
                 block_hash,
@@ -458,9 +486,22 @@ class AbeStore(Datastore_class):
             #print "hash", encode(Hash(msg.decode('hex')))
             #if h.get('block_height')==1:break
 
+        with self.lock:
+            self.chunk_cache[index] = msg
         print "get_chunk", index, len(msg)
         return msg
 
+
+
+    def get_raw_tx(self, tx_hash, height):
+        postdata = dumps({"method": 'getrawtransaction', 'params': [tx_hash, 0, height], 'id':'jsonrpc'})
+        respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+        r = loads(respdata)
+        if r['error'] != None:
+            raise BaseException(r['error'])
+
+        hextx = r.get('result')
+        return hextx
 
 
     def get_tx_merkle(self, tx_hash):
@@ -571,13 +612,15 @@ class AbeStore(Datastore_class):
         return out
 
 
-    def main_iteration(store):
-        with store.dblock:
-            store.catch_up()
-            store.memorypool_update()
-            height = store.get_block_number( store.chain_id )
+    def main_iteration(self):
+        with self.lock:
+            self.catch_up()
+            self.memorypool_update()
+            height = self.get_block_number( self.chain_id )
+            try: self.chunk_cache.pop(height/2016) 
+            except: pass
 
-        block_header = store.get_block_header( height )
+        block_header = self.get_block_header( height )
         return block_header
 
 
@@ -636,10 +679,27 @@ class BlockchainProcessor(Processor):
                 error = str(e) + ': ' + address
                 print "error:", error
 
+        elif method == 'blockchain.address.subscribe2':
+            try:
+                address = params[0]
+                result = self.store.get_status2(address)
+                self.watch_address(address)
+            except BaseException, e:
+                error = str(e) + ': ' + address
+                print "error:", error
+
         elif method == 'blockchain.address.get_history':
             try:
                 address = params[0]
                 result = self.store.get_history( address ) 
+            except BaseException, e:
+                error = str(e) + ': ' + address
+                print "error:", error
+
+        elif method == 'blockchain.address.get_history2':
+            try:
+                address = params[0]
+                result = self.store.get_history2( address ) 
             except BaseException, e:
                 error = str(e) + ': ' + address
                 print "error:", error
@@ -669,6 +729,15 @@ class BlockchainProcessor(Processor):
             try:
                 tx_hash = params[0]
                 result = self.store.get_tx_merkle(tx_hash ) 
+            except BaseException, e:
+                error = str(e) + ': ' + tx_hash
+                print "error:", error
+
+        elif method == 'blockchain.transaction.get':
+            try:
+                tx_hash = params[0]
+                height = params[1]
+                result = self.store.get_raw_tx(tx_hash, height ) 
             except BaseException, e:
                 error = str(e) + ': ' + tx_hash
                 print "error:", error
@@ -722,7 +791,9 @@ class BlockchainProcessor(Processor):
                 break
             if addr in self.watched_addresses:
                 status = self.store.get_status( addr )
+                status2 = self.store.get_status2( addr )
                 self.push_response({ 'id': None, 'method':'blockchain.address.subscribe', 'params':[addr, status] })
+                self.push_response({ 'id': None, 'method':'blockchain.address.subscribe2', 'params':[addr, status2] })
 
         threading.Timer(10, self.run_store_iteration).start()
 

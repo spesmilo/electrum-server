@@ -138,7 +138,21 @@ class RequestDispatcher(threading.Thread):
         method = request['method']
         params = request.get('params',[])
         suffix = method.split('.')[-1]
+
+        try:
+            is_new = float(session.version) >= 1.3
+        except:
+            is_new = False
+
+        if is_new and method == 'blockchain.address.get_history': 
+            method = 'blockchain.address.get_history2'
+            request['method'] = method
+
         if suffix == 'subscribe':
+            if is_new and method == 'blockchain.address.subscribe': 
+                method = 'blockchain.address.subscribe2'
+                request['method'] = method
+
             session.subscribe_to_service(method, params)
 
         # store session and id locally
@@ -222,7 +236,7 @@ class Session:
             return method,
         elif method == "blockchain.headers.subscribe":
             return method,
-        elif method == "blockchain.address.subscribe":
+        elif method in ["blockchain.address.subscribe", "blockchain.address.subscribe2"]:
             if not params:
                 return None
             else:
