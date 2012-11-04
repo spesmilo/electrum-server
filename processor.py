@@ -139,10 +139,7 @@ class RequestDispatcher(threading.Thread):
         params = request.get('params',[])
         suffix = method.split('.')[-1]
 
-        try:
-            is_new = float(session.version) >= 1.3
-        except:
-            is_new = False
+        is_new = session.protocol_version >= 0.5
 
         if is_new and method == 'blockchain.address.get_history': 
             method = 'blockchain.address.get_history2'
@@ -169,6 +166,10 @@ class RequestDispatcher(threading.Thread):
 
         if method in ['server.version']:
             session.version = params[0]
+            try:
+                session.protocol_version = float(params[1])
+            except:
+                pass
 
     def get_sessions(self):
         with self.lock:
@@ -201,6 +202,7 @@ class Session:
         self.address = ''
         self.name = ''
         self.version = 'unknown'
+        self.protocol_version = 0.
         self.time = time.time()
         threading.Timer(2, self.info).start()
 
