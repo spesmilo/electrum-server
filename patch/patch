@@ -1,0 +1,65 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 43bd5dd..b38ce88 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -925,7 +925,7 @@ bool CWalletTx::AcceptWalletTransaction(bool fCheckInputs)
+ 
+ 
+ // Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock
+-bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock, bool fAllowSlow)
++bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock, bool fAllowSlow, int height)
+ {
+     CBlockIndex *pindexSlow = NULL;
+     {
+@@ -940,8 +940,8 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock
+         }
+ 
+         if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
+-            int nHeight = -1;
+-            {
++	    int nHeight = height;
++	    if(nHeight == -1) {
+                 CCoinsViewCache &view = *pcoinsTip;
+                 CCoins coins;
+                 if (view.GetCoins(hash, coins))
+diff --git a/src/main.h b/src/main.h
+index d810bff..fba793c 100644
+--- a/src/main.h
++++ b/src/main.h
+@@ -115,7 +115,7 @@ unsigned int ComputeMinWork(unsigned int nBase, int64 nTime);
+ int GetNumBlocksOfPeers();
+ bool IsInitialBlockDownload();
+ std::string GetWarnings(std::string strFor);
+-bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool fAllowSlow = false);
++bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock, bool fAllowSlow = false, int height = -1);
+ bool SetBestChain(CBlockIndex* pindexNew);
+ bool ConnectBestBlock();
+ CBlockIndex * InsertBlockIndex(uint256 hash);
+diff --git a/src/rpcrawtransaction.cpp b/src/rpcrawtransaction.cpp
+index e82f4ad..624675f 100644
+--- a/src/rpcrawtransaction.cpp
++++ b/src/rpcrawtransaction.cpp
+@@ -134,7 +134,7 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)
+ 
+ Value getrawtransaction(const Array& params, bool fHelp)
+ {
+-    if (fHelp || params.size() < 1 || params.size() > 2)
++    if (fHelp || params.size() < 1 || params.size() > 3)
+         throw runtime_error(
+             "getrawtransaction <txid> [verbose=0]\n"
+             "If verbose=0, returns a string that is\n"
+@@ -148,9 +148,13 @@ Value getrawtransaction(const Array& params, bool fHelp)
+     if (params.size() > 1)
+         fVerbose = (params[1].get_int() != 0);
+ 
++    int height = -1;
++    if (params.size() > 2)
++        height = params[2].get_int();
++
+     CTransaction tx;
+     uint256 hashBlock = 0;
+-    if (!GetTransaction(hash, tx, hashBlock, true))
++    if (!GetTransaction(hash, tx, hashBlock, true, height))
+         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "No information available about transaction");
+ 
+     CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);
