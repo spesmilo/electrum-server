@@ -12,7 +12,7 @@ requirements.
 
 The most up-to date version of this document is available at:
 
-    https://gitorious.org/electrum/server/blobs/master/HOWTO
+    https://github.com/spesmilo/electrum-server/blob/master/HOWTO.md
 
 Conventions
 -----------
@@ -86,7 +86,7 @@ our ~/bin directory:
 
     $ mkdir -p ~/src/electrum
     $ cd ~/src/electrum
-    $ git://gitorious.org/electrum/server.git
+    $ git clone https://github.com/spesmilo/electrum-server.git
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum
 
