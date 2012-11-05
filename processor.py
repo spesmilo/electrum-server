@@ -270,9 +270,6 @@ class ResponseDispatcher(threading.Thread):
         method = response.get('method')
         params = response.get('params')
 
-        if method == "blockchain.address.subscribe2":
-            method = "blockchain.address.subscribe"
-
         # A notification
         if internal_id is None: # and method is not None and params is not None:
             self.notification(method, params, response)
@@ -288,6 +285,8 @@ class ResponseDispatcher(threading.Thread):
             if session.stopped():
                 continue
             if session.contains_subscription(subdesc):
+                if response.get('method') == "blockchain.address.subscribe2":
+                    response['method'] = "blockchain.address.subscribe"
                 session.send_response(response)
 
     def send_response(self, internal_id, response):
