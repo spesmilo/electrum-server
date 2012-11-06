@@ -71,7 +71,8 @@ class AbeStore(Datastore_class):
 
         self.address_queue = Queue()
 
-        self.lock = threading.Lock()
+        self.lock = threading.Lock()        # for the database
+        self.cache_lock = threading.Lock()  # for the cache
         self.last_tx_id = 0
         self.known_mempool_hashes = []
 
@@ -109,9 +110,11 @@ class AbeStore(Datastore_class):
                 continue
 
             address = hash_to_address(chr(self.addrtype), _hash)
-            if self.tx_cache.has_key(address):
-                print "cache: invalidating", address
-                self.tx_cache.pop(address)
+            with self.cache_lock:
+                if self.tx_cache.has_key(address):
+                    print "cache: invalidating", address
+                    self.tx_cache.pop(address)
+
             self.address_queue.put(address)
 
         outrows = self.get_tx_outputs(txid, False)
@@ -122,9 +125,11 @@ class AbeStore(Datastore_class):
                 continue
 
             address = hash_to_address(chr(self.addrtype), _hash)
-            if self.tx_cache.has_key(address):
-                print "cache: invalidating", address
-                self.tx_cache.pop(address)
+            with self.cache_lock:
+                if self.tx_cache.has_key(address):
+                    print "cache: invalidating", address
+                    self.tx_cache.pop(address)
+
             self.address_queue.put(address)
 
     def safe_sql(self,sql, params=(), lock=True):
@@ -271,7 +276,7 @@ class AbeStore(Datastore_class):
 
     def get_history(self, addr):
 
-        with self.lock:
+        with self.cache_lock:
             cached_version = self.tx_cache.get( addr )
             if cached_version is not None:
                 return cached_version
@@ -389,7 +394,7 @@ class AbeStore(Datastore_class):
         # cache result
         # do not cache mempool results because statuses are ambiguous
         if not address_has_mempool:
-            with self.lock:
+            with self.cache_lock:
                 self.tx_cache[addr] = txpoints
         
         return txpoints
@@ -454,7 +459,7 @@ class AbeStore(Datastore_class):
         
 
     def get_chunk(self, index):
-        with self.lock:
+        with self.cache_lock:
             msg = self.chunk_cache.get(index)
             if msg: return msg
 
@@ -486,7 +491,7 @@ class AbeStore(Datastore_class):
             #print "hash", encode(Hash(msg.decode('hex')))
             #if h.get('block_height')==1:break
 
-        with self.lock:
+        with self.cache_lock:
             self.chunk_cache[index] = msg
         print "get_chunk", index, len(msg)
         return msg
