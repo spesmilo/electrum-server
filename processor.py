@@ -40,6 +40,9 @@ class Processor(threading.Thread):
     def process(self, request):
         pass
 
+    def add_request(self, request):
+        self.queue.put(request)
+
     def push_response(self, response):
         #print "response", response
         self.dispatcher.request_dispatcher.push_response(response)
@@ -162,7 +165,7 @@ class RequestDispatcher(threading.Thread):
             print "error: no processor for", prefix
             return
 
-        p.queue.put(request)
+        p.add_request(request)
 
         if method in ['server.version']:
             session.version = params[0]
