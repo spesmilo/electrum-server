@@ -430,7 +430,7 @@ class AbeStore(Datastore_class):
 
     def get_status2(self, addr, cache_only=False):
         # for 0.5 clients
-        tx_points = self.get_history2(addr)
+        tx_points = self.get_history2(addr, cache_only)
         if cache_only and tx_points == -1: return -1
 
         if not tx_points: return None
@@ -482,7 +482,7 @@ class AbeStore(Datastore_class):
                 prev_block_hash,
                 block_height
               FROM chain_summary
-             WHERE block_height >= %d AND block_height< %d AND in_longest = 1"""%(index*2016, (index+1)*2016)
+             WHERE block_height >= %d AND block_height< %d AND in_longest = 1 ORDER BY block_height"""%(index*2016, (index+1)*2016)
 
         out = self.safe_sql(sql)
         msg = ''
@@ -579,16 +579,20 @@ class AbeStore(Datastore_class):
         ds = BCDataStream.BCDataStream()
         postdata = dumps({"method": 'getrawmempool', 'params': [], 'id':'jsonrpc'})
         respdata = urllib.urlopen(store.bitcoind_url, postdata).read()
+
         r = loads(respdata)
         if r['error'] != None:
             print r['error']
             return
 
         mempool_hashes = r.get('result')
+        num_new_tx = 0 
+
         for tx_hash in mempool_hashes:
 
             if tx_hash in store.known_mempool_hashes: continue
             store.known_mempool_hashes.append(tx_hash)
+            num_new_tx += 1
 
             postdata = dumps({"method": 'getrawtransaction', 'params': [tx_hash], 'id':'jsonrpc'})
             respdata = urllib.urlopen(store.bitcoind_url, postdata).read()
@@ -610,6 +614,7 @@ class AbeStore(Datastore_class):
 
         store.commit()
         store.known_mempool_hashes = mempool_hashes
+        return num_new_tx
 
 
     def send_tx(self,tx):
@@ -626,14 +631,22 @@ class AbeStore(Datastore_class):
 
     def main_iteration(self):
         with self.lock:
+            t1 = time.time()
             self.catch_up()
-            self.memorypool_update()
+            t2 = time.time()
+            time_catch_up = t2 - t1
+            n = self.memorypool_update()
+            time_mempool = time.time() - t2
             height = self.get_block_number( self.chain_id )
-            try: self.chunk_cache.pop(height/2016) 
-            except: pass
+
+        with self.cache_lock:
+            try: 
+                self.chunk_cache.pop(height/2016) 
+            except: 
+                pass
 
         block_header = self.get_block_header( height )
-        return block_header
+        return block_header, time_catch_up, time_mempool, n
 
 
 
@@ -661,7 +674,7 @@ class BlockchainProcessor(Processor):
         self.watched_addresses = []
 
         # catch_up first
-        self.block_header = self.store.main_iteration()
+        self.block_header, time_catch_up, time_mempool, n = self.store.main_iteration()
         self.block_number = self.block_header.get('block_height')
         print "blockchain: %d blocks"%self.block_number
 
@@ -670,7 +683,7 @@ class BlockchainProcessor(Processor):
 
     def add_request(self, request):
         # see if we can get if from cache. if not, add to queue
-        if self.process( request, cache_only=True) == -1:
+        if self.process( request, cache_only = True) == -1:
             self.queue.put(request)
 
 
@@ -791,9 +804,7 @@ class BlockchainProcessor(Processor):
     def run_store_iteration(self):
         
         try:
-            t1 = time.time()
-            block_header = self.store.main_iteration()
-            t2 = time.time() - t1
+            block_header, time_catch_up, time_mempool, n = self.store.main_iteration()
         except:
             traceback.print_exc(file=sys.stdout)
             print "terminating"
@@ -803,9 +814,11 @@ class BlockchainProcessor(Processor):
             print "exit timer"
             return
 
+        #print "block number: %d  (%.3fs)  mempool:%d (%.3fs)"%(self.block_number, time_catch_up, n, time_mempool)
+
         if self.block_number != block_header.get('block_height'):
             self.block_number = block_header.get('block_height')
-            print "block number: %d  (%.3f seconds)"%(self.block_number, t2)
+            print "block number: %d  (%.3fs)"%(self.block_number, time_catch_up)
             self.push_response({ 'id': None, 'method':'blockchain.numblocks.subscribe', 'params':[self.block_number] })
 
         if self.block_header != block_header:
