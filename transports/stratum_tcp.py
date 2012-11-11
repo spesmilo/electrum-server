@@ -4,7 +4,7 @@ import threading
 import time
 import Queue as queue
 
-from processor import Session, Dispatcher, timestr
+from processor import Session, Dispatcher, print_log
 
 class TcpSession(Session):
 
@@ -131,7 +131,10 @@ class TcpServer(threading.Thread):
         self.ssl_certfile = ssl_certfile
 
     def run(self):
-        print "TCP server started.", self.use_ssl
+        if self.use_ssl:
+            print_log( "TCP/SSL server started.")
+        else:
+            print_log( "TCP server started.")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self.host, self.port))

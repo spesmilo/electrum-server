@@ -122,18 +122,18 @@ if __name__ == '__main__':
 
     print "Starting Electrum server on", host
 
-    from backends.bitcoind import Blockchain2Processor
-
     # Create hub
     dispatcher = Dispatcher()
     shared = dispatcher.shared
 
     # Create and register processors
+
+    # from backends.bitcoind import Blockchain2Processor
+    # chain2_proc = Blockchain2Processor(config)
+    # dispatcher.register('blockchain2', chain2_proc)
+
     chain_proc = backend.BlockchainProcessor(config)
     dispatcher.register('blockchain', chain_proc)
-
-    chain2_proc = Blockchain2Processor(config)
-    dispatcher.register('blockchain2', chain2_proc)
 
     server_proc = ServerProcessor(config)
     dispatcher.register('server', server_proc)

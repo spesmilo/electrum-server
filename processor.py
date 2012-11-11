@@ -13,6 +13,15 @@ def timestr():
     return time.strftime("[%d/%m/%Y-%H:%M:%S]")
 
 
+print_lock = threading.Lock()
+def print_log(*args):
+    args = [str(item) for item in args]
+    with print_lock:
+        sys.stderr.write(" ".join(args) + "\n")
+        sys.stderr.flush()
+
+
+
 class Shared:
 
     def __init__(self):
@@ -20,7 +29,7 @@ class Shared:
         self._stopped = False
 
     def stop(self):
-        print "Stopping Stratum"
+        print_log( "Stopping Stratum" )
         with self.lock:
             self._stopped = True
 
@@ -55,7 +64,7 @@ class Processor(threading.Thread):
             except:
                 traceback.print_exc(file=sys.stdout)
 
-        print "processor terminating"
+        print_log( "processor terminating")
             
 
 
@@ -162,7 +171,7 @@ class RequestDispatcher(threading.Thread):
         try:
             p = self.processors[prefix]
         except:
-            print "error: no processor for", prefix
+            print_log( "error: no processor for", prefix)
             return
 
         p.add_request(request)
@@ -221,8 +230,7 @@ class Session:
             addr = None
 
         if self.subscriptions:
-            print timestr(), self.name, self.address, addr,\
-                len(self.subscriptions), self.version
+            print_log( timestr(), self.name, self.address, addr, len(self.subscriptions), self.version )
 
     def stopped(self):
         with self.lock:
@@ -280,7 +288,7 @@ class ResponseDispatcher(threading.Thread):
         elif internal_id is not None: # and method is None and params is None:
             self.send_response(internal_id, response)
         else:
-            print "no method", response
+            print_log( "no method", response)
 
     def notification(self, method, params, response):
         subdesc = Session.build_subdesc(method, params)
@@ -298,5 +306,5 @@ class ResponseDispatcher(threading.Thread):
             response['id'] = message_id
             session.send_response(response)
         else:
-            print "send_response: no session", message_id, internal_id, response
+            print_log( "send_response: no session", message_id, internal_id, response )
 

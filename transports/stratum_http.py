@@ -49,7 +49,7 @@ from the processor point of view:
 """
 
 
-from processor import random_string
+from processor import random_string, print_log
 
 
 def get_version(request):
@@ -390,11 +390,11 @@ class HttpServer(threading.Thread):
         if self.use_ssl:
             class StratumThreadedServer(ThreadingMixIn, StratumHTTPSSLServer): pass
             self.server = StratumThreadedServer(( self.host, self.port), self.certfile, self.keyfile)
-            print "HTTPS server started."
+            print_log( "HTTPS server started.")
         else:
             class StratumThreadedServer(ThreadingMixIn, StratumHTTPServer): pass
             self.server = StratumThreadedServer(( self.host, self.port))
-            print "HTTP server started."
+            print_log( "HTTP server started.")
 
         self.server.dispatcher = self.dispatcher
         self.server.register_function(None, 'server.stop')
