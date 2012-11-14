@@ -110,7 +110,7 @@ class BlockchainProcessor(Processor):
 
     def block2header(self, b):
         return {"block_height":b.get('height'), "version":b.get('version'), "prev_block_hash":b.get('previousblockhash'), 
-                "merkle_root":b.get('merkleroot'), "timestamp":b.get('time'), "bits":b.get('bits'), "nonce":b.get('nonce')}
+                "merkle_root":b.get('merkleroot'), "timestamp":b.get('time'), "bits":int(b.get('bits'),16), "nonce":b.get('nonce')}
 
 
     def get_header(self, height):
@@ -154,7 +154,7 @@ class BlockchainProcessor(Processor):
         for txid in self.mempool_hist.get(addr,[]):
             hist.append((txid, 0))
 
-        hist = map(lambda x: {'tx_hash':x[0], 'height':x[1]}, hist)
+        hist = map(lambda x: {'tx_hash':x[0], 'height':x[2]}, hist)
         with self.cache_lock: self.history_cache[addr] = hist
         return hist
 
@@ -372,13 +372,13 @@ class BlockchainProcessor(Processor):
         elif method == 'blockchain.address.subscribe2':
             try:
                 address = params[0]
-                result = self.get_status2(address, cache_only)
+                result = self.get_status(address, cache_only)
                 self.watch_address(address)
             except BaseException, e:
                 error = str(e) + ': ' + address
                 print_log( "error:", error )
 
-        elif method == 'blockchain.address.get_history':
+        elif method == 'blockchain.address.get_history2':
             try:
                 address = params[0]
                 result = self.get_history( address, cache_only )
