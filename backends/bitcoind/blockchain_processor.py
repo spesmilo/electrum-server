@@ -265,7 +265,7 @@ class BlockchainProcessor(Processor):
 
         # add memory pool
         for txid in self.mempool_hist.get(addr,[]):
-            hist.append((txid, 0))
+            hist.append((txid, 0, 0))
 
         hist = map(lambda x: {'tx_hash':x[0], 'height':x[2]}, hist)
         # add something to distinguish between unused and empty addresses
@@ -529,7 +529,7 @@ class BlockchainProcessor(Processor):
                     print_log( "error:", error)
 
         elif method == 'blockchain.transaction.broadcast':
-            txo = self.bitcoind('sendrawtransaction', params[0])
+            txo = self.bitcoind('sendrawtransaction', params)
             print_log( "sent tx:", txo )
             result = txo 
 
