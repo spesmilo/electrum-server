@@ -3,7 +3,7 @@ import leveldb, urllib
 import deserialize
 import ast, time, threading, hashlib
 from Queue import Queue
-import traceback, sys
+import traceback, sys, os
 
 
 
@@ -22,6 +22,30 @@ def int_to_hex(i, length=1):
     s = "0"*(2*length - len(s)) + s
     return rev_hex(s)
 
+def header_to_string(res):
+    pbh = res.get('prev_block_hash')
+    if pbh is None: pbh = '0'*64
+    s = int_to_hex(res.get('version'),4) \
+        + rev_hex(pbh) \
+        + rev_hex(res.get('merkle_root')) \
+        + int_to_hex(int(res.get('timestamp')),4) \
+        + int_to_hex(int(res.get('bits')),4) \
+        + int_to_hex(int(res.get('nonce')),4)
+    return s
+
+def header_from_string( s):
+    hex_to_int = lambda s: eval('0x' + s[::-1].encode('hex'))
+    h = {}
+    h['version'] = hex_to_int(s[0:4])
+    h['prev_block_hash'] = hash_encode(s[4:36])
+    h['merkle_root'] = hash_encode(s[36:68])
+    h['timestamp'] = hex_to_int(s[68:72])
+    h['bits'] = hex_to_int(s[72:76])
+    h['nonce'] = hex_to_int(s[76:80])
+    return h
+
+
+
 
 from processor import Processor, print_log
 
@@ -36,14 +60,16 @@ class BlockchainProcessor(Processor):
         self.history_cache = {}
         self.chunk_cache = {}
         self.cache_lock = threading.Lock()
+        self.headers_data = ''
 
         self.mempool_hist = {}
         self.known_mempool_hashes = []
         self.address_queue = Queue()
+        self.dbpath = config.get('leveldb', 'path')
 
         self.dblock = threading.Lock()
         try:
-            self.db = leveldb.LevelDB(config.get('leveldb', 'path'))
+            self.db = leveldb.LevelDB(self.dbpath)
         except:
             traceback.print_exc(file=sys.stdout)
             self.shared.stop()
@@ -58,6 +84,7 @@ class BlockchainProcessor(Processor):
         self.sent_height = 0
         self.sent_header = None
 
+
         try:
             hist = self.deserialize(self.db.Get('0'))
             hh, self.height, _ = hist[0] 
@@ -69,7 +96,9 @@ class BlockchainProcessor(Processor):
             self.height = 0
             self.block_hashes = [ '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f' ]
 
-        # catch_up first
+        # catch_up headers
+        self.init_headers(self.height)
+
         threading.Timer(0, lambda: self.catch_up(sync=False)).start()
         while not shared.stopped() and not self.up_to_date:
             try:
@@ -80,6 +109,7 @@ class BlockchainProcessor(Processor):
                 sys.exit(0)
 
         print "blockchain is up to date."
+
         threading.Timer(10, self.main_iteration).start()
 
 
@@ -122,9 +152,90 @@ class BlockchainProcessor(Processor):
         return self.block2header(b)
     
 
-    def get_chunk(self):
+    def init_headers(self, db_height):
+        self.chunk_cache = {}
+        self.headers_filename = os.path.join( self.dbpath, 'blockchain_headers')
+
+        height = 0
+        if os.path.exists(self.headers_filename):
+            height = os.path.getsize(self.headers_filename)/80
+
+        if height:
+            prev_header = self.read_header(height -1)
+            prev_hash = self.hash_header(prev_header)
+        else:
+            open(self.headers_filename,'wb').close()
+            prev_hash = None
+
+        if height != db_height:
+            print_log( "catching up missing headers:", height, db_height)
+
+        s = ''
+        try:
+            for i in range(height, db_height):
+                header = self.get_header(i)
+                assert prev_hash == header.get('prev_block_hash')
+                self.write_header(header, sync=False)
+                prev_hash = self.hash_header(header)
+                if i%1000==0: print_log("headers file:",i)
+        except KeyboardInterrupt:
+            self.flush_headers()
+            sys.exit()
+
+        self.flush_headers()
+
+
+    def hash_header(self, header):
+        return rev_hex(Hash(header_to_string(header).decode('hex')).encode('hex'))
+
+
+    def read_header(self, block_height):
+        if os.path.exists(self.headers_filename):
+            f = open(self.headers_filename,'rb')
+            f.seek(block_height*80)
+            h = f.read(80)
+            f.close()
+            if len(h) == 80:
+                h = header_from_string(h)
+                return h
+
+
+    def read_chunk(self, index):
+        f = open(self.headers_filename,'rb')
+        f.seek(index*2016*80)
+        chunk = f.read(2016*80)
+        f.close()
+        return chunk.encode('hex')
+
+
+    def write_header(self, header, sync=True):
+        if not self.headers_data:
+            self.headers_offset = header.get('block_height')
+        self.headers_data += header_to_string(header).decode('hex')
+        if sync or len(self.headers_data) > 40*100:
+            self.flush_headers()
+
+    def pop_header(self):
+        # we need to do this only if we have not flushed
+        if self.headers_data:
+            self.headers_data = self.headers_data[:-40]
+
+    def flush_headers(self):
+        if not self.headers_data: return
+        f = open(self.headers_filename,'rb+')
+        f.seek(self.headers_offset*80)
+        f.write(self.headers_data)
+        f.close()
+        self.headers_data = ''
+
+
+    def get_chunk(self, i):
         # store them on disk; store the current chunk in memory
-        pass
+        chunk = self.chunk_cache.get(i)
+        if not chunk:
+            chunk = self.read_chunk(i)
+            self.chunk_cache[i] = chunk
+        return chunk
 
 
     def get_transaction(self, txid, block_height=-1, is_coinbase = False):
@@ -488,6 +599,8 @@ class BlockchainProcessor(Processor):
 
                 self.import_block(block, block_hash, self.height+1, sync)
                 self.height = self.height + 1
+                self.write_header(self.block2header(block), sync)
+
                 self.block_hashes.append(block_hash)
                 self.block_hashes = self.block_hashes[-10:]
 
@@ -503,6 +616,8 @@ class BlockchainProcessor(Processor):
                 block_hash = self.last_hash()
                 block = self.bitcoind('getblock', [block_hash, 1])
                 self.height = self.height -1
+                self.pop_header()
+
                 self.block_hashes.remove(block_hash)
                 self.import_block(block, self.last_hash(), self.height, revert=True)
         
