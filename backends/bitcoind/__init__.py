@@ -1,1 +1,1 @@
-from blockchain_processor import Blockchain2Processor
+from blockchain_processor import BlockchainProcessor

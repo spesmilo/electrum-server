@@ -15,7 +15,7 @@
 # License along with this program.  If not, see
 # <http://www.gnu.org/licenses/agpl.html>.
 
-import time, sys, traceback
+import time, sys, traceback, threading
 import ConfigParser
 
 import logging
@@ -110,29 +110,27 @@ if __name__ == '__main__':
         sys.exit(0)
 
     from processor import Dispatcher
-
     from backends.irc import ServerProcessor
-    backend_name = config.get('server', 'backend')
-    try:
-        backend = __import__("backends." + backend_name,
-                             fromlist=["BlockchainProcessor"])
-    except ImportError:
-        sys.stderr.write("Unknown backend '%s' specified\n" % backend_name)
-        raise
 
-    print "Starting Electrum server on", host
+    backend_name = config.get('server', 'backend')
+    if backend_name == 'abe':
+        from backends.abe import BlockchainProcessor
+    elif backend_name == 'libbitcoin':
+        from backends.libbitcoin import BlockchainProcessor
+    elif backend_name == 'bitcoind':
+        from backends.bitcoind import BlockchainProcessor
+    else:
+        print "Unknown backend '%s' specified\n" % backend_name
+        sys.exit(1)
+
+    print "\n\n\n\nStarting Electrum server on", host
 
     # Create hub
     dispatcher = Dispatcher()
     shared = dispatcher.shared
 
     # Create and register processors
-
-    # from backends.bitcoind import Blockchain2Processor
-    # chain2_proc = Blockchain2Processor(config)
-    # dispatcher.register('blockchain2', chain2_proc)
-
-    chain_proc = backend.BlockchainProcessor(config)
+    chain_proc = BlockchainProcessor(config, shared)
     dispatcher.register('blockchain', chain_proc)
 
     server_proc = ServerProcessor(config)
@@ -164,6 +162,10 @@ if __name__ == '__main__':
         server.start()
 
     while not shared.stopped():
-        time.sleep(1)
-    print "Server stopped"
+        try:
+            time.sleep(1)
+        except:
+            shared.stop()
+
+    print "Electrum Server stopped"
 

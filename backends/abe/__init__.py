@@ -668,10 +668,11 @@ from processor import Processor
 
 class BlockchainProcessor(Processor):
 
-    def __init__(self, config):
+    def __init__(self, config, shared):
         Processor.__init__(self)
         self.store = AbeStore(config)
         self.watched_addresses = []
+        self.shared = shared
 
         # catch_up first
         self.block_header, time_catch_up, time_mempool, n = self.store.main_iteration()

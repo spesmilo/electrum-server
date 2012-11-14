@@ -183,6 +183,10 @@ class RequestDispatcher(threading.Thread):
             except:
                 pass
 
+        if session.protocol_version < 0.6:
+            print_log("stopping session from old client")
+            session.stop()
+
     def get_sessions(self):
         with self.lock:
             r = self.sessions[:]

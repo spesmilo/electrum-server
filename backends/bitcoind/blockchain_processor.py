@@ -3,6 +3,14 @@ import leveldb, urllib
 import deserialize
 import ast, time, threading, hashlib
 from Queue import Queue
+import traceback, sys
+
+
+
+Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+hash_encode = lambda x: x[::-1].encode('hex')
+hash_decode = lambda x: x.decode('hex')[::-1]
+
 
 
 def rev_hex(s):
@@ -17,12 +25,13 @@ def int_to_hex(i, length=1):
 
 from processor import Processor, print_log
 
+class BlockchainProcessor(Processor):
 
-class Blockchain2Processor(Processor):
-
-    def __init__(self, config):
+    def __init__(self, config, shared):
         Processor.__init__(self)
 
+        self.shared = shared
+        self.up_to_date = False
         self.watched_addresses = []
         self.history_cache = {}
         self.chunk_cache = {}
@@ -49,18 +58,27 @@ class Blockchain2Processor(Processor):
         self.sent_height = 0
         self.sent_header = None
 
-        # catch_up first
         try:
             hist = self.deserialize(self.db.Get('0'))
-            hh, self.height = hist[0] 
+            hh, self.height, _ = hist[0] 
             self.block_hashes = [hh]
             print_log( "hist", hist )
         except:
-            traceback.print_exc(file=sys.stdout)
+            #traceback.print_exc(file=sys.stdout)
+            print_log('initializing database')
             self.height = 0
             self.block_hashes = [ '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f' ]
 
-        threading.Timer(10, self.main_iteration).start()
+        # catch_up first
+        threading.Timer(0, lambda: self.catch_up(sync=False)).start()
+        while not shared.stopped() and not self.up_to_date:
+            try:
+                time.sleep(1)
+            except:
+                print "keyboard interrupt: stopping threads"
+                shared.stop()
+                sys.exit(0)
+
 
 
     def bitcoind(self, method, params=[]):
@@ -74,24 +92,26 @@ class Blockchain2Processor(Processor):
 
     def serialize(self, h):
         s = ''
-        for txid, height in h:
-            s += txid + int_to_hex(height, 4)
+        for txid, txpos, height in h:
+            s += txid + int_to_hex(txpos, 4) + int_to_hex(height, 4)
         return s.decode('hex')
+
 
     def deserialize(self, s):
         h = []
         while s:
             txid = s[0:32].encode('hex')
-            height = s[32:36].encode('hex')
-            height = int( rev_hex( height ), 16 )
-            h.append( ( txid, height ) )
-            s = s[36:]
+            txpos = int( rev_hex( s[32:36].encode('hex') ), 16 )
+            height = int( rev_hex( s[36:40].encode('hex') ), 16 )
+            h.append( ( txid, txpos, height ) )
+            s = s[40:]
         return h
 
 
     def block2header(self, b):
         return {"block_height":b.get('height'), "version":b.get('version'), "prev_block_hash":b.get('previousblockhash'), 
                 "merkle_root":b.get('merkleroot'), "timestamp":b.get('time'), "bits":b.get('bits'), "nonce":b.get('nonce')}
+
 
     def get_header(self, height):
         block_hash = self.bitcoind('getblockhash', [height])
@@ -104,11 +124,15 @@ class Blockchain2Processor(Processor):
         pass
 
 
-    def get_transaction(self, txid, block_height=-1):
+    def get_transaction(self, txid, block_height=-1, is_coinbase = False):
+        t0 = time.time()
         raw_tx = self.bitcoind('getrawtransaction', [txid, 0, block_height])
+        t1 = time.time()
         vds = deserialize.BCDataStream()
         vds.write(raw_tx.decode('hex'))
-        return deserialize.parse_Transaction(vds)
+        out = deserialize.parse_Transaction(vds, is_coinbase)
+        t2 = time.time()
+        return out, t1 - t0, t2 - t1
 
 
     def get_history(self, addr, cache_only=False):
@@ -171,110 +195,146 @@ class Blockchain2Processor(Processor):
         return {"block_height":height, "merkle":s, "pos":tx_pos}
 
         
+    def add_to_batch(self, addr, tx_hash, tx_pos, tx_height):
+
+        # we do it chronologically, so nothing wrong can happen...
+        s = (tx_hash + int_to_hex(tx_pos, 4) + int_to_hex(tx_height, 4)).decode('hex')
+        self.batch_list[addr] += s
+
+        # backlink
+        txo = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
+        self.batch_txio[txo] = addr
 
 
-    def import_block(self, block, block_hash, block_height):
-        #print "importing block", block_hash, block_height
+    def remove_from_batch(self, tx_hash, tx_pos):
+                    
+        txi = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
+        try:
+            addr = self.batch_txio[txi]
+        except:
+            #raise BaseException(tx_hash, tx_pos)
+            print "WARNING: cannot find address for", (tx_hash, tx_pos)
+            return
 
+        serialized_hist = self.batch_list[addr]
+
+        l = len(serialized_hist)/40
+        for i in range(l):
+            if serialized_hist[40*i:40*i+36] == txi:
+                serialized_hist = serialized_hist[0:40*i] + serialized_hist[40*(i+1):]
+                break
+        else:
+            raise BaseException("prevout not found", addr, hist, tx_hash, tx_pos)
+        self.batch_list[addr] = serialized_hist
+
+
+    def deserialize_block(self, block):
         txlist = block.get('tx')
-        batch_list = {}
+        tx_hashes = []  # ordered txids
+        txdict = {}     # deserialized tx
+        is_coinbase = True
+        for raw_tx in txlist:
+            tx_hash = hash_encode(Hash(raw_tx.decode('hex')))
+            tx_hashes.append(tx_hash)
+            vds = deserialize.BCDataStream()
+            vds.write(raw_tx.decode('hex'))
+            tx = deserialize.parse_Transaction(vds, is_coinbase)
+            txdict[tx_hash] = tx
+            is_coinbase = False
+        return tx_hashes, txdict
 
-        for txid in txlist:
-            tx = self.get_transaction(txid, block_height)
-            for x in tx.get('inputs') + tx.get('outputs'):
-                addr = x.get('address')
-                serialized_hist = batch_list.get(addr)
-                if serialized_hist is None:
-                    try:
-                        serialized_hist = self.db.Get(addr)
-                    except: 
-                        serialized_hist = ''
 
-                s = (txid + int_to_hex(block_height, 4)).decode('hex')
+    def import_block(self, block, block_hash, block_height, sync, revert=False):
 
-                found = False
-                for i in range(len(serialized_hist)/36):
-                    item = serialized_hist[-36*(1+i):]
-                    item = item[0:36]
+        self.batch_list = {}  # address -> history
+        self.batch_txio = {}  # transaction i/o -> address
 
-                    h = int( rev_hex( item[32:36].encode('hex') ), 16 )
-                    if h > block_height:
-                        txhash = item[0:32].encode('hex')
-                        print_log('warning: non-chronological order at', addr, (txhash, h), (txid, block_height))
-                        hist = self.deserialize(serialized_hist)
-                        print_log(hist)
-                        hist.sort( key=lambda tup: tup[1])
-                        while hist:
-                            last = hist[-1]
-                            if last[1] > block_height:
-                                hist = hist[0:-1]
-                            else:
-                                break
-                        found = (txhash, h) in hist
-                        print_log('new sorted hist', hist, found)
-                        serialized_hist = self.serialize(hist)
-                        break
-                    elif h < block_height:
-                        break
-                    elif item == s:
-                        found = True
-                        break
+        inputs_to_read = []
+        addr_to_read = []
 
-                if not found:
-                    serialized_hist += s
+        # deserialize transactions
+        t0 = time.time()
+        tx_hashes, txdict = self.deserialize_block(block)
 
-                batch_list[addr] = serialized_hist
+        # read addresses of tx inputs
+        t00 = time.time()
+        for tx in txdict.values():
+            for x in tx.get('inputs'):
+                txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+                inputs_to_read.append(txi)
 
-        # batch write
+        inputs_to_read.sort()
+        for txi in inputs_to_read:
+            try:
+                addr = self.db.Get(txi)    
+            except:
+                # the input could come from the same block
+                continue
+            self.batch_txio[txi] = addr
+            addr_to_read.append(addr)
+
+        # read histories of addresses
+        for txid, tx in txdict.items():
+            for x in tx.get('outputs'):
+                addr_to_read.append(x.get('address'))
+
+        addr_to_read.sort()
+        for addr in addr_to_read:
+            try:
+                self.batch_list[addr] = self.db.Get(addr)
+            except: 
+                self.batch_list[addr] = ''
+              
+        # process
+        t1 = time.time()
+
+        for txid in tx_hashes: # must be ordered
+            tx = txdict[txid]
+            if not revert:
+                for x in tx.get('inputs'):
+                    self.remove_from_batch( x.get('prevout_hash'), x.get('prevout_n'))
+                for x in tx.get('outputs'):
+                    self.add_to_batch( x.get('address'), txid, x.get('index'), block_height)
+            else:
+                for x in tx.get('outputs'):
+                    self.remove_from_batch( x.get('prevout_hash'), x.get('prevout_n'))
+                for x in tx.get('inputs'):
+                    self.add_to_batch( x.get('address'), txid, x.get('index'), block_height)
+
+        # write
+        max_len = 0
+        max_addr = ''
+        t2 = time.time()
+
         batch = leveldb.WriteBatch()
-        for addr, hist in batch_list.items():
+        for addr, serialized_hist in self.batch_list.items():
             batch.Put(addr, serialized_hist)
-        batch.Put('0', self.serialize( [(block_hash, block_height)] ) )
-        self.db.Write(batch, sync = True)
+            l = len(serialized_hist)
+            if l > max_len:
+                max_len = l
+                max_addr = addr
+
+        for txio, addr in self.batch_txio.items():
+            batch.Put(txio, addr)
+        # delete spent inputs
+        for txi in inputs_to_read:
+            batch.Delete(txi)
+        batch.Put('0', self.serialize( [(block_hash, block_height, 0)] ) )
+
+        # actual write
+        self.db.Write(batch, sync = sync)
+
+        t3 = time.time()
+        if t3 - t0 > 10: 
+            print_log("block", block_height, 
+                      "parse:%0.2f "%(t00 - t0), 
+                      "read:%0.2f "%(t1 - t00), 
+                      "proc:%.2f "%(t2-t1), 
+                      "write:%.2f "%(t3-t2), 
+                      "max:", max_len, max_addr)
 
         # invalidate cache
-        for addr in batch_list.keys(): self.update_history_cache(addr)
-
-        return len(txlist)
-
-
-
-    def revert_block(self, block, block_hash, block_height):
-
-        txlist = block.get('tx')
-        batch_list = {}
-
-        for txid in txlist:
-            tx = self.get_transaction(txid, block_height)
-            for x in tx.get('inputs') + tx.get('outputs'):
-
-                addr = x.get('address')
-
-                hist = batch_list.get(addr)
-                if hist is None:
-                    try:
-                        hist = self.deserialize(self.db.Get(addr))
-                    except: 
-                        hist = []
-
-                if (txid, block_height) in hist:
-                    hist.remove( (txid, block_height) )
-                else:
-                    print "error: txid not found during block revert", txid, block_height
-
-                batch_list[addr] = hist
-
-        # batch write
-        batch = leveldb.WriteBatch()
-        for addr, hist in batch_list.items():
-            batch.Put(addr, self.serialize(hist))
-        batch.Put('0', self.serialize( [(block_hash, block_height)] ) )
-        self.db.Write(batch, sync = True)
-
-        # invalidate cache
-        for addr in batch_list.keys(): self.update_history_cache(addr)
-
-        return len(txlist)
+        for addr in self.batch_list.keys(): self.update_history_cache(addr)
 
 
 
@@ -294,13 +354,13 @@ class Blockchain2Processor(Processor):
         result = None
         error = None
 
-        if method == 'blockchain2.numblocks.subscribe':
+        if method == 'blockchain.numblocks.subscribe':
             result = self.height
 
-        elif method == 'blockchain2.headers.subscribe':
+        elif method == 'blockchain.headers.subscribe':
             result = self.header
 
-        elif method == 'blockchain2.address.subscribe':
+        elif method == 'blockchain.address.subscribe':
             try:
                 address = params[0]
                 result = self.get_status(address, cache_only)
@@ -309,7 +369,7 @@ class Blockchain2Processor(Processor):
                 error = str(e) + ': ' + address
                 print_log( "error:", error )
 
-        elif method == 'blockchain2.address.subscribe2':
+        elif method == 'blockchain.address.subscribe2':
             try:
                 address = params[0]
                 result = self.get_status2(address, cache_only)
@@ -318,7 +378,7 @@ class Blockchain2Processor(Processor):
                 error = str(e) + ': ' + address
                 print_log( "error:", error )
 
-        elif method == 'blockchain2.address.get_history':
+        elif method == 'blockchain.address.get_history':
             try:
                 address = params[0]
                 result = self.get_history( address, cache_only )
@@ -326,7 +386,7 @@ class Blockchain2Processor(Processor):
                 error = str(e) + ': ' + address
                 print_log( "error:", error )
 
-        elif method == 'blockchain2.block.get_header':
+        elif method == 'blockchain.block.get_header':
             if cache_only: 
                 result = -1
             else:
@@ -337,7 +397,7 @@ class Blockchain2Processor(Processor):
                     error = str(e) + ': %d'% height
                     print_log( "error:", error )
                     
-        elif method == 'blockchain2.block.get_chunk':
+        elif method == 'blockchain.block.get_chunk':
             if cache_only:
                 result = -1
             else:
@@ -348,12 +408,12 @@ class Blockchain2Processor(Processor):
                     error = str(e) + ': %d'% index
                     print_log( "error:", error)
 
-        elif method == 'blockchain2.transaction.broadcast':
+        elif method == 'blockchain.transaction.broadcast':
             txo = self.bitcoind('sendrawtransaction', params[0])
             print_log( "sent tx:", txo )
             result = txo 
 
-        elif method == 'blockchain2.transaction.get_merkle':
+        elif method == 'blockchain.transaction.get_merkle':
             if cache_only:
                 result = -1
             else:
@@ -365,7 +425,7 @@ class Blockchain2Processor(Processor):
                     error = str(e) + ': ' + tx_hash
                     print_log( "error:", error )
                     
-        elif method == 'blockchain2.transaction.get':
+        elif method == 'blockchain.transaction.get':
             try:
                 tx_hash = params[0]
                 height = params[1]
@@ -397,8 +457,7 @@ class Blockchain2Processor(Processor):
         return self.block_hashes[-1]
 
 
-    def catch_up(self):
-
+    def catch_up(self, sync = True):
         t1 = time.time()
 
         while not self.shared.stopped():
@@ -407,19 +466,22 @@ class Blockchain2Processor(Processor):
             info = self.bitcoind('getinfo')
             bitcoind_height = info.get('blocks')
             bitcoind_block_hash = self.bitcoind('getblockhash', [bitcoind_height])
-            if self.last_hash() == bitcoind_block_hash: break
+            if self.last_hash() == bitcoind_block_hash: 
+                self.up_to_date = True
+                break
 
             # not done..
+            self.up_to_date = False
             block_hash = self.bitcoind('getblockhash', [self.height+1])
-            block = self.bitcoind('getblock', [block_hash])
+            block = self.bitcoind('getblock', [block_hash, 1])
 
             if block.get('previousblockhash') == self.last_hash():
 
-                self.import_block(block, block_hash, self.height+1)
+                self.import_block(block, block_hash, self.height+1, sync)
 
-                if (self.height+1)%100 == 0: 
+                if (self.height+1)%100 == 0 and not sync: 
                     t2 = time.time()
-                    print_log( "bc2: block %d (%.3fs)"%( self.height+1, t2 - t1 ) )
+                    print_log( "catch_up: block %d (%.3fs)"%( self.height+1, t2 - t1 ) )
                     t1 = t2
 
                 self.height = self.height + 1
@@ -430,10 +492,10 @@ class Blockchain2Processor(Processor):
                 # revert current block
                 print_log( "bc2: reorg", self.height, block.get('previousblockhash'), self.last_hash() )
                 block_hash = self.last_hash()
-                block = self.bitcoind('getblock', [block_hash])
+                block = self.bitcoind('getblock', [block_hash, 1])
                 self.height = self.height -1
                 self.block_hashes.remove(block_hash)
-                self.revert_block(block, self.last_hash(), self.height)
+                self.import_block(block, self.last_hash(), self.height, revert=True)
         
 
         self.header = self.block2header(self.bitcoind('getblock', [self.last_hash()]))
@@ -474,7 +536,7 @@ class Blockchain2Processor(Processor):
     def main_iteration(self):
 
         if self.shared.stopped(): 
-            print_log( "bc2 terminating")
+            print_log( "blockchain processor terminating" )
             return
 
         with self.dblock:
@@ -486,11 +548,11 @@ class Blockchain2Processor(Processor):
 
         if self.sent_height != self.height:
             self.sent_height = self.height
-            self.push_response({ 'id': None, 'method':'blockchain2.numblocks.subscribe', 'params':[self.height] })
+            self.push_response({ 'id': None, 'method':'blockchain.numblocks.subscribe', 'params':[self.height] })
 
         if self.sent_header != self.header:
             self.sent_header = self.header
-            self.push_response({ 'id': None, 'method':'blockchain2.headers.subscribe', 'params':[self.header] })
+            self.push_response({ 'id': None, 'method':'blockchain.headers.subscribe', 'params':[self.header] })
 
         while True:
             try:
@@ -505,7 +567,7 @@ class Blockchain2Processor(Processor):
         if not self.shared.stopped(): 
             threading.Timer(10, self.main_iteration).start()
         else:
-            print_log( "bc2 terminating" )
+            print_log( "blockchain processor terminating" )
 
 
 

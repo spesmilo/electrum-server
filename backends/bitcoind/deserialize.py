@@ -258,8 +258,9 @@ def parse_TxIn(vds):
   d['prevout_n'] = vds.read_uint32()
   scriptSig = vds.read_bytes(vds.read_compact_size())
   d['sequence'] = vds.read_uint32()
-  d['address'] = extract_public_key(scriptSig)
-  #d['script'] = decode_script(scriptSig)
+  # actually I don't need that at all
+  # if not is_coinbase: d['address'] = extract_public_key(scriptSig)
+  # d['script'] = decode_script(scriptSig)
   return d
 
 
@@ -274,18 +275,22 @@ def parse_TxOut(vds, i):
   return d
 
 
-def parse_Transaction(vds):
+def parse_Transaction(vds, is_coinbase):
   d = {}
   start = vds.read_cursor
   d['version'] = vds.read_int32()
   n_vin = vds.read_compact_size()
   d['inputs'] = []
   for i in xrange(n_vin):
-    d['inputs'].append(parse_TxIn(vds))
+      o = parse_TxIn(vds)
+      if not is_coinbase: 
+          d['inputs'].append(o)
   n_vout = vds.read_compact_size()
   d['outputs'] = []
   for i in xrange(n_vout):
-    d['outputs'].append(parse_TxOut(vds, i))
+      o = parse_TxOut(vds, i)
+      if o['address'] is not None:
+          d['outputs'].append(o)
   d['lockTime'] = vds.read_uint32()
   return d
 
@@ -387,4 +392,5 @@ def extract_public_key(bytes):
   if match_decoded(decoded, match):
     return hash_160_to_bc_address(decoded[2][1])
 
+  #raise BaseException("address not found in script") see ce35795fb64c268a52324b884793b3165233b1e6d678ccaadf760628ec34d76b
   return "(None)"
