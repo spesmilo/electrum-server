@@ -79,6 +79,9 @@ class BlockchainProcessor(Processor):
                 shared.stop()
                 sys.exit(0)
 
+        print "blockchain is up to date."
+        threading.Timer(10, self.main_iteration).start()
+
 
 
     def bitcoind(self, method, params=[]):
@@ -125,14 +128,11 @@ class BlockchainProcessor(Processor):
 
 
     def get_transaction(self, txid, block_height=-1, is_coinbase = False):
-        t0 = time.time()
         raw_tx = self.bitcoind('getrawtransaction', [txid, 0, block_height])
-        t1 = time.time()
         vds = deserialize.BCDataStream()
         vds.write(raw_tx.decode('hex'))
         out = deserialize.parse_Transaction(vds, is_coinbase)
-        t2 = time.time()
-        return out, t1 - t0, t2 - t1
+        return out
 
 
     def get_history(self, addr, cache_only=False):
@@ -143,8 +143,10 @@ class BlockchainProcessor(Processor):
         with self.dblock:
             try:
                 hist = self.deserialize(self.db.Get(addr))
+                is_known = True
             except: 
                 hist = []
+                is_known = False
 
         # should not be necessary
         hist.sort( key=lambda tup: tup[1])
@@ -155,6 +157,9 @@ class BlockchainProcessor(Processor):
             hist.append((txid, 0))
 
         hist = map(lambda x: {'tx_hash':x[0], 'height':x[2]}, hist)
+        # add something to distinguish between unused and empty addresses
+        if hist == [] and is_known: hist = ['*']
+
         with self.cache_lock: self.history_cache[addr] = hist
         return hist
 
@@ -164,18 +169,22 @@ class BlockchainProcessor(Processor):
         if cache_only and tx_points == -1: return -1
 
         if not tx_points: return None
+        if tx_points == ['*']: return '*'
         status = ''
         for tx in tx_points:
             status += tx.get('tx_hash') + ':%d:' % tx.get('height')
         return hashlib.sha256( status ).digest().encode('hex')
 
 
-    def get_merkle(self, target_hash, height):
+    def get_merkle(self, tx_hash, height):
 
         block_hash = self.bitcoind('getblockhash', [height])
         b = self.bitcoind('getblock', [block_hash])
-        merkle = b.get('tx')
-
+        tx_list = b.get('tx')
+        tx_pos = tx_list.index(tx_hash)
+        
+        merkle = map(hash_decode, tx_list)
+        target_hash = hash_decode(tx_hash)
         s = []
         while len(merkle) != 1:
             if len(merkle)%2: merkle.append( merkle[-1] )
@@ -183,10 +192,10 @@ class BlockchainProcessor(Processor):
             while merkle:
                 new_hash = Hash( merkle[0] + merkle[1] )
                 if merkle[0] == target_hash:
-                    s.append( merkle[1])
+                    s.append( hash_encode( merkle[1]))
                     target_hash = new_hash
                 elif merkle[1] == target_hash:
-                    s.append( merkle[0])
+                    s.append( hash_encode( merkle[0]))
                     target_hash = new_hash
                 n.append( new_hash )
                 merkle = merkle[2:]
@@ -478,15 +487,15 @@ class BlockchainProcessor(Processor):
             if block.get('previousblockhash') == self.last_hash():
 
                 self.import_block(block, block_hash, self.height+1, sync)
-
-                if (self.height+1)%100 == 0 and not sync: 
-                    t2 = time.time()
-                    print_log( "catch_up: block %d (%.3fs)"%( self.height+1, t2 - t1 ) )
-                    t1 = t2
-
                 self.height = self.height + 1
                 self.block_hashes.append(block_hash)
                 self.block_hashes = self.block_hashes[-10:]
+
+                if (self.height+1)%100 == 0 and not sync: 
+                    t2 = time.time()
+                    print_log( "catch_up: block %d (%.3fs)"%( self.height, t2 - t1 ) )
+                    t1 = t2
+
                     
             else:
                 # revert current block
@@ -543,7 +552,7 @@ class BlockchainProcessor(Processor):
             t1 = time.time()
             self.catch_up()
             t2 = time.time()
-            print_log( "blockchain: %d (%.3fs)"%( self.height+1, t2 - t1 ) )
+
         self.memorypool_update()
 
         if self.sent_height != self.height:
@@ -551,6 +560,7 @@ class BlockchainProcessor(Processor):
             self.push_response({ 'id': None, 'method':'blockchain.numblocks.subscribe', 'params':[self.height] })
 
         if self.sent_header != self.header:
+            print_log( "blockchain: %d (%.3fs)"%( self.height, t2 - t1 ) )
             self.sent_header = self.header
             self.push_response({ 'id': None, 'method':'blockchain.headers.subscribe', 'params':[self.header] })
 
