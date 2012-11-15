@@ -537,16 +537,17 @@ class BlockchainProcessor(Processor):
                 error = str(e) + ': ' + address
                 print_log( "error:", error )
 
-        elif method == 'blockchain.address.subscribe2':
+        elif method == 'blockchain.address.unsubscribe':
             try:
                 address = params[0]
-                result = self.get_status(address, cache_only)
-                self.watch_address(address)
+                self.watched_addresses.remove(address)
+                print_log('unsubscribed', address)
+                result = "ok"
             except BaseException, e:
                 error = str(e) + ': ' + address
                 print_log( "error:", error )
 
-        elif method == 'blockchain.address.get_history2':
+        elif method == 'blockchain.address.get_history':
             try:
                 address = params[0]
                 result = self.get_history( address, cache_only )
@@ -779,8 +780,6 @@ class BlockchainProcessor(Processor):
             if addr in self.watched_addresses:
                 status = self.get_status( addr )
                 self.push_response({ 'id': None, 'method':'blockchain.address.subscribe', 'params':[addr, status] })
-                self.push_response({ 'id': None, 'method':'blockchain.address.subscribe2', 'params':[addr, status] })
-
 
         if not self.shared.stopped(): 
             threading.Timer(10, self.main_iteration).start()
