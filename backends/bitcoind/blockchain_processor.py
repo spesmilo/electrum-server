@@ -677,8 +677,11 @@ class BlockchainProcessor(Processor):
                     h.append( tx_hash )
                 new_mempool_hist[addr] = h
 
-        for addr in self.mempool_hist.keys():
-            if self.mempool_hist[addr] != new_mempool_hist[addr]: 
+        for addr in new_mempool_hist.keys():
+            if addr in self.mempool_hist.keys():
+                if self.mempool_hist[addr] != new_mempool_hist[addr]: 
+                    self.invalidate_cache(addr)
+            else:
                 self.invalidate_cache(addr)
 
         with self.mempool_lock:
@@ -692,7 +695,8 @@ class BlockchainProcessor(Processor):
                 print_log( "cache: invalidating", address )
                 self.history_cache.pop(address)
 
-                self.address_queue.put(address)
+        if address in self.watched_addresses:
+            self.address_queue.put(address)
 
 
 
