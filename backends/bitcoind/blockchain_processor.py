@@ -669,16 +669,20 @@ class BlockchainProcessor(Processor):
                 self.mempool_addresses.pop(tx_hash)
 
         # rebuild histories
-        with self.mempool_lock:
-            self.mempool_hist = {}
-            for tx_hash, addresses in self.mempool_addresses.items():
-                for addr in addresses:
-                    h = self.mempool_hist.get(addr, [])
-                    if tx_hash not in h: 
-                        h.append( tx_hash )
-                        self.mempool_hist[addr] = h
-                        self.invalidate_cache(addr)
+        new_mempool_hist = {}
+        for tx_hash, addresses in self.mempool_addresses.items():
+            for addr in addresses:
+                h = new_mempool_hist.get(addr, [])
+                if tx_hash not in h: 
+                    h.append( tx_hash )
+                new_mempool_hist[addr] = h
 
+        for addr in self.mempool_hist.keys():
+            if self.mempool_hist[addr] != new_mempool_hist[addr]: 
+                self.invalidate_cache(addr)
+
+        with self.mempool_lock:
+            self.mempool_hist = new_mempool_hist
 
 
 
@@ -687,6 +691,8 @@ class BlockchainProcessor(Processor):
             if self.history_cache.has_key(address):
                 print_log( "cache: invalidating", address )
                 self.history_cache.pop(address)
+
+                self.address_queue.put(address)
 
 
 
@@ -723,6 +729,7 @@ class BlockchainProcessor(Processor):
             if addr in self.watched_addresses:
                 status = self.get_status( addr )
                 self.push_response({ 'id': None, 'method':'blockchain.address.subscribe', 'params':[addr, status] })
+                self.push_response({ 'id': None, 'method':'blockchain.address.subscribe2', 'params':[addr, status] })
 
 
         if not self.shared.stopped(): 
