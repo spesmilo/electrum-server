@@ -67,8 +67,13 @@ def create_config():
 
 def run_rpc_command(command, stratum_tcp_port):
     import socket, json
-    s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-    s.connect(( host, int(stratum_tcp_port )))
+    try:
+        s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+        s.connect(( host, int(stratum_tcp_port )))
+    except:
+        print "cannot connect to server."
+        return
+
     method = 'server.' + command
     request = json.dumps( { 'id':0, 'method':method, 'params':[password] } )
     s.send(request + '\n')

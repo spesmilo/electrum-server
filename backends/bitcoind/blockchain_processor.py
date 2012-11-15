@@ -703,7 +703,7 @@ class BlockchainProcessor(Processor):
 
         self.memorypool_update()
         t3 = time.time()
-        print "mempool:", len(self.mempool_addresses), len(self.mempool_hist), "%.3fs"%(t3 - t2)
+        # print "mempool:", len(self.mempool_addresses), len(self.mempool_hist), "%.3fs"%(t3 - t2)
 
 
         if self.sent_height != self.height:

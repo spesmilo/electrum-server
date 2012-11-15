@@ -149,7 +149,7 @@ class ServerProcessor(Processor):
 
         elif method == 'server.stop':
             self.shared.stop()
-            result = 'ok'
+            result = 'stopping, please wait until all threads terminate.'
 
         elif method == 'server.info':
             result = map(lambda s: { "time":s.time, 
