@@ -602,7 +602,7 @@ class BlockchainProcessor(Processor):
             # not done..
             self.up_to_date = False
             next_block_hash = self.bitcoind('getblockhash', [self.height+1])
-            next_block = self.bitcoind('getblock', [block_hash, 1])
+            next_block = self.bitcoind('getblock', [next_block_hash, 1])
 
             if next_block.get('previousblockhash') == self.last_hash:
 
