@@ -114,7 +114,7 @@ if __name__ == '__main__':
         run_rpc_command(sys.argv[1], stratum_tcp_port)
         sys.exit(0)
 
-    from processor import Dispatcher
+    from processor import Dispatcher, print_log
     from backends.irc import ServerProcessor
 
     backend_name = config.get('server', 'backend')
@@ -128,7 +128,8 @@ if __name__ == '__main__':
         print "Unknown backend '%s' specified\n" % backend_name
         sys.exit(1)
 
-    print "\n\n\n\nStarting Electrum server on", host
+    for i in range(5): print ""
+    print_log( "Starting Electrum server on", host)
 
     # Create hub
     dispatcher = Dispatcher()
@@ -172,5 +173,5 @@ if __name__ == '__main__':
         except:
             shared.stop()
 
-    print "Electrum Server stopped"
+    print_log( "Electrum Server stopped")
 

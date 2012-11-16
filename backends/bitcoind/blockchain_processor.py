@@ -111,7 +111,7 @@ class BlockchainProcessor(Processor):
                 shared.stop()
                 sys.exit(0)
 
-        print "blockchain is up to date."
+        print_log( "blockchain is up to date." )
 
         threading.Timer(10, self.main_iteration).start()
 
@@ -449,7 +449,7 @@ class BlockchainProcessor(Processor):
         self.db.Write(batch, sync = sync)
 
         t3 = time.time()
-        if t3 - t0 > 10: 
+        if t3 - t0 > 10 and not sync: 
             print_log("block", block_height, 
                       "parse:%0.2f "%(t00 - t0), 
                       "read:%0.2f "%(t1 - t00), 
