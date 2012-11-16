@@ -86,11 +86,21 @@ our ~/bin directory:
 
     $ mkdir -p ~/src/electrum
     $ cd ~/src/electrum
-    $ git clone https://github.com/spesmilo/electrum-server.git
+    $ git clone https://github.com/spesmilo/electrum-server.git server
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum
 
-### Step 2. Configure and start bitcoind
+### Step 2. Donwnload Bitcoind from git & patch it
+
+In order for the latest versions of Electrum to work properly we will need to use the latest 
+build from Git and also patch it with an electrum specific patch.
+
+   $ cd src && git clone git://github.com/bitcoin/bitcoin.git
+   $ cd bitcoin 
+   $ patch -p2 < ~/src/electrum/server/patch/path
+   $ cd src && make -f makefile.unix
+
+### Step 3. Configure and start bitcoind
 
 In order to allow Electrum to "talk" to `bitcoind`, we need to set up a RPC
 username and password for `bitcoind`. We will then start `bitcoind` and
@@ -118,7 +128,7 @@ You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
 
-### Step 3. Install Electrum dependencies
+### Step 4. Install Electrum dependencies
 
 Electrum server depends on various standard Python libraries. These will be
 already installed on your distribution, or can be installed with your
@@ -137,7 +147,7 @@ for example python2.6 or 2.8.
     $ sudo chmod +x /usr/local/lib/python2.7/dist-packages/Abe/abe.py
     $ ln -s /usr/local/lib/python2.7/dist-packages/Abe/abe.py ~/bin/abe
 
-### Step 4. Configure the database
+### Step 5. Configure the database
 
 Electrum server uses a SQL database to store the blockchain data. In theory,
 it supports all databases supported by Abe. At the time of this writing,
@@ -156,7 +166,7 @@ For PostgreSQL:
 
     TBW!
 
-### Step 5. Configure Abe and import blockchain into the database
+### Step 6. Configure Abe and import blockchain into the database
 
 When you run Electrum server for the first time, it will automatically
 import the blockchain into the database, so it is safe to skip this step.
@@ -204,7 +214,7 @@ expect it to take hours. Here are some benchmarks for importing
 	  * CPU: Intel Xeon X3430 @ 2.40GHz
 	  * HDD: 2 x SATA in a RAID1.
 
-### Step 6. Configure Electrum server
+### Step 7. Configure Electrum server
 
 Electrum reads a config file (/etc/electrum.conf) when starting up. This
 file includes the database setup, bitcoind RPC setup, and a few other
@@ -254,7 +264,7 @@ Write this in `electrum.conf`:
     user = <rpc-username>
     password = <rpc-password>
 
-### Step 7. (Finally!) Run Electrum server
+### Step 8. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server:
 
@@ -273,7 +283,7 @@ You should also take a look at the 'start' and 'stop' scripts in
 `~/src/electrum/server`. You can use them as a starting point to create a
 init script for your system.
 
-### 8. Test the Electrum server
+### 9. Test the Electrum server
 
 We will assume you have a working Electrum client, a wallet and some
 transactions history. You should start the client and click on the green
