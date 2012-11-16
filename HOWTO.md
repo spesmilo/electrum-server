@@ -97,7 +97,7 @@ build from Git and also patch it with an electrum specific patch.
 
    $ cd src && git clone git://github.com/bitcoin/bitcoin.git
    $ cd bitcoin 
-   $ patch -p2 < ~/src/electrum/server/patch/path
+   $ patch -p2 < ~/src/electrum/server/patch/patch
    $ cd src && make -f makefile.unix
 
 ### Step 3. Configure and start bitcoind
