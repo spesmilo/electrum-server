@@ -89,7 +89,7 @@ class BlockchainProcessor(Processor):
 
 
         try:
-            hist = self.deserialize(self.db.Get('0'))
+            hist = self.deserialize(self.db.Get('height'))
             self.last_hash, self.height, _ = hist[0] 
             print_log( "hist", hist )
         except:
@@ -320,24 +320,39 @@ class BlockchainProcessor(Processor):
         return {"block_height":height, "merkle":s, "pos":tx_pos}
 
         
-    def add_to_batch(self, addr, tx_hash, tx_pos, tx_height):
 
-        # we do it chronologically, so nothing wrong can happen...
+
+    def add_to_history(self, addr, tx_hash, tx_pos, tx_height):
+
+        # keep it sorted
         s = (tx_hash + int_to_hex(tx_pos, 4) + int_to_hex(tx_height, 4)).decode('hex')
-        self.batch_list[addr] += s
+
+        serialized_hist = self.batch_list[addr] 
+
+        l = len(serialized_hist)/40
+        for i in range(l-1, -1, -1):
+            item = serialized_hist[40*i:40*(i+1)]
+            item_height = int( rev_hex( item[36:40].encode('hex') ), 16 )
+            if item_height < tx_height:
+                serialized_hist = serialized_hist[0:40*(i+1)] + s + serialized_hist[40*(i+1):]
+                break
+        else:
+            serialized_hist = s + serialized_hist
+
+        self.batch_list[addr] = serialized_hist
 
         # backlink
         txo = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
         self.batch_txio[txo] = addr
 
 
-    def remove_from_batch(self, tx_hash, tx_pos):
+    def remove_from_history(self, tx_hash, tx_pos):
                     
         txi = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
         try:
             addr = self.batch_txio[txi]
         except:
-            #raise BaseException(tx_hash, tx_pos)
+            raise BaseException(tx_hash, tx_pos)
             print "WARNING: cannot find address for", (tx_hash, tx_pos)
             return
 
@@ -381,22 +396,31 @@ class BlockchainProcessor(Processor):
         t0 = time.time()
         tx_hashes, txdict = self.deserialize_block(block)
 
-        # read addresses of tx inputs
         t00 = time.time()
-        for tx in txdict.values():
-            for x in tx.get('inputs'):
-                txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
-                inputs_to_read.append(txi)
 
-        inputs_to_read.sort()
-        for txi in inputs_to_read:
-            try:
-                addr = self.db.Get(txi)    
-            except:
-                # the input could come from the same block
-                continue
-            self.batch_txio[txi] = addr
-            addr_to_read.append(addr)
+        if revert:
+            # read addresses of tx outputs
+            for tx_hash, tx in txdict.items():
+                for x in tx.get('outputs'):
+                    txo = (tx_hash + int_to_hex(x.get('index'), 4)).decode('hex')
+                self.batch_txio[txo] = x.get('address')
+        else:
+            # read addresses of tx inputs
+            for tx in txdict.values():
+                for x in tx.get('inputs'):
+                    txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+                    inputs_to_read.append(txi)
+
+            inputs_to_read.sort()
+            for txi in inputs_to_read:
+                try:
+                    addr = self.db.Get(txi)
+                except:
+                    # the input could come from the same block
+                    continue
+                self.batch_txio[txi] = addr
+                addr_to_read.append(addr)
+
 
         # read histories of addresses
         for txid, tx in txdict.items():
@@ -417,14 +441,40 @@ class BlockchainProcessor(Processor):
             tx = txdict[txid]
             if not revert:
                 for x in tx.get('inputs'):
-                    self.remove_from_batch( x.get('prevout_hash'), x.get('prevout_n'))
+                    self.remove_from_history( x.get('prevout_hash'), x.get('prevout_n'))
                 for x in tx.get('outputs'):
-                    self.add_to_batch( x.get('address'), txid, x.get('index'), block_height)
+                    self.add_to_history( x.get('address'), txid, x.get('index'), block_height)
             else:
                 for x in tx.get('outputs'):
-                    self.remove_from_batch( x.get('prevout_hash'), x.get('prevout_n'))
+                    self.remove_from_history( txid, x.get('index'))
+
                 for x in tx.get('inputs'):
-                    self.add_to_batch( x.get('address'), txid, x.get('index'), block_height)
+                    prevout_height = self.db.Get(x['prevout_hash'].decode('hex'))
+                    try:
+                        # note: this will fail if the block containing txi is part of the reorg and has been orphaned by bitcoind
+                        txi = self.get_transaction(x.get('prevout_hash'), prevout_height ) 
+                    except:
+                        # so, if if it fails, we need to read the block containing txi
+                        prevout_block_hash = self.db.Get('%d'%prevout_height)
+                        prevout_block = self.bitcoind('getblock', [prevout_block_hash, 1])
+                        for txc in prevout_block['tx']:
+                            if hash_encode(Hash(txc)) == prevout_hash: 
+                                raw_txi = txc
+                                break
+                        else: 
+                            raise BaseException('txi not found')
+
+                        vds = deserialize.BCDataStream()
+                        vds.write(raw_txi.decode('hex'))
+                        txi = deserialize.parse_Transaction(vds, False)
+
+                    print "txi", txi
+                    output = txi.get('outputs')[x.get('prevout_n')]
+                    prevout_addr = output['address']
+                    self.batch_list[prevout_addr] = self.db.Get(prevout_addr)
+                    # no longer chronological..
+                    self.add_to_history( prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
+                    print "new hist", self.deserialize(self.batch_list[prevout_addr])
 
         # write
         max_len = 0
@@ -444,7 +494,14 @@ class BlockchainProcessor(Processor):
         # delete spent inputs
         for txi in inputs_to_read:
             batch.Delete(txi)
-        batch.Put('0', self.serialize( [(block_hash, block_height, 0)] ) )
+
+        # add tx -> height
+        for txid in tx_hashes:
+            batch.Put(txid.decode('hex'), "%d"%block_height)
+        # add height -> block_hash
+        batch.Put("%d"%block_height, block_hash)
+        # add the max
+        batch.Put('height', self.serialize( [(block_hash, block_height, 0)] ) )
 
         # actual write
         self.db.Write(batch, sync = sync)
@@ -578,6 +635,7 @@ class BlockchainProcessor(Processor):
 
 
     def catch_up(self, sync = True):
+        #   a reorg in bitcoind id not synchronous with my database
         #        
         #                     -------> F ------> G -------> H
         #                    /
@@ -611,7 +669,7 @@ class BlockchainProcessor(Processor):
                 self.write_header(self.block2header(next_block), sync)
                 self.last_hash = next_block_hash
 
-                if (self.height+1)%100 == 0 and not sync: 
+                if (self.height)%100 == 0 and not sync: 
                     t2 = time.time()
                     print_log( "catch_up: block %d (%.3fs)"%( self.height, t2 - t1 ) )
                     t1 = t2
@@ -620,7 +678,7 @@ class BlockchainProcessor(Processor):
                 # revert current block
                 block = self.bitcoind('getblock', [self.last_hash, 1])
                 print_log( "bc2: reorg", self.height, block.get('previousblockhash'), self.last_hash )
-                self.import_block(block, self.last_hash, self.height, revert=True)
+                self.import_block(block, self.last_hash, self.height, sync, revert=True)
                 self.pop_header()
 
                 self.height = self.height -1
