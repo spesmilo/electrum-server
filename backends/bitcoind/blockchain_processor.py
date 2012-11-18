@@ -459,6 +459,7 @@ class BlockchainProcessor(Processor):
         # process
         t1 = time.time()
 
+        if revert: tx_hashes = tx_hashes[::-1]
         for txid in tx_hashes: # must be ordered
             tx = txdict[txid]
             if not revert:
@@ -482,7 +483,9 @@ class BlockchainProcessor(Processor):
                     i += 1
 
                     # read the history into batch list
-                    self.batch_list[prevout_addr] = self.db.Get(prevout_addr)
+                    if self.batch_list.get(prevout_addr) is None:
+                        self.batch_list[prevout_addr] = self.db.Get(prevout_addr)
+
                     # re-add them to the history
                     self.add_to_history( prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
                     print "new hist for", prevout_addr, self.deserialize(self.batch_list[prevout_addr])
@@ -671,7 +674,7 @@ class BlockchainProcessor(Processor):
             next_block_hash = self.bitcoind('getblockhash', [self.height+1])
             next_block = self.bitcoind('getblock', [next_block_hash, 1])
 
-            revert = (random.randint(1, 100)==1) if self.is_test else False
+            revert = (random.randint(1, 10)==1) if self.is_test else False
             if (next_block.get('previousblockhash') == self.last_hash) and not revert:
 
                 self.import_block(next_block, next_block_hash, self.height+1, sync)
