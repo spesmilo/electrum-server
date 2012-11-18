@@ -174,7 +174,7 @@ class BlockchainProcessor(Processor):
             print_log( "catching up missing headers:", height, db_height)
 
         try:
-            while height != db_height:
+            while height < db_height:
                 height = height + 1
                 header = self.get_header(height)
                 if height>1: 
@@ -347,16 +347,16 @@ class BlockchainProcessor(Processor):
         self.batch_txio[txo] = addr
 
 
-    def remove_from_history(self, tx_hash, tx_pos):
+    def remove_from_history(self, addr, tx_hash, tx_pos):
                     
         txi = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
-        try:
-            addr = self.batch_txio[txi]
-        except:
-            raise BaseException(tx_hash, tx_pos)
-            print "WARNING: cannot find address for", (tx_hash, tx_pos)
-            return
 
+        if addr is None:
+            try:
+                addr = self.batch_txio[txi]
+            except:
+                raise BaseException(tx_hash, tx_pos)
+        
         serialized_hist = self.batch_list[addr]
 
         l = len(serialized_hist)/40
@@ -367,6 +367,7 @@ class BlockchainProcessor(Processor):
                 serialized_hist = serialized_hist[0:40*i] + serialized_hist[40*(i+1):]
                 break
         else:
+            hist = self.deserialize(serialized_hist)
             raise BaseException("prevout not found", addr, hist, tx_hash, tx_pos)
 
         self.batch_list[addr] = serialized_hist
@@ -401,7 +402,8 @@ class BlockchainProcessor(Processor):
         self.batch_list = {}  # address -> history
         self.batch_txio = {}  # transaction i/o -> address
 
-        inputs_to_read = []
+        block_inputs = []
+        block_outputs = []
         addr_to_read = []
 
         # deserialize transactions
@@ -410,21 +412,16 @@ class BlockchainProcessor(Processor):
 
         t00 = time.time()
 
-        if revert:
-            # read addresses of tx outputs
-            for tx_hash, tx in txdict.items():
-                for x in tx.get('outputs'):
-                    txo = (tx_hash + int_to_hex(x.get('index'), 4)).decode('hex')
-                self.batch_txio[txo] = x.get('address')
-        else:
+
+        if not revert:
             # read addresses of tx inputs
             for tx in txdict.values():
                 for x in tx.get('inputs'):
                     txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
-                    inputs_to_read.append(txi)
+                    block_inputs.append(txi)
 
-            inputs_to_read.sort()
-            for txi in inputs_to_read:
+            block_inputs.sort()
+            for txi in block_inputs:
                 try:
                     addr = self.db.Get(txi)
                 except:
@@ -432,6 +429,13 @@ class BlockchainProcessor(Processor):
                     continue
                 self.batch_txio[txi] = addr
                 addr_to_read.append(addr)
+
+        else:
+            for txid, tx in txdict.items():
+                for x in tx.get('outputs'):
+                    txo = (txid + int_to_hex(x.get('index'), 4)).decode('hex')
+                    block_outputs.append(txo)
+            
 
 
         # read histories of addresses
@@ -461,7 +465,7 @@ class BlockchainProcessor(Processor):
 
                 undo = []
                 for x in tx.get('inputs'):
-                    prevout_height, prevout_addr = self.remove_from_history( x.get('prevout_hash'), x.get('prevout_n'))
+                    prevout_height, prevout_addr = self.remove_from_history( None, x.get('prevout_hash'), x.get('prevout_n'))
                     undo.append( (prevout_height, prevout_addr) )
                 undo_info[txid] = undo
 
@@ -470,7 +474,7 @@ class BlockchainProcessor(Processor):
                     
             else:
                 for x in tx.get('outputs'):
-                    self.remove_from_history( txid, x.get('index'))
+                    self.remove_from_history( x.get('address'), txid, x.get('index'))
 
                 i = 0
                 for x in tx.get('inputs'):
@@ -481,7 +485,7 @@ class BlockchainProcessor(Processor):
                     self.batch_list[prevout_addr] = self.db.Get(prevout_addr)
                     # re-add them to the history
                     self.add_to_history( prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
-                    print "new hist", self.deserialize(self.batch_list[prevout_addr])
+                    print "new hist for", prevout_addr, self.deserialize(self.batch_list[prevout_addr])
 
         # write
         max_len = 0
@@ -496,14 +500,23 @@ class BlockchainProcessor(Processor):
                 max_len = l
                 max_addr = addr
 
-        for txio, addr in self.batch_txio.items():
-            batch.Put(txio, addr)
-        # delete spent inputs
-        for txi in inputs_to_read:
-            batch.Delete(txi)
+        if not revert:
+            # add new created outputs
+            for txio, addr in self.batch_txio.items():
+                batch.Put(txio, addr)
+            # delete spent inputs
+            for txi in block_inputs:
+                batch.Delete(txi)
+            # add undo info 
+            self.write_undo_info(batch, block_height, undo_info)
+        else:
+            # restore spent inputs
+            for txio, addr in self.batch_txio.items():
+                batch.Put(txio, addr)
+            # delete spent outputs
+            for txo in block_outputs:
+                batch.Delete(txo)
 
-        # add undo info 
-        if not revert: self.write_undo_info(batch, block_height, undo_info)
 
         # add the max
         batch.Put('height', self.serialize( [(block_hash, block_height, 0)] ) )
@@ -658,7 +671,7 @@ class BlockchainProcessor(Processor):
             next_block_hash = self.bitcoind('getblockhash', [self.height+1])
             next_block = self.bitcoind('getblock', [next_block_hash, 1])
 
-            revert = (random.randint(1, 1000)!=1) if self.is_test else False
+            revert = (random.randint(1, 100)==1) if self.is_test else False
             if (next_block.get('previousblockhash') == self.last_hash) and not revert:
 
                 self.import_block(next_block, next_block_hash, self.height+1, sync)
