@@ -3,7 +3,7 @@ import leveldb, urllib
 import deserialize
 import ast, time, threading, hashlib
 from Queue import Queue
-import traceback, sys, os
+import traceback, sys, os, random
 
 
 
@@ -84,6 +84,7 @@ class BlockchainProcessor(Processor):
             config.get('bitcoind','port'))
 
         self.height = 0
+        self.is_test = False
         self.sent_height = 0
         self.sent_header = None
 
@@ -360,12 +361,16 @@ class BlockchainProcessor(Processor):
 
         l = len(serialized_hist)/40
         for i in range(l):
-            if serialized_hist[40*i:40*i+36] == txi:
+            item = serialized_hist[40*i:40*(i+1)]
+            if item[0:36] == txi:
+                height = int( rev_hex( item[36:40].encode('hex') ), 16 )
                 serialized_hist = serialized_hist[0:40*i] + serialized_hist[40*(i+1):]
                 break
         else:
             raise BaseException("prevout not found", addr, hist, tx_hash, tx_pos)
+
         self.batch_list[addr] = serialized_hist
+        return height, addr
 
 
     def deserialize_block(self, block):
@@ -382,6 +387,13 @@ class BlockchainProcessor(Processor):
             txdict[tx_hash] = tx
             is_coinbase = False
         return tx_hashes, txdict
+
+    def get_undo_info(self, height):
+        s = self.db.Get("undo%d"%(height%100))
+        return eval(s)
+
+    def write_undo_info(self, batch, height, undo_info):
+        batch.Put("undo%d"%(height%100), repr(undo_info))
 
 
     def import_block(self, block, block_hash, block_height, sync, revert=False):
@@ -433,46 +445,41 @@ class BlockchainProcessor(Processor):
                 self.batch_list[addr] = self.db.Get(addr)
             except: 
                 self.batch_list[addr] = ''
-              
+
+
+        if revert: 
+            undo_info = self.get_undo_info(block_height)
+            print "undo", block_height, undo_info
+        else: undo_info = {}
+
         # process
         t1 = time.time()
 
         for txid in tx_hashes: # must be ordered
             tx = txdict[txid]
             if not revert:
+
+                undo = []
                 for x in tx.get('inputs'):
-                    self.remove_from_history( x.get('prevout_hash'), x.get('prevout_n'))
+                    prevout_height, prevout_addr = self.remove_from_history( x.get('prevout_hash'), x.get('prevout_n'))
+                    undo.append( (prevout_height, prevout_addr) )
+                undo_info[txid] = undo
+
                 for x in tx.get('outputs'):
                     self.add_to_history( x.get('address'), txid, x.get('index'), block_height)
+                    
             else:
                 for x in tx.get('outputs'):
                     self.remove_from_history( txid, x.get('index'))
 
+                i = 0
                 for x in tx.get('inputs'):
-                    prevout_height = self.db.Get(x['prevout_hash'].decode('hex'))
-                    try:
-                        # note: this will fail if the block containing txi is part of the reorg and has been orphaned by bitcoind
-                        txi = self.get_transaction(x.get('prevout_hash'), prevout_height ) 
-                    except:
-                        # so, if if it fails, we need to read the block containing txi
-                        prevout_block_hash = self.db.Get('%d'%prevout_height)
-                        prevout_block = self.bitcoind('getblock', [prevout_block_hash, 1])
-                        for txc in prevout_block['tx']:
-                            if hash_encode(Hash(txc)) == prevout_hash: 
-                                raw_txi = txc
-                                break
-                        else: 
-                            raise BaseException('txi not found')
+                    prevout_height, prevout_addr = undo_info.get(txid)[i]
+                    i += 1
 
-                        vds = deserialize.BCDataStream()
-                        vds.write(raw_txi.decode('hex'))
-                        txi = deserialize.parse_Transaction(vds, False)
-
-                    print "txi", txi
-                    output = txi.get('outputs')[x.get('prevout_n')]
-                    prevout_addr = output['address']
+                    # read the history into batch list
                     self.batch_list[prevout_addr] = self.db.Get(prevout_addr)
-                    # no longer chronological..
+                    # re-add them to the history
                     self.add_to_history( prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
                     print "new hist", self.deserialize(self.batch_list[prevout_addr])
 
@@ -495,11 +502,9 @@ class BlockchainProcessor(Processor):
         for txi in inputs_to_read:
             batch.Delete(txi)
 
-        # add tx -> height
-        for txid in tx_hashes:
-            batch.Put(txid.decode('hex'), "%d"%block_height)
-        # add height -> block_hash
-        batch.Put("%d"%block_height, block_hash)
+        # add undo info 
+        if not revert: self.write_undo_info(batch, block_height, undo_info)
+
         # add the max
         batch.Put('height', self.serialize( [(block_hash, block_height, 0)] ) )
 
@@ -635,15 +640,6 @@ class BlockchainProcessor(Processor):
 
 
     def catch_up(self, sync = True):
-        #   a reorg in bitcoind id not synchronous with my database
-        #        
-        #                     -------> F ------> G -------> H
-        #                    /
-        #                   /
-        #        A ------> B --------> C ------> E
-        #        
-        #        we always compare the hash in the headers file to the hash returned by bitcoind
-
 
         t1 = time.time()
 
@@ -662,7 +658,8 @@ class BlockchainProcessor(Processor):
             next_block_hash = self.bitcoind('getblockhash', [self.height+1])
             next_block = self.bitcoind('getblock', [next_block_hash, 1])
 
-            if next_block.get('previousblockhash') == self.last_hash:
+            revert = (random.randint(1, 1000)!=1) if self.is_test else False
+            if (next_block.get('previousblockhash') == self.last_hash) and not revert:
 
                 self.import_block(next_block, next_block_hash, self.height+1, sync)
                 self.height = self.height + 1
@@ -677,14 +674,15 @@ class BlockchainProcessor(Processor):
             else:
                 # revert current block
                 block = self.bitcoind('getblock', [self.last_hash, 1])
-                print_log( "bc2: reorg", self.height, block.get('previousblockhash'), self.last_hash )
+                print_log( "blockchain reorg", self.height, block.get('previousblockhash'), self.last_hash )
                 self.import_block(block, self.last_hash, self.height, sync, revert=True)
                 self.pop_header()
+                self.flush_headers()
 
                 self.height = self.height -1
 
                 # read previous header from disk
-                self.header = self.read_header(self.height) 
+                self.header = self.read_header(self.height)
                 self.last_hash = self.hash_header(self.header)
         
 
