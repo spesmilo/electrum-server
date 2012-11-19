@@ -290,10 +290,9 @@ def parse_Transaction(vds, is_coinbase):
   for i in xrange(n_vout):
       o = parse_TxOut(vds, i)
 
-      if o['address'] == "None" and o['value']==0:
-          print("skipping strange tx output with zero value")
-          continue
-
+      #if o['address'] == "None" and o['value']==0:
+      #    print("skipping strange tx output with zero value")
+      #    continue
       # if o['address'] != "None":
       d['outputs'].append(o)
 
