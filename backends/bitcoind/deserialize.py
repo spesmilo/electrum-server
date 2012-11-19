@@ -289,7 +289,7 @@ def parse_Transaction(vds, is_coinbase):
   d['outputs'] = []
   for i in xrange(n_vout):
       o = parse_TxOut(vds, i)
-      if o['address'] is not None:
+      if o['address'] != "(None)":
           d['outputs'].append(o)
   d['lockTime'] = vds.read_uint32()
   return d
