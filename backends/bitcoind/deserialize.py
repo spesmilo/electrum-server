@@ -392,6 +392,12 @@ def extract_public_key(bytes):
   if match_decoded(decoded, match):
     return public_key_to_bc_address(decoded[0][1])
 
+  # coins sent to black hole
+  # DUP HASH160 20 BYTES:... EQUALVERIFY CHECKSIG
+  match = [ opcodes.OP_DUP, opcodes.OP_HASH160, opcodes.OP_0, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG ]
+  if match_decoded(decoded, match):
+    return "None"
+
   # Pay-by-Bitcoin-address TxOuts look like:
   # DUP HASH160 20 BYTES:... EQUALVERIFY CHECKSIG
   match = [ opcodes.OP_DUP, opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG ]
