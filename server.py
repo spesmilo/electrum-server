@@ -122,7 +122,7 @@ if __name__ == '__main__':
         from backends.abe import BlockchainProcessor
     elif backend_name == 'libbitcoin':
         from backends.libbitcoin import BlockchainProcessor
-    elif backend_name == 'bitcoind':
+    elif backend_name == 'leveldb':
         from backends.bitcoind import BlockchainProcessor
     else:
         print "Unknown backend '%s' specified\n" % backend_name
