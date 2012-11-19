@@ -394,7 +394,8 @@ class BlockchainProcessor(Processor):
         return eval(s)
 
     def write_undo_info(self, batch, height, undo_info):
-        batch.Put("undo%d"%(height%100), repr(undo_info))
+        if self.is_test or height > self.bitcoind_height - 100:
+            batch.Put("undo%d"%(height%100), repr(undo_info))
 
 
     def import_block(self, block, block_hash, block_height, sync, revert=False):
@@ -663,8 +664,8 @@ class BlockchainProcessor(Processor):
 
             # are we done yet?
             info = self.bitcoind('getinfo')
-            bitcoind_height = info.get('blocks')
-            bitcoind_block_hash = self.bitcoind('getblockhash', [bitcoind_height])
+            self.bitcoind_height = info.get('blocks')
+            bitcoind_block_hash = self.bitcoind('getblockhash', [self.bitcoind_height])
             if self.last_hash == bitcoind_block_hash: 
                 self.up_to_date = True
                 break
