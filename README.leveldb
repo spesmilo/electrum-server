@@ -29,7 +29,7 @@ __________________________________________________________
 backend = leveldb
 
 [leveldb]
-dbpath = /path/to/your/database
+path = /path/to/your/database
 
 ______________________________________________________________
 
