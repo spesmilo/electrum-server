@@ -83,10 +83,12 @@ def hash_160(public_key):
 
 
 def public_key_to_bc_address(public_key):
+    if public_key == 'None': return 'None'
     h160 = hash_160(public_key)
     return hash_160_to_bc_address(h160)
 
 def hash_160_to_bc_address(h160):
+    if h160 == 'None': return 'None'
     vh160 = chr(addrtype) + h160
     h = Hash(vh160)
     addr = vh160 + h[0:4]

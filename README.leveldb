@@ -1,0 +1,62 @@
+How to run a pruning node with leveldb
+
+Pruning nodes use a lightweight database to store address histories.
+Only unspent coins are kept in that database; spent outputs are
+pruned.
+
+
+__________________________________________________________
+1. patch and compile bitcoind.
+
+Install version 0.8 or equivalent.
+
+Note: Even though Electrum's database uses pruning, you cannot use it
+with a pruning bitcoind. A full bitcoin node is required in order to
+know for each address if it has been used. Pruning occurs only at the
+level of the Electrum database.
+
+__________________________________________________________
+
+2. Install python-leveldb: 
+
+sudo apt-get install python-leveldb
+
+__________________________________________________________
+
+3. edit /etc/electrum.conf : 
+
+[server]
+backend = leveldb
+
+[leveldb]
+dbpath = /path/to/your/database
+
+______________________________________________________________
+
+4. catch up with the blockchain.
+
+In order to speed up the initial catch_up phase, it is recommended to
+locate your database in shared memory:
+
+ dbpath = /run/shm/electrum_db
+
+Once your server has finished catching up, copy your database to disk
+and update the path in /etc/electrum.conf
+
+During the catch_up phase, you can interrupt the server with Ctrl-C;
+it will safely write the current status in the database and exit.
+
+_________________________________
+
+5. enjoy!
+
+Once the server is synchronized, it will listen to ports, and the
+normal way to stop it is to type: ./server.py stop
+
+Other commands are available: 
+
+./server info   : view connections
+./server load   : view the size of the queue
+
+
+

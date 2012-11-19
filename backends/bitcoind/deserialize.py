@@ -289,8 +289,14 @@ def parse_Transaction(vds, is_coinbase):
   d['outputs'] = []
   for i in xrange(n_vout):
       o = parse_TxOut(vds, i)
-      if o['address'] != "(None)":
-          d['outputs'].append(o)
+
+      if o['address'] == "None" and o['value']==0:
+          print("skipping strange tx output with zero value")
+          continue
+
+      # if o['address'] != "None":
+      d['outputs'].append(o)
+
   d['lockTime'] = vds.read_uint32()
   return d
 
@@ -392,5 +398,10 @@ def extract_public_key(bytes):
   if match_decoded(decoded, match):
     return hash_160_to_bc_address(decoded[2][1])
 
+  # strange tx
+  match = [ opcodes.OP_DUP, opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG, opcodes.OP_NOP ]
+  if match_decoded(decoded, match):
+    return hash_160_to_bc_address(decoded[2][1])
+
   #raise BaseException("address not found in script") see ce35795fb64c268a52324b884793b3165233b1e6d678ccaadf760628ec34d76b
-  return "(None)"
+  return "None"
