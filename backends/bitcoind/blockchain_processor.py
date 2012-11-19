@@ -6,47 +6,8 @@ from Queue import Queue
 import traceback, sys, os, random
 
 
-
-Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
-hash_encode = lambda x: x[::-1].encode('hex')
-hash_decode = lambda x: x.decode('hex')[::-1]
-
-
-
-def rev_hex(s):
-    return s.decode('hex')[::-1].encode('hex')
-
-
-def int_to_hex(i, length=1):
-    s = hex(i)[2:].rstrip('L')
-    s = "0"*(2*length - len(s)) + s
-    return rev_hex(s)
-
-def header_to_string(res):
-    pbh = res.get('prev_block_hash')
-    if pbh is None: pbh = '0'*64
-    s = int_to_hex(res.get('version'),4) \
-        + rev_hex(pbh) \
-        + rev_hex(res.get('merkle_root')) \
-        + int_to_hex(int(res.get('timestamp')),4) \
-        + int_to_hex(int(res.get('bits')),4) \
-        + int_to_hex(int(res.get('nonce')),4)
-    return s
-
-def header_from_string( s):
-    hex_to_int = lambda s: eval('0x' + s[::-1].encode('hex'))
-    h = {}
-    h['version'] = hex_to_int(s[0:4])
-    h['prev_block_hash'] = hash_encode(s[4:36])
-    h['merkle_root'] = hash_encode(s[36:68])
-    h['timestamp'] = hex_to_int(s[68:72])
-    h['bits'] = hex_to_int(s[72:76])
-    h['nonce'] = hex_to_int(s[76:80])
-    return h
-
-
-
-
+from util import Hash, hash_encode, hash_decode, rev_hex, int_to_hex
+from util import bc_address_to_hash_160, hash_160_to_bc_address, header_to_string, header_from_string
 from processor import Processor, print_log
 
 class BlockchainProcessor(Processor):
@@ -258,7 +219,8 @@ class BlockchainProcessor(Processor):
 
         with self.dblock:
             try:
-                hist = self.deserialize(self.db.Get(addr))
+                hash_160 = bc_address_to_hash_160(addr)
+                hist = self.deserialize(self.db.Get(hash_160))
                 is_known = True
             except: 
                 hist = []
@@ -437,12 +399,11 @@ class BlockchainProcessor(Processor):
                     txo = (txid + int_to_hex(x.get('index'), 4)).decode('hex')
                     block_outputs.append(txo)
             
-
-
         # read histories of addresses
         for txid, tx in txdict.items():
             for x in tx.get('outputs'):
-                addr_to_read.append(x.get('address'))
+                hash_160 = bc_address_to_hash_160(x.get('address'))
+                addr_to_read.append(hash_160)
 
         addr_to_read.sort()
         for addr in addr_to_read:
@@ -454,7 +415,7 @@ class BlockchainProcessor(Processor):
 
         if revert: 
             undo_info = self.get_undo_info(block_height)
-            print "undo", block_height, undo_info
+            # print "undo", block_height, undo_info
         else: undo_info = {}
 
         # process
@@ -472,11 +433,13 @@ class BlockchainProcessor(Processor):
                 undo_info[txid] = undo
 
                 for x in tx.get('outputs'):
-                    self.add_to_history( x.get('address'), txid, x.get('index'), block_height)
+                    hash_160 = bc_address_to_hash_160(x.get('address'))
+                    self.add_to_history( hash_160, txid, x.get('index'), block_height)
                     
             else:
                 for x in tx.get('outputs'):
-                    self.remove_from_history( x.get('address'), txid, x.get('index'))
+                    hash_160 = bc_address_to_hash_160(x.get('address'))
+                    self.remove_from_history( hash_160, txid, x.get('index'))
 
                 i = 0
                 for x in tx.get('inputs'):
@@ -489,7 +452,7 @@ class BlockchainProcessor(Processor):
 
                     # re-add them to the history
                     self.add_to_history( prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
-                    print "new hist for", prevout_addr, self.deserialize(self.batch_list[prevout_addr])
+                    print_log( "new hist for", hash_160_to_bc_address(prevout_addr), self.deserialize(self.batch_list[prevout_addr]) )
 
         # write
         max_len = 0
@@ -675,7 +638,9 @@ class BlockchainProcessor(Processor):
             next_block_hash = self.bitcoind('getblockhash', [self.height+1])
             next_block = self.bitcoind('getblock', [next_block_hash, 1])
 
-            revert = (random.randint(1, 10)==1) if self.is_test else False
+            # fixme: this is unsafe, if we revert when the undo info is not yet written 
+            revert = (random.randint(1, 100)==1) if self.is_test else False        
+
             if (next_block.get('previousblockhash') == self.last_hash) and not revert:
 
                 self.import_block(next_block, next_block_hash, self.height+1, sync)
