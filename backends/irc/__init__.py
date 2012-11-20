@@ -24,6 +24,7 @@ class IrcThread(threading.Thread):
         self.prepend = 'E_'
         if config.get('server', 'coin') == 'litecoin':
             self.prepend = 'EL_'
+        self.pruning = config.get('server', 'backend') == 'leveldb'
         self.nick = self.prepend + self.nick
 
     def get_peers(self):
@@ -32,6 +33,7 @@ class IrcThread(threading.Thread):
 
     def getname(self):
         s = 'v' + VERSION + ' '
+        if self.pruning: s += 'p '
         if self.stratum_tcp_port:
             s += 't' + self.stratum_tcp_port + ' ' 
         if self.stratum_http_port:
