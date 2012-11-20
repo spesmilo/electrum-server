@@ -16,6 +16,7 @@ class BlockchainProcessor(Processor):
         Processor.__init__(self)
 
         self.shared = shared
+        self.config = config
         self.up_to_date = False
         self.watched_addresses = []
         self.history_cache = {}
@@ -539,10 +540,15 @@ class BlockchainProcessor(Processor):
 
         elif method == 'blockchain.address.unsubscribe':
             try:
-                address = params[0]
-                self.watched_addresses.remove(address)
-                print_log('unsubscribed', address)
-                result = "ok"
+                password = params[0]
+                address = params[1]
+                if password == self.config.get('server','password'):
+                    self.watched_addresses.remove(address)
+                    print_log('unsubscribed', address)
+                    result = "ok"
+                else:
+                    print_log('incorrect password')
+                    result = "authentication error"
             except BaseException, e:
                 error = str(e) + ': ' + address
                 print_log( "error:", error )

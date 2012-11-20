@@ -24,9 +24,10 @@ def print_log(*args):
 
 class Shared:
 
-    def __init__(self):
+    def __init__(self, config):
         self.lock = threading.Lock()
         self._stopped = False
+        self.config = config
 
     def stop(self):
         print_log( "Stopping Stratum" )
@@ -70,8 +71,8 @@ class Processor(threading.Thread):
 
 class Dispatcher:
 
-    def __init__(self):
-        self.shared = Shared()
+    def __init__(self, config):
+        self.shared = Shared(config)
         self.request_dispatcher = RequestDispatcher(self.shared)
         self.request_dispatcher.start()
         self.response_dispatcher = \
@@ -281,8 +282,9 @@ class ResponseDispatcher(threading.Thread):
         if internal_id is None: # and method is not None and params is not None:
             found = self.notification(method, params, response)
             if not found and method == 'blockchain.address.subscribe':
-                self.request_dispatcher.push_request(None,{'method':method.replace('.subscribe', '.unsubscribe'), 'params':params, 'id':None})
-                pass
+                params2 = [self.shared.config.get('server','password')] + params
+                self.request_dispatcher.push_request(None,{'method':method.replace('.subscribe', '.unsubscribe'), 'params':params2, 'id':None})
+
         # A response
         elif internal_id is not None: 
             self.send_response(internal_id, response)
@@ -298,7 +300,7 @@ class ResponseDispatcher(threading.Thread):
             if session.contains_subscription(subdesc):
                 session.send_response(response)
                 found = True
-        if not found: print "no subscriber for", subdesc
+        # if not found: print_log( "no subscriber for", subdesc)
         return found
 
     def send_response(self, internal_id, response):
@@ -306,6 +308,6 @@ class ResponseDispatcher(threading.Thread):
         if session:
             response['id'] = message_id
             session.send_response(response)
-        else:
-            print_log( "send_response: no session", message_id, internal_id, response )
+        #else:
+        #    print_log( "send_response: no session", message_id, internal_id, response )
 

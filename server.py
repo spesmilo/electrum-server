@@ -132,7 +132,7 @@ if __name__ == '__main__':
     print_log( "Starting Electrum server on", host)
 
     # Create hub
-    dispatcher = Dispatcher()
+    dispatcher = Dispatcher(config)
     shared = dispatcher.shared
 
     # Create and register processors
