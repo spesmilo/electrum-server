@@ -498,7 +498,7 @@ class BlockchainProcessor(Processor):
                       "read:%0.2f "%(t1 - t00), 
                       "proc:%.2f "%(t2-t1), 
                       "write:%.2f "%(t3-t2), 
-                      "max:", max_len, max_addr)
+                      "max:", max_len, hash_160_to_bc_address(max_addr))
 
         for addr in self.batch_list.keys(): self.invalidate_cache(addr)
 
