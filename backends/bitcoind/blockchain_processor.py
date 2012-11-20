@@ -500,7 +500,9 @@ class BlockchainProcessor(Processor):
                       "write:%.2f "%(t3-t2), 
                       "max:", max_len, hash_160_to_bc_address(max_addr))
 
-        for addr in self.batch_list.keys(): self.invalidate_cache(addr)
+        for h160 in self.batch_list.keys(): 
+            addr = hash_160_to_bc_address(h160)
+            self.invalidate_cache(addr)
 
 
 
@@ -686,7 +688,8 @@ class BlockchainProcessor(Processor):
             for x in tx.get('inputs'):
                 txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
                 try:
-                    addr = self.db.Get(txi)    
+                    h160 = self.db.Get(txi)
+                    addr = hash_160_to_bc_address(h160)
                 except:
                     continue
                 l = self.mempool_addresses.get(tx_hash, [])
