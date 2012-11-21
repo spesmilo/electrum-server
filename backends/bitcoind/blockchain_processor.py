@@ -182,6 +182,11 @@ class BlockchainProcessor(Processor):
         if sync or len(self.headers_data) > 40*100:
             self.flush_headers()
 
+        with self.cache_lock:
+            chunk_index = header.get('block_height')/2016
+            if self.chunk_cache.get(chunk_index):
+                self.chunk_cache.pop(chunk_index)
+
     def pop_header(self):
         # we need to do this only if we have not flushed
         if self.headers_data:
@@ -198,10 +203,12 @@ class BlockchainProcessor(Processor):
 
     def get_chunk(self, i):
         # store them on disk; store the current chunk in memory
-        chunk = self.chunk_cache.get(i)
-        if not chunk:
-            chunk = self.read_chunk(i)
-            self.chunk_cache[i] = chunk
+        with self.cache_lock:
+            chunk = self.chunk_cache.get(i)
+            if not chunk:
+                chunk = self.read_chunk(i)
+                self.chunk_cache[i] = chunk
+
         return chunk
 
 
