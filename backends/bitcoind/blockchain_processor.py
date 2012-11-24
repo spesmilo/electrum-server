@@ -591,9 +591,13 @@ class BlockchainProcessor(Processor):
                     print_log( "error:", error)
 
         elif method == 'blockchain.transaction.broadcast':
-            txo = self.bitcoind('sendrawtransaction', params)
-            print_log( "sent tx:", txo )
-            result = txo 
+            try:
+                txo = self.bitcoind('sendrawtransaction', params)
+                print_log( "sent tx:", txo )
+                result = txo 
+            except BaseException, e:
+                result = str(e) # do not send an error
+                print_log( "error:", str(e), params )
 
         elif method == 'blockchain.transaction.get_merkle':
             if cache_only:
