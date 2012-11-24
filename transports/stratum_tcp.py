@@ -22,7 +22,7 @@ class TcpSession(Session):
             self._connection = connection
 
         self.address = address[0]
-        self.name = "TCP" if not use_ssl else "TCP/SSL"
+        self.name = "TCP " if not use_ssl else "SSL "
 
     def connection(self):
         if self.stopped():

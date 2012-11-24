@@ -227,7 +227,7 @@ class Session:
             addr = None
 
         if self.subscriptions:
-            print_log( "%4s"%self.name, "%14s"%self.address, "%35s"%addr, "%3d"%len(self.subscriptions), self.version )
+            print_log( "%4s"%self.name, "%15s"%self.address, "%35s"%addr, "%3d"%len(self.subscriptions), self.version )
 
     def stopped(self):
         with self.lock:
