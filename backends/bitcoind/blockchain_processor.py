@@ -460,7 +460,7 @@ class BlockchainProcessor(Processor):
 
                     # re-add them to the history
                     self.add_to_history( prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
-                    print_log( "new hist for", hash_160_to_bc_address(prevout_addr), self.deserialize(self.batch_list[prevout_addr]) )
+                    # print_log( "new hist for", hash_160_to_bc_address(prevout_addr), self.deserialize(self.batch_list[prevout_addr]) )
 
         # write
         max_len = 0
