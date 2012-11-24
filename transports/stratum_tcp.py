@@ -22,7 +22,7 @@ class TcpSession(Session):
             self._connection = connection
 
         self.address = address[0]
-        self.name = "TCP"
+        self.name = "TCP" if not use_ssl else "TCP/SSL"
 
     def connection(self):
         if self.stopped():
@@ -140,7 +140,12 @@ class TcpServer(threading.Thread):
         sock.bind((self.host, self.port))
         sock.listen(1)
         while not self.shared.stopped():
-            session = TcpSession(*sock.accept(), use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
+            try:
+                session = TcpSession(*sock.accept(), use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
+            except BaseException, e:
+                error = str(e)
+                print_log("cannot start TCP session", error)
+                continue
             self.dispatcher.add_session(session)
             self.dispatcher.collect_garbage()
             client_req = TcpClientRequestor(self.dispatcher, session)
