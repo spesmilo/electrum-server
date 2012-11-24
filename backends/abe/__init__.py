@@ -400,13 +400,8 @@ class AbeStore(Datastore_class):
             with self.cache_lock:
                 self.tx_cache[addr] = txpoints
         
-        return txpoints
 
-    def get_history2(self, addr, cache_only=False):
-        h = self.get_history(addr, cache_only)
-        if cache_only and h==-1: return -1
-
-        out = map(lambda x: {'tx_hash':x['tx_hash'], 'height':x['height']}, h)
+        out = map(lambda x: {'tx_hash':x['tx_hash'], 'height':x['height']}, txpoints)
         out2 = []
         for item in out:
             if item not in out2: out2.append(item)
@@ -414,23 +409,8 @@ class AbeStore(Datastore_class):
 
 
     def get_status(self, addr, cache_only=False):
-        # get address status, i.e. the last block for that address.
-        tx_points = self.get_history(addr, cache_only)
-        if cache_only and tx_points == -1: return -1
-
-        if not tx_points:
-            status = None
-        else:
-            lastpoint = tx_points[-1]
-            status = lastpoint['block_hash']
-            # this is a temporary hack; move it up once old clients have disappeared
-            if status == 'mempool': # and session['version'] != "old":
-                status = status + ':%d'% len(tx_points)
-        return status
-
-    def get_status2(self, addr, cache_only=False):
         # for 0.5 clients
-        tx_points = self.get_history2(addr, cache_only)
+        tx_points = self.get_history(addr, cache_only)
         if cache_only and tx_points == -1: return -1
 
         if not tx_points: return None
@@ -712,27 +692,10 @@ class BlockchainProcessor(Processor):
                 error = str(e) + ': ' + address
                 print "error:", error
 
-        elif method == 'blockchain.address.subscribe2':
-            try:
-                address = params[0]
-                result = self.store.get_status2(address, cache_only)
-                self.watch_address(address)
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print "error:", error
-
         elif method == 'blockchain.address.get_history':
             try:
                 address = params[0]
                 result = self.store.get_history( address, cache_only )
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print "error:", error
-
-        elif method == 'blockchain.address.get_history2':
-            try:
-                address = params[0]
-                result = self.store.get_history2( address, cache_only )
             except BaseException, e:
                 error = str(e) + ': ' + address
                 print "error:", error
@@ -834,9 +797,7 @@ class BlockchainProcessor(Processor):
                 break
             if addr in self.watched_addresses:
                 status = self.store.get_status( addr )
-                status2 = self.store.get_status2( addr )
                 self.push_response({ 'id': None, 'method':'blockchain.address.subscribe', 'params':[addr, status] })
-                self.push_response({ 'id': None, 'method':'blockchain.address.subscribe2', 'params':[addr, status2] })
 
         threading.Timer(10, self.run_store_iteration).start()
 
