@@ -394,18 +394,19 @@ class AbeStore(Datastore_class):
 
             txpoint.pop('tx_id')
 
-        # cache result
-        # do not cache mempool results because statuses are ambiguous
-        if not address_has_mempool:
-            with self.cache_lock:
-                self.tx_cache[addr] = txpoints
-        
 
-        out = map(lambda x: {'tx_hash':x['tx_hash'], 'height':x['height']}, txpoints)
-        out2 = []
-        for item in out:
-            if item not in out2: out2.append(item)
-        return out2
+        txpoints = map(lambda x: {'tx_hash':x['tx_hash'], 'height':x['height']}, txpoints)
+        out = []
+        for item in txpoints:
+            if item not in out: out.append(item)
+
+        # cache result
+        ## do not cache mempool results because statuses are ambiguous
+        #if not address_has_mempool:
+        with self.cache_lock:
+            self.tx_cache[addr] = out
+        
+        return out
 
 
     def get_status(self, addr, cache_only=False):
