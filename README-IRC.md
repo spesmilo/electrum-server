@@ -23,7 +23,7 @@ of the realname field in IRC (see below).
 `report_host` is a an optional fully-qualified domain name (FQDN) of your Electrum server 
 instead of `host`. It is used as part of the name field in IRC for incoming client connections.
 This is useful in a NAT setup where you bind to a private IP locally but have an external IP
-and set up at your router and external DNS.
+set up at your router and external DNS.
 
 `report_stratum_tcp_port`, `report_stratum_http_port`, `report_stratum_tcp_ssl_port`, 
 `report_stratum_http_ssl_port` are optional settings for a port number to be reported in the
