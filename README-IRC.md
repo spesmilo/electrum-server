@@ -8,7 +8,7 @@ The following config file options are used by the IRC part of Electrum server:
     [server]
     irc = yes
     host = fqdn.host.name.tld
-    ircname = a description
+    irc_nick = server nickname
 
 `irc` is used to determine whether the IRC thread will be started or the 
 Electrum server will run in private mode. In private mode, 
@@ -18,8 +18,10 @@ Electrum server will run in private mode. In private mode,
 used both when binding the listener for incoming client connections and as part
 of the realname field in IRC (see below).
 
-`ircname` is a short text that will be appended to 'host' when composing the 
-IRC realname field.
+`irc_nick` is a nick name that will be appended to E_ when 
+composing the IRC nickname to identify your server on #electrum.
 
-The `realname` = `host` + ' ' + `ircname`. For example, using the example 
-configuration above, `realname` would be `fqdn.host.name.tld a description`.
+Please note the IRC name field can only contain 50 chars and will be composed
+of `host` + protocol version number + Port numbers for the various protocols.
+Please check whether port numbers are cut off at the end   
+
