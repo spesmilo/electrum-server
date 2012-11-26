@@ -1,7 +1,10 @@
 [server]
 host = localhost
+#report_host = 
 stratum_tcp_port = 50001
 stratum_http_port = 8081
+#report_stratum_tcp_port = 50001
+#report_stratum_http_port = 80
 password = secret
 banner = Welcome to Electrum!
 irc = yes

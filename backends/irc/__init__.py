@@ -17,9 +17,19 @@ class IrcThread(threading.Thread):
         self.stratum_http_port = config.get('server','stratum_http_port')
         self.stratum_tcp_ssl_port = config.get('server','stratum_tcp_ssl_port')
         self.stratum_http_ssl_port = config.get('server','stratum_http_ssl_port')
+        self.report_stratum_tcp_port = config.get('server','report_stratum_tcp_port')
+        self.report_stratum_http_port = config.get('server','report_stratum_http_port')
+        self.report_stratum_tcp_ssl_port = config.get('server','report_stratum_tcp_ssl_port')
+        self.report_stratum_http_ssl_port = config.get('server','report_stratum_http_ssl_port')
         self.peers = {}
         self.host = config.get('server','host')
+        self.report_host = config.get('server','report_host')
         self.nick = config.get('server', 'irc_nick')
+	if self.report_stratum_tcp_port: self.stratum_tcp_port = self.report_stratum_tcp_port
+	if self.report_stratum_http_port: self.stratum_http_port = self.report_stratum_http_port
+	if self.report_stratum_tcp_ssl_port: self.stratum_tcp_ssl_port = self.report_stratum_tcp_ssl_port
+	if self.report_stratum_http_ssl_port: self.stratum_http_ssl_port = self.report_stratum_http_ssl_port
+	if self.report_host: self.host = self.report_host
         if not self.nick: self.nick = random_string(10)
         self.prepend = 'E_'
         if config.get('server', 'coin') == 'litecoin':
