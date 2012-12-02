@@ -81,7 +81,12 @@ class BlockchainProcessor(Processor):
 
     def bitcoind(self, method, params=[]):
         postdata = dumps({"method": method, 'params': params, 'id':'jsonrpc'})
-        respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+        try:
+            respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+        except:
+            traceback.print_exc(file=sys.stdout)
+            self.shared.stop()
+
         r = loads(respdata)
         if r['error'] != None:
             raise BaseException(r['error'])
