@@ -217,11 +217,15 @@ class BlockchainProcessor(Processor):
         return chunk
 
 
-    def get_transaction(self, txid, block_height=-1, is_coinbase = False):
-        raw_tx = self.bitcoind('getrawtransaction', [txid, 0, block_height])
+    def get_mempool_transaction(self, txid):
+        try:
+            raw_tx = self.bitcoind('getrawtransaction', [txid, 0, -1])
+        except:
+            return None
+
         vds = deserialize.BCDataStream()
         vds.write(raw_tx.decode('hex'))
-        out = deserialize.parse_Transaction(vds, is_coinbase)
+        out = deserialize.parse_Transaction(vds, is_coinbase = False)
         return out
 
 
@@ -705,7 +709,7 @@ class BlockchainProcessor(Processor):
         for tx_hash in mempool_hashes:
             if tx_hash in self.mempool_hashes: continue
 
-            tx = self.get_transaction(tx_hash)
+            tx = self.get_mempool_transaction(tx_hash)
             if not tx: continue
 
             for x in tx.get('inputs'):
