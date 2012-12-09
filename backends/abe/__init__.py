@@ -49,18 +49,18 @@ class AbeStore(Datastore_class):
         coin = config.get('server', 'coin')
         self.addrtype = 0
         if coin == 'litecoin':
-            print 'Litecoin settings:'
+            print_log ('Litecoin settings:')
             datadir = config.get('server','datadir')
-            print '  datadir = ' + datadir
+            print_log ('  datadir = ' + datadir)
             args.datadir = [{"dirname":datadir,"chain":"Litecoin","code3":"LTC","address_version":"\u0030"}]
-            print '  addrtype = 48'
+            print_log ('  addrtype = 48')
             self.addrtype = 48
 
         Datastore_class.__init__(self,args)
 
         # Use 1 (Bitcoin) if chain_id is not sent
         self.chain_id = self.datadirs[0]["chain_id"] or 1
-        print 'Coin chain_id = %d' % self.chain_id
+        print_log ('Coin chain_id = %d' % self.chain_id)
 
         self.sql_limit = int( config.get('database','limit') )
 
@@ -87,7 +87,7 @@ class AbeStore(Datastore_class):
 
 
     def import_block(self, b, chain_ids=frozenset()):
-        #print "import block"
+        #print_log ("import block")
         block_id = super(AbeStore, self).import_block(b, chain_ids)
         for pos in xrange(len(b['transactions'])):
             tx = b['transactions'][pos]
@@ -97,7 +97,7 @@ class AbeStore(Datastore_class):
             if tx_id:
                 self.update_tx_cache(tx_id)
             else:
-                print "error: import_block: no tx_id"
+                print_log ("error: import_block: no tx_id")
         return block_id
 
 
@@ -106,13 +106,13 @@ class AbeStore(Datastore_class):
         for row in inrows:
             _hash = self.binout(row[6])
             if not _hash:
-                #print "WARNING: missing tx_in for tx", txid
+                #print_log ("WARNING: missing tx_in for tx", txid)
                 continue
 
             address = hash_to_address(chr(self.addrtype), _hash)
             with self.cache_lock:
                 if self.tx_cache.has_key(address):
-                    print "cache: invalidating", address
+                    print_log ("cache: invalidating", address)
                     self.tx_cache.pop(address)
 
             self.address_queue.put(address)
@@ -121,13 +121,13 @@ class AbeStore(Datastore_class):
         for row in outrows:
             _hash = self.binout(row[6])
             if not _hash:
-                #print "WARNING: missing tx_out for tx", txid
+                #print_log ("WARNING: missing tx_out for tx", txid)
                 continue
 
             address = hash_to_address(chr(self.addrtype), _hash)
             with self.cache_lock:
                 if self.tx_cache.has_key(address):
-                    print "cache: invalidating", address
+                    print_log ("cache: invalidating", address)
                     self.tx_cache.pop(address)
 
             self.address_queue.put(address)
@@ -300,7 +300,7 @@ class AbeStore(Datastore_class):
             try:
                 nTime, chain_id, height, is_in, blk_hash, tx_hash, tx_id, pos, value = row
             except:
-                print "cannot unpack row", row
+                print_log ("cannot unpack row", row)
                 break
             tx_hash = self.hashout_hex(tx_hash)
             txpoint = {
@@ -335,13 +335,13 @@ class AbeStore(Datastore_class):
 
             # discard transactions that are too old
             if self.last_tx_id - tx_id > 50000:
-                print "discarding tx id", tx_id
+                print_log ("discarding tx id", tx_id)
                 continue
 
             # this means that pending transactions were added to the db, even if they are not returned by getmemorypool
             address_has_mempool = True
 
-            #print "mempool", tx_hash
+            #print_log ("mempool", tx_hash)
             txpoint = {
                     "timestamp":    0,
                     "height":   0,
@@ -363,7 +363,7 @@ class AbeStore(Datastore_class):
             for row in inrows:
                 _hash = self.binout(row[6])
                 if not _hash:
-                    #print "WARNING: missing tx_in for tx", tx_id, addr
+                    #print_log ("WARNING: missing tx_in for tx", tx_id, addr)
                     continue
                 address = hash_to_address(chr(self.addrtype), _hash)
                 txinputs.append(address)
@@ -373,7 +373,7 @@ class AbeStore(Datastore_class):
             for row in outrows:
                 _hash = self.binout(row[6])
                 if not _hash:
-                    #print "WARNING: missing tx_out for tx", tx_id, addr
+                    #print_log ("WARNING: missing tx_out for tx", tx_id, addr)
                     continue
                 address = hash_to_address(chr(self.addrtype), _hash)
                 txoutputs.append(address)
@@ -476,12 +476,12 @@ class AbeStore(Datastore_class):
             if h.get('block_height')==0: h['prev_block_hash'] = "0"*64
             msg += header_to_string(h)
 
-            #print "hash", encode(Hash(msg.decode('hex')))
+            #print_log ("hash", encode(Hash(msg.decode('hex'))))
             #if h.get('block_height')==1:break
 
         with self.cache_lock:
             self.chunk_cache[index] = msg
-        print "get_chunk", index, len(msg)
+        print_log ("get_chunk", index, len(msg))
         return msg
 
 
@@ -563,7 +563,7 @@ class AbeStore(Datastore_class):
 
         r = loads(respdata)
         if r['error'] != None:
-            print r['error']
+            print_log (r['error'])
             return
 
         mempool_hashes = r.get('result')
@@ -591,7 +591,7 @@ class AbeStore(Datastore_class):
             else:
                 tx_id = store.import_tx(tx, False)
                 store.update_tx_cache(tx_id)
-                #print tx_hash
+                #print_log (tx_hash)
 
         store.commit()
         store.known_mempool_hashes = mempool_hashes
@@ -645,7 +645,7 @@ class AbeStore(Datastore_class):
 
 
 
-from processor import Processor
+from processor import Processor, print_log
 
 class BlockchainProcessor(Processor):
 
@@ -658,7 +658,7 @@ class BlockchainProcessor(Processor):
         # catch_up first
         self.block_header, time_catch_up, time_mempool, n = self.store.main_iteration()
         self.block_number = self.block_header.get('block_height')
-        print "blockchain: %d blocks"%self.block_number
+        print_log ("blockchain: %d blocks"%self.block_number)
 
         threading.Timer(10, self.run_store_iteration).start()
 
@@ -670,7 +670,7 @@ class BlockchainProcessor(Processor):
 
 
     def process(self, request, cache_only = False):
-        #print "abe process", request
+        #print_log ("abe process", request)
 
         message_id = request['id']
         method = request['method']
@@ -691,7 +691,7 @@ class BlockchainProcessor(Processor):
                 self.watch_address(address)
             except BaseException, e:
                 error = str(e) + ': ' + address
-                print "error:", error
+                print_log ("error:", error)
 
         elif method == 'blockchain.address.get_history':
             try:
@@ -699,7 +699,7 @@ class BlockchainProcessor(Processor):
                 result = self.store.get_history( address, cache_only )
             except BaseException, e:
                 error = str(e) + ': ' + address
-                print "error:", error
+                print_log ("error:", error)
 
         elif method == 'blockchain.block.get_header':
             if cache_only: 
@@ -710,7 +710,7 @@ class BlockchainProcessor(Processor):
                     result = self.store.get_block_header( height ) 
                 except BaseException, e:
                     error = str(e) + ': %d'% height
-                    print "error:", error
+                    print_log ("error:", error)
                     
         elif method == 'blockchain.block.get_chunk':
             if cache_only:
@@ -721,11 +721,11 @@ class BlockchainProcessor(Processor):
                     result = self.store.get_chunk( index ) 
                 except BaseException, e:
                     error = str(e) + ': %d'% index
-                    print "error:", error
+                    print_log ("error:", error)
                     
         elif method == 'blockchain.transaction.broadcast':
             txo = self.store.send_tx(params[0])
-            print "sent tx:", txo
+            print_log ("sent tx:", txo)
             result = txo 
 
         elif method == 'blockchain.transaction.get_merkle':
@@ -737,7 +737,7 @@ class BlockchainProcessor(Processor):
                     result = self.store.get_tx_merkle(tx_hash ) 
                 except BaseException, e:
                     error = str(e) + ': ' + tx_hash
-                    print "error:", error
+                    print_log ("error:", error)
                     
         elif method == 'blockchain.transaction.get':
             try:
@@ -746,7 +746,7 @@ class BlockchainProcessor(Processor):
                 result = self.store.get_raw_tx(tx_hash, height ) 
             except BaseException, e:
                 error = str(e) + ': ' + tx_hash
-                print "error:", error
+                print_log ("error:", error)
 
         else:
             error = "unknown method:%s"%method
@@ -772,18 +772,18 @@ class BlockchainProcessor(Processor):
             block_header, time_catch_up, time_mempool, n = self.store.main_iteration()
         except:
             traceback.print_exc(file=sys.stdout)
-            print "terminating"
+            print_log ("terminating")
             self.shared.stop()
 
         if self.shared.stopped(): 
-            print "exit timer"
+            print_log ("exit timer")
             return
 
-        #print "block number: %d  (%.3fs)  mempool:%d (%.3fs)"%(self.block_number, time_catch_up, n, time_mempool)
+        #print_log ("block number: %d  (%.3fs)  mempool:%d (%.3fs)"%(self.block_number, time_catch_up, n, time_mempool))
 
         if self.block_number != block_header.get('block_height'):
             self.block_number = block_header.get('block_height')
-            print "block number: %d  (%.3fs)"%(self.block_number, time_catch_up)
+            print_log ("block number: %d  (%.3fs)"%(self.block_number, time_catch_up))
             self.push_response({ 'id': None, 'method':'blockchain.numblocks.subscribe', 'params':[self.block_number] })
 
         if self.block_header != block_header:
