@@ -22,6 +22,12 @@ __________________________________________________________
 
 sudo apt-get install python-leveldb
 
+alternatively build yourself, see
+http://code.google.com/p/py-leveldb/ 
+and
+http://peter-hoffmann.com/2011/installation-leveldb-ubuntu-python.html
+make sure you have libtool, automake and pkg-config
+
 __________________________________________________________
 
 3. edit /etc/electrum.conf : 

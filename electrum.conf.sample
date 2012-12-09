@@ -3,19 +3,31 @@ host = localhost
 #report_host = 
 stratum_tcp_port = 50001
 stratum_http_port = 8081
+#stratum_tcp_ssl_port = 50002
+#stratum_http_ssl_port = 8082
 #report_stratum_tcp_port = 50001
 #report_stratum_http_port = 80
+#report_stratum_tcp_ssl_port = 50002
+#report_stratum_http_ssl_port = 443
 password = secret
 banner = Welcome to Electrum!
 irc = yes
-cache = no
+#irc_nick = <yournickname>
+#ssl_certfile = /path/to/electrum-server.crt
+#ssl_keyfile = /path/to/electrum-server.key
+
+#default backend is abe
+#backend = leveldb
+
+#for abe only, number of requests per single hash
+#limit = 1000
 
 [database]
 type = MySQLdb
 database = electrum
 username = electrum
 password = secret
-#
+
 # [database]
 # type = psycopg2
 # database = electrum
@@ -23,6 +35,11 @@ password = secret
 # [database]
 # type = sqlite3
 # database = electrum.sqlite
+
+# comment database section above 
+# if you use backend = leveldb
+# [leveldb]
+# path = /path/to/your/database
 
 [bitcoind]
 host = localhost
