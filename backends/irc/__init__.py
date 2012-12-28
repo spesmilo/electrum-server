@@ -62,7 +62,7 @@ class IrcThread(threading.Thread):
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
-                s.settimeout(260)
+                s.settimeout(300)
             except:
                 s.close()
                 time.sleep(10)

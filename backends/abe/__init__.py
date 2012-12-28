@@ -797,8 +797,11 @@ class BlockchainProcessor(Processor):
             except:
                 break
             if addr in self.watched_addresses:
-                status = self.store.get_status( addr )
-                self.push_response({ 'id': None, 'method':'blockchain.address.subscribe', 'params':[addr, status] })
+                try:
+                    status = self.store.get_status( addr )
+                    self.push_response({ 'id': None, 'method':'blockchain.address.subscribe', 'params':[addr, status] })
+                except:
+                    break
 
         threading.Timer(10, self.run_store_iteration).start()
 
