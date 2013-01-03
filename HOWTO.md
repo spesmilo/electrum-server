@@ -97,7 +97,7 @@ build from Git and also patch it with an electrum specific patch.
 
    $ cd src && git clone git://github.com/bitcoin/bitcoin.git
    $ cd bitcoin 
-   $ patch -p2 < ~/src/electrum/server/patch/patch
+   $ patch -p1 < ~/src/electrum/server/patch/patch
    $ cd src && make -f makefile.unix
 
 ### Step 3. Configure and start bitcoind
@@ -147,7 +147,35 @@ for example python2.6 or 2.8.
     $ sudo chmod +x /usr/local/lib/python2.7/dist-packages/Abe/abe.py
     $ ln -s /usr/local/lib/python2.7/dist-packages/Abe/abe.py ~/bin/abe
 
-### Step 5. Configure the database
+
+### Step 5. Select your backend - pruning leveldb or full abe server
+
+Electrum server can currently be operated in two modes - as a pruning server
+or as a full server. The pruning server uses leveldb and keeps a smaller and
+faster database by pruning spent transactions. It's a lot quicker to get up
+and running and requires less maintenance and diskspace than the full abe version
+
+The full version uses abe as a backend, the while the blockchain in bitcoind
+is at roughly 5 GB in January 2013, the abe mysql for a full server requires
+~22 GB diskspace for innodb and can take over a week to freshly index on most but
+the fastest of hardware.
+
+Full servers are useful for recovering all past transactions when restoring 
+from seed. Those are then stored in electrum.dat and won't need to be recovered
+until electrum.dat is removed. Pruning servers summarize past transactions
+when restoring from seed which can be feature. Once seed recovery is done
+switching between pruning and full servers can be done at any time without effect
+to the transaction history stored in electrum.dat.
+
+While it's useful for Electrum to have a number of full servers it is 
+expected that the vast majority of servers available publicly will be 
+pruning servers.
+
+If you decide to setup a pruning server with leveldb take a break from this 
+document, read and work through README.leveldb then come back and skip to step 8
+
+
+### Step 6. Configure the database
 
 Electrum server uses a SQL database to store the blockchain data. In theory,
 it supports all databases supported by Abe. At the time of this writing,
@@ -166,7 +194,7 @@ For PostgreSQL:
 
     TBW!
 
-### Step 6. Configure Abe and import blockchain into the database
+### Step 7. Configure Abe and import blockchain into the database
 
 When you run Electrum server for the first time, it will automatically
 import the blockchain into the database, so it is safe to skip this step.
@@ -214,7 +242,7 @@ expect it to take hours. Here are some benchmarks for importing
 	  * CPU: Intel Xeon X3430 @ 2.40GHz
 	  * HDD: 2 x SATA in a RAID1.
 
-### Step 7. Configure Electrum server
+### Step 8. Configure Electrum server
 
 Electrum reads a config file (/etc/electrum.conf) when starting up. This
 file includes the database setup, bitcoind RPC setup, and a few other
@@ -223,48 +251,10 @@ options.
     $ sudo cp ~/src/electrum/server/electrum.conf.sample /etc/electrum.conf
     $ sudo $EDITOR /etc/electrum.conf
 
-Write this in `electrum.conf`:
+Go through the sample config options and set them to your liking.
+If you intend to run the server publicly have a look at README-IRC.md 
 
-    # sample config for a public Electrum server	
-    [server]
-    host = host-fqdn
-    native_port = 50000
-    stratum_tcp_port:50001
-    stratum_http_port:8081
-    password = <electrum-server-password>
-    banner = Welcome to Electrum server!
-    irc = yes
-    cache = yes
-
-    # sample config for a private server (does not advertise on IRC)
-    [server]
-    host = localhost
-    native_port = 50000
-    stratum_tcp_port:50001
-    stratum_http_port:8081
-    password = <electrum-server-password>
-    banner = Welcome to my private Electrum server!
-    irc = no
-    cache = yes
-
-    # database setup - MySQL
-    [database]
-    type = MySQLdb
-    database = electrum
-    username = electrum
-    password = <database-password>
-
-    # database setup - PostgreSQL
-    TBD!
-
-    # bitcoind RPC setup
-    [bitcoind]
-    host = localhost
-    port = 8332
-    user = <rpc-username>
-    password = <rpc-password>
-
-### Step 8. (Finally!) Run Electrum server
+### Step 9. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server:
 
@@ -283,7 +273,7 @@ You should also take a look at the 'start' and 'stop' scripts in
 `~/src/electrum/server`. You can use them as a starting point to create a
 init script for your system.
 
-### 9. Test the Electrum server
+### Step 10. Test the Electrum server
 
 We will assume you have a working Electrum client, a wallet and some
 transactions history. You should start the client and click on the green
@@ -295,3 +285,9 @@ current server and connect to your new Electrum server. You should see your
 addresses and transactions history. You can see the number of blocks and
 response time in the Server selection window. You should send/receive some
 bitcoins to confirm that everything is working properly.
+
+### Step 11. Join us on IRC
+
+Say hi to the dev crew, other server operators and fans on 
+irc.freenode.net #electrum and we'll try to congratulate you
+on supporting the community by running an Electrum node
