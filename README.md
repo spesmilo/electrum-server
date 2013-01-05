@@ -18,7 +18,7 @@ Installation
 ------------
 
   1. Install [bitcoin-abe](https://github.com/jtobey/bitcoin-abe).
-  2. Install [jsonrpclib](https://code.google.com/p/jsonrpclib/).
+  2. Install [jsonrpclib](https://github.com/joshmarshall/jsonrpclib).
   3. Launch the server: `nohup python -u server.py > /var/log/electrum.log &`
      or use the included `start` script.
 
