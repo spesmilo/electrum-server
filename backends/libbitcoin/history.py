@@ -1,8 +1,10 @@
+import threading
+import time
+
 import bitcoin
 from bitcoin import bind, _1, _2, _3
-import threading
 import multimap
-import time
+
 
 class ExpiryQueue(threading.Thread):
 
@@ -23,7 +25,9 @@ class ExpiryQueue(threading.Thread):
         with self.lock:
             self.items.append(item)
 
+
 expiry_queue = ExpiryQueue()
+
 
 class MemoryPoolBuffer:
 
@@ -48,9 +52,11 @@ class MemoryPoolBuffer:
             address = bitcoin.payment_address()
             if address.extract(output.output_script):
                 desc[2].append((idx, str(address)))
-        self.txpool.store(tx,
+        self.txpool.store(
+            tx,
             bind(self.confirmed, _1, desc),
-            bind(self.mempool_stored, _1, desc, handle_store))
+            bind(self.mempool_stored, _1, desc, handle_store)
+        )
 
     def mempool_stored(self, ec, desc, handle_store):
         tx_hash, prevouts, addrs = desc
@@ -95,7 +101,7 @@ class MemoryPoolBuffer:
             pass
         result = []
         for outpoint in output_points:
-            if self.lookup_input.has_key(str(outpoint)):
+            if str(outpoint) in self.lookup_input:
                 point = self.lookup_input[str(outpoint)]
                 info = ExtendableDict()
                 info["tx_hash"] = point[0]
@@ -103,7 +109,7 @@ class MemoryPoolBuffer:
                 info["is_input"] = 1
                 info["timestamp"] = self.timestamps[info["tx_hash"]]
                 result.append(info)
-        if self.lookup_address.has_key(str(address)):
+        if str(address) in self.lookup_address:
             addr_points = self.lookup_address[str(address)]
             for point in addr_points:
                 info = ExtendableDict()
@@ -113,6 +119,7 @@ class MemoryPoolBuffer:
                 info["timestamp"] = self.timestamps[info["tx_hash"]]
                 result.append(info)
         handle(result)
+
 
 class PaymentEntry:
 
@@ -135,6 +142,7 @@ class PaymentEntry:
     def has_input(self):
         return self.input_point is not False
 
+
 class History:
 
     def __init__(self, chain, txpool, membuf):
@@ -153,12 +161,11 @@ class History:
         address = bitcoin.payment_address(address)
         # To begin we fetch all the outputs (payments in)
         # associated with this address
-        self.chain.fetch_outputs(address,
-            bind(self.check_membuf, _1, _2))
+        self.chain.fetch_outputs(address, bind(self.check_membuf, _1, _2))
 
     def stop(self):
         with self.lock:
-            assert self._stopped == False
+            assert self._stopped is False
             self._stopped = True
 
     def stopped(self):
@@ -174,8 +181,7 @@ class History:
     def check_membuf(self, ec, output_points):
         if self.stop_on_error(ec):
             return
-        self.membuf.check(output_points, self.address,
-            bind(self.start_loading, _1, output_points))
+        self.membuf.check(output_points, self.address, bind(self.start_loading, _1, output_points))
 
     def start_loading(self, membuf_result, output_points):
         if len(membuf_result) == 0 and len(output_points) == 0:
@@ -188,15 +194,13 @@ class History:
             with self.lock:
                 self.statement.append(entry)
             # Attempt to fetch the spend of this output
-            self.chain.fetch_spend(outpoint,
-                bind(self.load_spend, _1, _2, entry))
+            self.chain.fetch_spend(outpoint, bind(self.load_spend, _1, _2, entry))
             self.load_tx_info(outpoint, entry, False)
         # Load memory pool transactions
         with self.lock:
             self.membuf_result = membuf_result
         for info in self.membuf_result:
-            self.txpool.fetch(bitcoin.hash_digest(info["tx_hash"]),
-                bind(self.load_pool_tx, _1, _2, info))
+            self.txpool.fetch(bitcoin.hash_digest(info["tx_hash"]), bind(self.load_pool_tx, _1, _2, info))
 
     def load_spend(self, ec, inpoint, entry):
         # Need a custom self.stop_on_error(...) as a missing spend
@@ -227,7 +231,7 @@ class History:
             if any(not entry.is_loaded() for entry in self.statement):
                 return
             # Memory buffer transactions finished loading?
-            if any(not info.has_key("height") for info in self.membuf_result):
+            if any("height" not in info for info in self.membuf_result):
                 return
         # Whole operation completed successfully! Finish up.
         result = []
@@ -269,16 +273,14 @@ class History:
         # Before loading the transaction, Stratum requires the hash
         # of the parent block, so we load the block depth and then
         # fetch the block header and hash it.
-        self.chain.fetch_transaction_index(point.hash,
-            bind(self.tx_index, _1, _2, _3, entry, info))
+        self.chain.fetch_transaction_index(point.hash, bind(self.tx_index, _1, _2, _3, entry, info))
 
     def tx_index(self, ec, block_depth, offset, entry, info):
         if self.stop_on_error(ec):
             return
         info["height"] = block_depth
         # And now for the block hash
-        self.chain.fetch_block_header_by_depth(block_depth,
-            bind(self.block_header, _1, _2, entry, info))
+        self.chain.fetch_block_header_by_depth(block_depth, bind(self.block_header, _1, _2, entry, info))
 
     def block_header(self, ec, blk_head, entry, info):
         if self.stop_on_error(ec):
@@ -287,8 +289,7 @@ class History:
         info["block_hash"] = str(bitcoin.hash_block_header(blk_head))
         tx_hash = bitcoin.hash_digest(info["tx_hash"])
         # Now load the actual main transaction for this input or output
-        self.chain.fetch_transaction(tx_hash,
-            bind(self.load_chain_tx, _1, _2, entry, info))
+        self.chain.fetch_transaction(tx_hash, bind(self.load_chain_tx, _1, _2, entry, info))
 
     def load_pool_tx(self, ec, tx, info):
         if self.stop_on_error(ec):
@@ -319,8 +320,7 @@ class History:
             info["block_hash"] = "mempool"
             self.finish_if_done()
         create_handler = lambda prevout_index, input_index: \
-            bind(self.load_input_pool_tx, _1, _2,
-                prevout_index, info, input_index)
+            bind(self.load_input_pool_tx, _1, _2, prevout_index, info, input_index)
         self.fetch_input_txs(tx, info, create_handler)
 
     def load_tx(self, tx, info):
@@ -374,8 +374,7 @@ class History:
                 entry.input_loaded = info
             self.finish_if_done()
         create_handler = lambda prevout_index, input_index: \
-            bind(self.load_input_chain_tx, _1, _2,
-                prevout_index, entry, info, input_index)
+            bind(self.load_input_chain_tx, _1, _2, prevout_index, entry, info, input_index)
         self.fetch_input_txs(tx, info, create_handler)
 
     def inputs_all_loaded(self, info_inputs):
@@ -418,10 +417,12 @@ class History:
             info["block_hash"] = "mempool"
         self.finish_if_done()
 
+
 def payment_history(chain, txpool, membuf, address, handle_finish):
     h = History(chain, txpool, membuf)
     expiry_queue.add(h)
     h.start(address, handle_finish)
+
 
 if __name__ == "__main__":
     ex = bitcoin.satoshi_exporter()
@@ -434,8 +435,10 @@ if __name__ == "__main__":
 
     def blockchain_started(ec, chain):
         print "Blockchain initialisation:", ec
+
     def store_tx(ec):
         print "Tx", ec
+
     def finish(result):
         print "Finish"
         if result is None:
@@ -449,6 +452,7 @@ if __name__ == "__main__":
     class FakeMonitor:
         def tx_stored(self, tx):
             pass
+
         def tx_confirmed(self, tx):
             pass
 
@@ -475,4 +479,3 @@ if __name__ == "__main__":
     #payment_history(chain, txpool, membuf, address[1], finish)
     raw_input()
     print "Stopping..."
-

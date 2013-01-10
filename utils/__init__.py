@@ -15,61 +15,83 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+import base64
+from functools import partial
+from itertools import imap
+import random
+import string
+import threading
+import time
+import hashlib
+import re
+import sys
 
-
-import hashlib, base64, re
+__b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+__b58base = len(__b58chars)
 
 
 def rev_hex(s):
     return s.decode('hex')[::-1].encode('hex')
+
 
 def int_to_hex(i, length=1):
     s = hex(i)[2:].rstrip('L')
     s = "0"*(2*length - len(s)) + s
     return rev_hex(s)
 
+
 def var_int(i):
-    if i<0xfd:
+    if i < 0xfd:
         return int_to_hex(i)
-    elif i<=0xffff:
-        return "fd"+int_to_hex(i,2)
-    elif i<=0xffffffff:
-        return "fe"+int_to_hex(i,4)
+    elif i <= 0xffff:
+        return "fd" + int_to_hex(i, 2)
+    elif i <= 0xffffffff:
+        return "fe" + int_to_hex(i, 4)
     else:
-        return "ff"+int_to_hex(i,8)
+        return "ff" + int_to_hex(i, 8)
 
 
 Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
+
+
 hash_encode = lambda x: x[::-1].encode('hex')
+
+
 hash_decode = lambda x: x.decode('hex')[::-1]
 
 
 def header_to_string(res):
     pbh = res.get('prev_block_hash')
-    if pbh is None: pbh = '0'*64
-    s = int_to_hex(res.get('version'),4) \
+    if pbh is None:
+        pbh = '0'*64
+
+    return int_to_hex(res.get('version'), 4) \
         + rev_hex(pbh) \
         + rev_hex(res.get('merkle_root')) \
-        + int_to_hex(int(res.get('timestamp')),4) \
-        + int_to_hex(int(res.get('bits')),4) \
-        + int_to_hex(int(res.get('nonce')),4)
-    return s
-
-def header_from_string( s):
-    hex_to_int = lambda s: eval('0x' + s[::-1].encode('hex'))
-    h = {}
-    h['version'] = hex_to_int(s[0:4])
-    h['prev_block_hash'] = hash_encode(s[4:36])
-    h['merkle_root'] = hash_encode(s[36:68])
-    h['timestamp'] = hex_to_int(s[68:72])
-    h['bits'] = hex_to_int(s[72:76])
-    h['nonce'] = hex_to_int(s[76:80])
-    return h
+        + int_to_hex(int(res.get('timestamp')), 4) \
+        + int_to_hex(int(res.get('bits')), 4) \
+        + int_to_hex(int(res.get('nonce')), 4)
 
 
-############ functions from pywallet ##################### 
+def hex_to_int(s):
+    return eval('0x' + s[::-1].encode('hex'))
+
+
+def header_from_string(s):
+    return {
+        'version': hex_to_int(s[0:4]),
+        'prev_block_hash': hash_encode(s[4:36]),
+        'merkle_root': hash_encode(s[36:68]),
+        'timestamp': hex_to_int(s[68:72]),
+        'bits': hex_to_int(s[72:76]),
+        'nonce': hex_to_int(s[76:80]),
+    }
+
+
+############ functions from pywallet #####################
 
 addrtype = 0
+
 
 def hash_160(public_key):
     try:
@@ -83,27 +105,27 @@ def hash_160(public_key):
 
 
 def public_key_to_bc_address(public_key):
-    h160 = hash_160(public_key)
-    return hash_160_to_bc_address(h160)
+    return hash_160_to_bc_address(hash_160(public_key))
+
 
 def hash_160_to_bc_address(h160):
-    if h160 == 'None': return 'None'
+    if h160 == 'None':
+        return 'None'
     vh160 = chr(addrtype) + h160
     h = Hash(vh160)
     addr = vh160 + h[0:4]
     return b58encode(addr)
 
+
 def bc_address_to_hash_160(addr):
-    if addr == 'None': return 'None'
+    if addr == 'None':
+        return 'None'
     bytes = b58decode(addr, 25)
     return bytes[1:21]
 
 
-__b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-__b58base = len(__b58chars)
-
 def b58encode(v):
-    """ encode v, which is a string of bytes, to base58."""
+    """encode v, which is a string of bytes, to base58."""
 
     long_value = 0L
     for (i, c) in enumerate(v[::-1]):
@@ -120,10 +142,13 @@ def b58encode(v):
     # leading 0-bytes in the input become leading-1s
     nPad = 0
     for c in v:
-        if c == '\0': nPad += 1
-        else: break
+        if c == '\0':
+            nPad += 1
+        else:
+            break
 
     return (__b58chars[0]*nPad) + result
+
 
 def b58decode(v, length):
     """ decode v into a string of len bytes."""
@@ -140,8 +165,10 @@ def b58decode(v, length):
 
     nPad = 0
     for c in v:
-        if c == __b58chars[0]: nPad += 1
-        else: break
+        if c == __b58chars[0]:
+            nPad += 1
+        else:
+            break
 
     result = chr(0)*nPad + result
     if length is not None and len(result) != length:
@@ -154,6 +181,7 @@ def EncodeBase58Check(vchIn):
     hash = Hash(vchIn)
     return b58encode(vchIn + hash[0:4])
 
+
 def DecodeBase58Check(psz):
     vchRet = b58decode(psz, None)
     key = vchRet[0:-4]
@@ -165,12 +193,15 @@ def DecodeBase58Check(psz):
     else:
         return key
 
+
 def PrivKeyToSecret(privkey):
     return privkey[9:9+32]
+
 
 def SecretToASecret(secret):
     vchIn = chr(addrtype+128) + secret
     return EncodeBase58Check(vchIn)
+
 
 def ASecretToSecret(key):
     vch = DecodeBase58Check(key)
@@ -179,5 +210,21 @@ def ASecretToSecret(key):
     else:
         return False
 
+
 ########### end pywallet functions #######################
 
+def random_string(length):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in xrange(length))
+
+
+def timestr():
+    return time.strftime("[%d/%m/%Y-%H:%M:%S]")
+
+
+print_lock = threading.Lock()
+
+
+def print_log(*args):
+    with print_lock:
+        sys.stderr.write(timestr() + " " + " ".join(imap(str, args)) + "\n")
+        sys.stderr.flush()

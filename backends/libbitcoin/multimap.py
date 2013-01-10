@@ -7,7 +7,7 @@ class MultiMap:
         return self.multi[key]
 
     def __setitem__(self, key, value):
-        if not self.multi.has_key(key):
+        if key not in self.multi:
             self.multi[key] = []
         self.multi[key].append(value)
 
@@ -22,11 +22,13 @@ class MultiMap:
 
     def __repr__(self):
         return repr(self.multi)
+
     def __str__(self):
         return str(self.multi)
 
     def has_key(self, key):
-        return self.multi.has_key(key)
+        return key in self.multi
+
 
 if __name__ == "__main__":
     m = MultiMap()
@@ -37,4 +39,3 @@ if __name__ == "__main__":
     m.delete("foo", 1)
     m.delete("bar", 2)
     print m.multi
-

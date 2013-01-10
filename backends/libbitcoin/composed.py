@@ -1,6 +1,8 @@
-import bitcoin
 import threading
 import time
+
+import bitcoin
+
 
 class ExpiryQueue(threading.Thread):
 
@@ -23,6 +25,7 @@ class ExpiryQueue(threading.Thread):
 
 expiry_queue = ExpiryQueue()
 
+
 class StatementLine:
 
     def __init__(self, output_point):
@@ -41,6 +44,7 @@ class StatementLine:
                   self.input_loaded is None):
                 return False
         return True
+
 
 class PaymentHistory:
 
@@ -62,9 +66,10 @@ class PaymentHistory:
             for outpoint in output_points:
                 statement_line = StatementLine(outpoint)
                 self.statement.append(statement_line)
-                self.chain.fetch_spend(outpoint,
-                    bitcoin.bind(self.load_spend,
-                        bitcoin._1, bitcoin._2, statement_line))
+                self.chain.fetch_spend(
+                    outpoint,
+                    bitcoin.bind(self.load_spend, bitcoin._1, bitcoin._2, statement_line)
+                )
                 self.load_tx_info(outpoint, statement_line, False)
 
     def load_spend(self, ec, inpoint, statement_line):
@@ -87,8 +92,7 @@ class PaymentHistory:
                 line.input_loaded["value"] = -line.output_loaded["value"]
                 result.append(line.input_loaded)
             else:
-                line.output_loaded["raw_output_script"] = \
-                    line.raw_output_script
+                line.output_loaded["raw_output_script"] = line.raw_output_script
             result.append(line.output_loaded)
         self.handle_finish(result)
         self.stop()
@@ -106,23 +110,26 @@ class PaymentHistory:
         info["tx_hash"] = str(point.hash)
         info["index"] = point.index
         info["is_input"] = 1 if is_input else 0
-        self.chain.fetch_transaction_index(point.hash,
-            bitcoin.bind(self.tx_index, bitcoin._1, bitcoin._2, bitcoin._3,
-                statement_line, info))
+        self.chain.fetch_transaction_index(
+            point.hash,
+            bitcoin.bind(self.tx_index, bitcoin._1, bitcoin._2, bitcoin._3, statement_line, info)
+        )
 
     def tx_index(self, ec, block_depth, offset, statement_line, info):
         info["height"] = block_depth
-        self.chain.fetch_block_header_by_depth(block_depth,
-            bitcoin.bind(self.block_header, bitcoin._1, bitcoin._2,
-                statement_line, info))
+        self.chain.fetch_block_header_by_depth(
+            block_depth,
+            bitcoin.bind(self.block_header, bitcoin._1, bitcoin._2, statement_line, info)
+        )
 
     def block_header(self, ec, blk_head, statement_line, info):
         info["timestamp"] = blk_head.timestamp
         info["block_hash"] = str(bitcoin.hash_block_header(blk_head))
         tx_hash = bitcoin.hash_digest(info["tx_hash"])
-        self.chain.fetch_transaction(tx_hash,
-            bitcoin.bind(self.load_tx, bitcoin._1, bitcoin._2,
-                statement_line, info))
+        self.chain.fetch_transaction(
+            tx_hash,
+            bitcoin.bind(self.load_tx, bitcoin._1, bitcoin._2, statement_line, info)
+        )
 
     def load_tx(self, ec, tx, statement_line, info):
         outputs = []
@@ -152,9 +159,10 @@ class PaymentHistory:
         for tx_idx, tx_in in enumerate(tx.inputs):
             if info["is_input"] == 1 and info["index"] == tx_idx:
                 continue
-            self.chain.fetch_transaction(tx_in.previous_output.hash,
-                bitcoin.bind(self.load_input, bitcoin._1, bitcoin._2,
-                    tx_in.previous_output.index, statement_line, info, tx_idx))
+            self.chain.fetch_transaction(
+                tx_in.previous_output.hash,
+                bitcoin.bind(self.load_input, bitcoin._1, bitcoin._2, tx_in.previous_output.index, statement_line, info, tx_idx)
+            )
 
     def load_input(self, ec, tx, index, statement_line, info, inputs_index):
         script = tx.outputs[index].output_script
@@ -172,14 +180,17 @@ class PaymentHistory:
                     statement_line.output_loaded = info
         self.finish_if_done()
 
+
 def payment_history(chain, address, handle_finish):
     ph = PaymentHistory(chain)
     expiry_queue.add(ph)
     ph.run(address, handle_finish)
 
+
 if __name__ == "__main__":
     def finish(result):
         print result
+
     def last(ec, depth):
         print "D:", depth
 
@@ -191,4 +202,3 @@ if __name__ == "__main__":
     print "Looking up", address
     payment_history(chain, address, finish)
     raw_input()
-

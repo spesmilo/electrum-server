@@ -1,10 +1,12 @@
 import json
+import Queue as queue
 import socket
 import threading
 import time
-import Queue as queue
 
-from processor import Session, Dispatcher, print_log
+from processor import Session, Dispatcher
+from utils import print_log
+
 
 class TcpSession(Session):
 
@@ -50,7 +52,6 @@ class TcpSession(Session):
             self.stop()
 
 
-
 class TcpClientRequestor(threading.Thread):
 
     def __init__(self, dispatcher, session):
@@ -93,7 +94,7 @@ class TcpClientRequestor(threading.Thread):
 
         raw_command = self.message[0:raw_buffer].strip()
         self.message = self.message[raw_buffer + 1:]
-        if raw_command == 'quit': 
+        if raw_command == 'quit':
             self.session.stop()
             return False
 
@@ -112,9 +113,10 @@ class TcpClientRequestor(threading.Thread):
             # Return an error JSON in response.
             self.dispatcher.push_response({"error": "syntax error", "request": raw_command})
         else:
-            self.dispatcher.push_request(self.session,command)
+            self.dispatcher.push_request(self.session, command)
 
         return True
+
 
 class TcpServer(threading.Thread):
 
@@ -132,9 +134,9 @@ class TcpServer(threading.Thread):
 
     def run(self):
         if self.use_ssl:
-            print_log( "TCP/SSL server started.")
+            print_log("TCP/SSL server started.")
         else:
-            print_log( "TCP server started.")
+            print_log("TCP server started.")
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self.host, self.port))
@@ -150,4 +152,3 @@ class TcpServer(threading.Thread):
             self.dispatcher.collect_garbage()
             client_req = TcpClientRequestor(self.dispatcher, session)
             client_req.start()
-
