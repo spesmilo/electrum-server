@@ -47,6 +47,8 @@ def create_config():
     config.set('server', 'report_stratum_http_port', '')
     config.set('server', 'report_stratum_tcp_ssl_port', '')
     config.set('server', 'report_stratum_http_ssl_port', '')
+    config.set('server', 'ssl_certfile', '')
+    config.set('server', 'ssl_keyfile', '')
     config.set('server', 'password', '')
     config.set('server', 'irc', 'yes')
     config.set('server', 'irc_nick', '')
