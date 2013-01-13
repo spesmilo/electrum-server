@@ -49,14 +49,17 @@ build chain. You will need root access in order to install other software or
 Python libraries. You will need access to the SQL server to create users and
 databases.
 
-**Hardware.** Running a Bitcoin node and Electrum server is
-resource-intensive. At the time of this writing, the Bitcoin blockchain is
-3.5 GB large. The corresponding SQL database is about 4 time larger, so you
-should have a minimum of 14 GB free space. You should expect the total size
-to grow with time. CPU speed is also important, mostly for the initial block
-chain import, but also if you plan to run a public Electrum server, which
-could serve tens of concurrent requests. See step 6 below for some initial
-import benchmarks.
+**Hardware.** It's recommended to run a pruning server with leveldb.
+It is a light setup with diskspace requirements permanently under 1 GB and 
+less taxing on I/O and CPU once it's up and running. 
+Full (archival) servers on the other hand use SQL. At the time of this writing, 
+the Bitcoin blockchain is 5.5 GB large. The corresponding SQL database is 
+about 4 time larger, so you should have a minimum of 22 GB free space just 
+for SQL, growing continuously. 
+CPU speed is also important, mostly for the initial block chain import, but 
+also if you plan to run a public Electrum server, which could serve tens 
+of concurrent requests. See step 6 below for some initial import benchmarks 
+on SQL.
 
 Instructions
 ------------
@@ -128,41 +131,23 @@ You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
 
-### Step 4. Install Electrum dependencies
 
-Electrum server depends on various standard Python libraries. These will be
-already installed on your distribution, or can be installed with your
-package manager. Electrum also depends on two Python libraries which we wil
-l need to install "by hand": `Abe` and `JSONRPClib`.
-
-    $ sudo easy_install jsonrpclib
-    $ cd ~/src
-    $ git clone git://github.com/jtobey/bitcoin-abe.git
-    $ cd bitcoin-abe
-    $ sudo python setup.py install
-
-Please note that the path below might be slightly different on your system,
-for example python2.6 or 2.8.
-
-    $ sudo chmod +x /usr/local/lib/python2.7/dist-packages/Abe/abe.py
-    $ ln -s /usr/local/lib/python2.7/dist-packages/Abe/abe.py ~/bin/abe
-
-
-### Step 5. Select your backend - pruning leveldb or full abe server
+### Step 4. Select your backend - pruning leveldb or full abe server
 
 Electrum server can currently be operated in two modes - as a pruning server
 or as a full server. The pruning server uses leveldb and keeps a smaller and
 faster database by pruning spent transactions. It's a lot quicker to get up
-and running and requires less maintenance and diskspace than the full abe version
+and running and requires less maintenance and diskspace than the full abe
+server.
 
-The full version uses abe as a backend, the while the blockchain in bitcoind
-is at roughly 5 GB in January 2013, the abe mysql for a full server requires
-~22 GB diskspace for innodb and can take over a week to freshly index on most but
-the fastest of hardware.
+The full version uses abe as a backend. While the blockchain in bitcoind
+is at roughly 5.5 GB in January 2013, the abe mysql for a full server requires
+~25 GB diskspace for innodb and can take a week or two (!) to freshly index 
+on most but the fastest of hardware.
 
 Full servers are useful for recovering all past transactions when restoring 
 from seed. Those are then stored in electrum.dat and won't need to be recovered
-until electrum.dat is removed. Pruning servers summarize past transactions
+until electrum.dat is removed. Pruning servers summarize spent transactions
 when restoring from seed which can be feature. Once seed recovery is done
 switching between pruning and full servers can be done at any time without effect
 to the transaction history stored in electrum.dat.
@@ -172,7 +157,31 @@ expected that the vast majority of servers available publicly will be
 pruning servers.
 
 If you decide to setup a pruning server with leveldb take a break from this 
-document, read and work through README.leveldb then come back and skip to step 8
+document, read and work through README.leveldb then come back
+install jsonrcp (but not abe) from step 5 and then skip to step 8
+
+### Step 5. Install Electrum dependencies
+
+Electrum server depends on various standard Python libraries. These will be
+already installed on your distribution, or can be installed with your
+package manager. Electrum also depends on two Python libraries which we wil
+l need to install "by hand": `Abe` and `JSONRPClib`.
+
+    $ sudo easy_install jsonrpclib
+    $ cd ~/src
+    $ wget https://github.com/jtobey/bitcoin-abe/archive/v0.7.1.tar.gz
+    $ cd bitcoin-abe
+    $ sudo python setup.py install
+
+Electrum server does not currently support abe > 0.7.1 so please stick 
+with 0.7.1 for the time being. If you're version is < 0.7 you need to upgrade
+to 0.7.1!
+
+Please note that the path below might be slightly different on your system,
+for example python2.6 or 2.8.
+
+    $ sudo chmod +x /usr/local/lib/python2.7/dist-packages/Abe/abe.py
+    $ ln -s /usr/local/lib/python2.7/dist-packages/Abe/abe.py ~/bin/abe
 
 
 ### Step 6. Configure the database
