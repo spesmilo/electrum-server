@@ -50,8 +50,8 @@ Python libraries. You will need access to the SQL server to create users and
 databases.
 
 **Hardware.** It's recommended to run a pruning server with leveldb.
-It is a light setup with diskspace requirements permanently under 1 GB and 
-less taxing on I/O and CPU once it's up and running. 
+It is a light setup with diskspace requirements well under 1 GB growing 
+very moderately and less taxing on I/O and CPU once it's up and running. 
 Full (archival) servers on the other hand use SQL. At the time of this writing, 
 the Bitcoin blockchain is 5.5 GB large. The corresponding SQL database is 
 about 4 time larger, so you should have a minimum of 22 GB free space just 
@@ -242,7 +242,7 @@ for the initial import.
 
 Important notice: This is a *very* long process. Even on fast machines,
 expect it to take hours. Here are some benchmarks for importing
-~196K blocks (size of the Bitcoin blockchain at the time of this writing):
+~196K blocks (size of the Bitcoin blockchain in Septeber 2012):
 
   * System 1: ~9 hours.
 	  * CPU: Intel Core i7 Q740 @ 1.73GHz
@@ -262,6 +262,10 @@ options.
 
 Go through the sample config options and set them to your liking.
 If you intend to run the server publicly have a look at README-IRC.md 
+
+Ifu're looking to run SSL / HTTPS you need to generate a self-signed certificate
+using openssl. Otherwise you can just comment out the SSL / HTTPS ports and run 
+without.
 
 ### Step 9. (Finally!) Run Electrum server
 
