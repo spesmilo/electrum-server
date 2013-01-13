@@ -19,7 +19,7 @@ Installation
 
   1. To install and run a pruning server (easiest setup) see README.leveldb
   2. Install [bitcoin-abe](https://github.com/jtobey/bitcoin-abe).
-  3. Install [jsonrpclib](https://code.google.com/p/jsonrpclib/).
+  3. Install [jsonrpclib](https://github.com/joshmarshall/jsonrpclib).
   4. Launch the server: `nohup python -u server.py > /var/log/electrum.log &`
      or use the included `start` script.
 
