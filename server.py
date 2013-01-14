@@ -15,10 +15,16 @@
 # License along with this program.  If not, see
 # <http://www.gnu.org/licenses/agpl.html>.
 
-import time, sys, traceback, threading
 import ConfigParser
-
 import logging
+import socket
+import sys
+import time
+import threading
+import traceback
+
+import json
+
 logging.basicConfig()
 
 if sys.maxsize <= 2**32:
@@ -31,6 +37,7 @@ def attempt_read_config(config, filename):
             config.readfp(f)
     except IOError:
         pass
+
 
 def create_config():
     config = ConfigParser.ConfigParser()
@@ -66,43 +73,46 @@ def create_config():
 
     try:
         with open('/etc/electrum.banner', 'r') as f:
-            config.set('server','banner', f.read())
+            config.set('server', 'banner', f.read())
     except IOError:
         pass
 
     return config
 
+
 def run_rpc_command(command, stratum_tcp_port):
-    import socket, json
     try:
-        s = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-        s.connect(( host, int(stratum_tcp_port )))
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, int(stratum_tcp_port)))
     except:
         print "cannot connect to server."
         return
 
     method = 'server.' + command
-    request = json.dumps( { 'id':0, 'method':method, 'params':[password] } )
+    request = json.dumps({'id': 0, 'method': method, 'params': [password]})
     s.send(request + '\n')
     msg = ''
     while True:
         o = s.recv(1024)
         msg += o
-        if msg.find('\n') != -1: break
+        if msg.find('\n') != -1:
+            break
     s.close()
     r = json.loads(msg).get('result')
 
-    if command == 'info': 
+    if command == 'info':
         now = time.time()
-        print 'type           address   sub  version  time' 
+        print 'type           address   sub  version  time'
         for item in r:
-            print '%4s   %15s   %3s  %7s  %.2f'%( item.get('name'), 
-                                                  item.get('address'), 
-                                                  item.get('subscriptions'), 
-                                                  item.get('version'), 
-                                                  (now - item.get('time')) )
+            print '%4s   %15s   %3s  %7s  %.2f' % (item.get('name'),
+                                                   item.get('address'),
+                                                   item.get('subscriptions'),
+                                                   item.get('version'),
+                                                   (now - item.get('time')),
+                                                   )
     else:
         print r
+
 
 if __name__ == '__main__':
     config = create_config()
@@ -115,7 +125,8 @@ if __name__ == '__main__':
     ssl_certfile = config.get('server', 'ssl_certfile')
     ssl_keyfile = config.get('server', 'ssl_keyfile')
 
-    if stratum_tcp_ssl_port or stratum_http_ssl_port: assert ssl_certfile and ssl_keyfile 
+    if stratum_tcp_ssl_port or stratum_http_ssl_port:
+        assert ssl_certfile and ssl_keyfile
 
     if len(sys.argv) > 1:
         run_rpc_command(sys.argv[1], stratum_tcp_port)
@@ -135,8 +146,9 @@ if __name__ == '__main__':
         print "Unknown backend '%s' specified\n" % backend_name
         sys.exit(1)
 
-    for i in range(5): print ""
-    print_log( "Starting Electrum server on", host)
+    for i in xrange(5):
+        print ""
+    print_log("Starting Electrum server on", host)
 
     # Create hub
     dispatcher = Dispatcher(config)
@@ -180,5 +192,4 @@ if __name__ == '__main__':
         except:
             shared.stop()
 
-    print_log( "Electrum Server stopped")
-
+    print_log("Electrum Server stopped")

@@ -1,25 +1,12 @@
 import json
+import Queue as queue
 import socket
 import threading
 import time
-import traceback, sys
-import Queue as queue
+import traceback
+import sys
 
-def random_string(N):
-    import random, string
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(N))
-
-def timestr():
-    return time.strftime("[%d/%m/%Y-%H:%M:%S]")
-
-
-print_lock = threading.Lock()
-def print_log(*args):
-    args = [str(item) for item in args]
-    with print_lock:
-        sys.stderr.write(timestr() + " " + " ".join(args) + "\n")
-        sys.stderr.flush()
-
+from utils import random_string, timestr, print_log
 
 
 class Shared:
@@ -30,7 +17,7 @@ class Shared:
         self.config = config
 
     def stop(self):
-        print_log( "Stopping Stratum" )
+        print_log("Stopping Stratum")
         with self.lock:
             self._stopped = True
 
@@ -65,8 +52,7 @@ class Processor(threading.Thread):
             except:
                 traceback.print_exc(file=sys.stdout)
 
-        print_log( "processor terminating")
-            
+        print_log("processor terminating")
 
 
 class Dispatcher:
@@ -84,7 +70,6 @@ class Dispatcher:
         processor.shared = self.shared
         processor.start()
         self.request_dispatcher.processors[prefix] = processor
-
 
 
 class RequestDispatcher(threading.Thread):
@@ -108,7 +93,7 @@ class RequestDispatcher(threading.Thread):
         return self.response_queue.get()
 
     def push_request(self, session, item):
-        self.request_queue.put((session,item))
+        self.request_queue.put((session, item))
 
     def pop_request(self):
         return self.request_queue.get()
@@ -138,7 +123,6 @@ class RequestDispatcher(threading.Thread):
                 self.do_dispatch(session, request)
             except:
                 traceback.print_exc(file=sys.stdout)
-                
 
         self.stop()
 
@@ -149,7 +133,7 @@ class RequestDispatcher(threading.Thread):
         """ dispatch request to the relevant processor """
 
         method = request['method']
-        params = request.get('params',[])
+        params = request.get('params', [])
         suffix = method.split('.')[-1]
 
         if session is not None:
@@ -164,7 +148,7 @@ class RequestDispatcher(threading.Thread):
         try:
             p = self.processors[prefix]
         except:
-            print_log( "error: no processor for", prefix)
+            print_log("error: no processor for", prefix)
             return
 
         p.add_request(request)
@@ -227,7 +211,11 @@ class Session:
             addr = None
 
         if self.subscriptions:
-            print_log( "%4s"%self.name, "%15s"%self.address, "%35s"%addr, "%3d"%len(self.subscriptions), self.version )
+            print_log("%4s" % self.name,
+                      "%15s" % self.address,
+                      "%35s" % addr,
+                      "%3d" % len(self.subscriptions),
+                      self.version)
 
     def stopped(self):
         with self.lock:
@@ -257,7 +245,7 @@ class Session:
     def contains_subscription(self, subdesc):
         with self.lock:
             return subdesc in self.subscriptions
-    
+
 
 class ResponseDispatcher(threading.Thread):
 
@@ -279,17 +267,21 @@ class ResponseDispatcher(threading.Thread):
         params = response.get('params')
 
         # A notification
-        if internal_id is None: # and method is not None and params is not None:
+        if internal_id is None:  # and method is not None and params is not None:
             found = self.notification(method, params, response)
             if not found and method == 'blockchain.address.subscribe':
-                params2 = [self.shared.config.get('server','password')] + params
-                self.request_dispatcher.push_request(None,{'method':method.replace('.subscribe', '.unsubscribe'), 'params':params2, 'id':None})
+                request = {
+                    'id': None,
+                    'method': method.replace('.subscribe', '.unsubscribe'),
+                    'params': [self.shared.config.get('server', 'password')] + params,
+                }
 
+                self.request_dispatcher.push_request(None, request)
         # A response
-        elif internal_id is not None: 
+        elif internal_id is not None:
             self.send_response(internal_id, response)
         else:
-            print_log( "no method", response)
+            print_log("no method", response)
 
     def notification(self, method, params, response):
         subdesc = Session.build_subdesc(method, params)
@@ -300,7 +292,7 @@ class ResponseDispatcher(threading.Thread):
             if session.contains_subscription(subdesc):
                 session.send_response(response)
                 found = True
-        # if not found: print_log( "no subscriber for", subdesc)
+        # if not found: print_log("no subscriber for", subdesc)
         return found
 
     def send_response(self, internal_id, response):
@@ -309,5 +301,4 @@ class ResponseDispatcher(threading.Thread):
             response['id'] = message_id
             session.send_response(response)
         #else:
-        #    print_log( "send_response: no session", message_id, internal_id, response )
-
+        #    print_log("send_response: no session", message_id, internal_id, response )

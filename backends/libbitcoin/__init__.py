@@ -1,11 +1,13 @@
-import bitcoin
-from bitcoin import bind, _1, _2, _3
-from processor import Processor
 import threading
 import time
 
+import bitcoin
+from bitcoin import bind, _1, _2, _3
+
+from processor import Processor
 import history1 as history
 import membuf
+
 
 class HistoryCache:
 
@@ -27,8 +29,9 @@ class HistoryCache:
     def clear(self, addresses):
         with self.lock:
             for address in addresses:
-                if self.cache.has_key(address):
+                if address in self.cache:
                     del self.cache[address]
+
 
 class MonitorAddress:
 
@@ -46,7 +49,7 @@ class MonitorAddress:
 
     def monitor(self, address, result):
         for info in result:
-            if not info.has_key("raw_output_script"):
+            if "raw_output_script" not in info:
                 continue
             assert info["is_input"] == 0
             tx_hash = info["tx_hash"]
@@ -112,8 +115,8 @@ class MonitorAddress:
             response = {"id": None,
                         "method": "blockchain.address.subscribe",
                         "params": [str(address)]}
-            history.payment_history(service, chain, txpool, memory_buff,
-                address, bind(self.send_notify, _1, _2, response))
+            history.payment_history(service, chain, txpool, memory_buff, address,
+                                    bind(self.send_notify, _1, _2, response))
 
     def mempool_n(self, result):
         assert result is not None
@@ -135,6 +138,7 @@ class MonitorAddress:
         assert len(response["params"]) == 1
         response["params"].append(self.mempool_n(result))
         self.processor.push_response(response)
+
 
 class Backend:
 
@@ -208,6 +212,7 @@ class Backend:
         else:
             print "Accepted transaction", tx_hash
 
+
 class GhostValue:
 
     def __init__(self):
@@ -221,6 +226,7 @@ class GhostValue:
     def set(self, value):
         self.value = value
         self.event.set()
+
 
 class NumblocksSubscribe:
 
@@ -253,6 +259,7 @@ class NumblocksSubscribe:
                     "error": None}
         self.processor.push_response(response)
 
+
 class AddressGetHistory:
 
     def __init__(self, backend, processor):
@@ -265,8 +272,8 @@ class AddressGetHistory:
         chain = self.backend.blockchain
         txpool = self.backend.transaction_pool
         memory_buff = self.backend.memory_buffer
-        history.payment_history(service, chain, txpool, memory_buff,
-            address, bind(self.respond, _1, _2, request))
+        history.payment_history(service, chain, txpool, memory_buff, address,
+                                bind(self.respond, _1, _2, request))
 
     def respond(self, ec, result, request):
         if ec:
@@ -275,6 +282,7 @@ class AddressGetHistory:
         else:
             response = {"id": request["id"], "result": result, "error": None}
         self.processor.push_response(response)
+
 
 class AddressSubscribe:
 
@@ -290,8 +298,8 @@ class AddressSubscribe:
         chain = self.backend.blockchain
         txpool = self.backend.transaction_pool
         memory_buff = self.backend.memory_buffer
-        history.payment_history(service, chain, txpool, memory_buff,
-            address, bind(self.construct, _1, _2, request))
+        history.payment_history(service, chain, txpool, memory_buff, address,
+                                bind(self.construct, _1, _2, request))
 
     def construct(self, ec, result, request):
         if ec:
@@ -315,6 +323,7 @@ class AddressSubscribe:
         response = {"id": request["id"], "result": cached, "error": None}
         self.processor.push_response(response)
         return True
+
 
 class BlockchainProcessor(Processor):
 
@@ -349,13 +358,16 @@ class BlockchainProcessor(Processor):
         try:
             tx = exporter.load_transaction(raw_tx)
         except RuntimeError:
-            response = {"id": request["id"], "result": None,
-                        "error": {"message": 
-                            "Exception while parsing the transaction data.",
-                            "code": -4}}
+            response = {
+                "id": request["id"],
+                "result": None,
+                "error": {
+                    "message": "Exception while parsing the transaction data.",
+                    "code": -4,
+                }
+            }
         else:
             self.backend.protocol.broadcast_transaction(tx)
             tx_hash = str(bitcoin.hash_transaction(tx))
             response = {"id": request["id"], "result": tx_hash, "error": None}
         self.push_response(response)
-

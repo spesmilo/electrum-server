@@ -14,19 +14,31 @@
 # You should have received a copy of the GNU Affero General Public
 # License along with this program.  If not, see
 # <http://www.gnu.org/licenses/agpl.html>.
+"""
+sessions are identified with cookies
+ - each session has a buffer of responses to requests
+
+
+from the processor point of view:
+ - the user only defines process() ; the rest is session management.  thus sessions should not belong to processor
+
+"""
+import json
+import logging
+import os
+import Queue
+import SimpleXMLRPCServer
+import socket
+import SocketServer
+import sys
+import time
+import threading
+import traceback
+import types
 
 import jsonrpclib
 from jsonrpclib import Fault
 from jsonrpclib.jsonrpc import USE_UNIX_SOCKETS
-import SimpleXMLRPCServer
-import SocketServer
-import socket
-import logging
-import os, time
-import types
-import traceback
-import sys, threading
-
 from OpenSSL import SSL
 
 try:
@@ -35,21 +47,9 @@ except ImportError:
     # For Windows
     fcntl = None
 
-import json
 
-
-"""
-sessions are identified with cookies
- - each session has a buffer of responses to requests
-
-
-from the processor point of view: 
- - the user only defines process() ; the rest is session management.  thus sessions should not belong to processor
-
-"""
-
-
-from processor import random_string, print_log
+from processor import Session
+from utils import random_string, print_log
 
 
 def get_version(request):
@@ -59,38 +59,31 @@ def get_version(request):
     if 'id' in request.keys():
         return 1.0
     return None
-    
+
+
 def validate_request(request):
-    if type(request) is not types.DictType:
-        fault = Fault(
-            -32600, 'Request must be {}, not %s.' % type(request)
-        )
-        return fault
+    if not isinstance(request, types.DictType):
+        return Fault(-32600, 'Request must be {}, not %s.' % type(request))
     rpcid = request.get('id', None)
     version = get_version(request)
     if not version:
-        fault = Fault(-32600, 'Request %s invalid.' % request, rpcid=rpcid)
-        return fault        
+        return Fault(-32600, 'Request %s invalid.' % request, rpcid=rpcid)
     request.setdefault('params', [])
     method = request.get('method', None)
     params = request.get('params')
     param_types = (types.ListType, types.DictType, types.TupleType)
-    if not method or type(method) not in types.StringTypes or \
-        type(params) not in param_types:
-        fault = Fault(
-            -32600, 'Invalid request parameters or method.', rpcid=rpcid
-        )
-        return fault
+    if not method or type(method) not in types.StringTypes or type(params) not in param_types:
+        return Fault(-32600, 'Invalid request parameters or method.', rpcid=rpcid)
     return True
+
 
 class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
 
     def __init__(self, encoding=None):
-        SimpleXMLRPCServer.SimpleXMLRPCDispatcher.__init__(self,
-                                        allow_none=True,
-                                        encoding=encoding)
+        # todo: use super
+        SimpleXMLRPCServer.SimpleXMLRPCDispatcher.__init__(self, allow_none=True, encoding=encoding)
 
-    def _marshaled_dispatch(self, session_id, data, dispatch_method = None):
+    def _marshaled_dispatch(self, session_id, data, dispatch_method=None):
         response = None
         try:
             request = jsonrpclib.loads(data)
@@ -105,8 +98,8 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
         session.time = time.time()
 
         responses = []
-        if type(request) is not types.ListType:
-            request = [ request ]
+        if not isinstance(request, types.ListType):
+            request = [request]
 
         for req_entry in request:
             result = validate_request(req_entry)
@@ -115,14 +108,14 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
                 continue
 
             self.dispatcher.do_dispatch(session, req_entry)
-                
+
             if req_entry['method'] == 'server.stop':
-                return json.dumps({'result':'ok'})
+                return json.dumps({'result': 'ok'})
 
         r = self.poll_session(session)
         for item in r:
             responses.append(json.dumps(item))
-            
+
         if len(responses) > 1:
             response = '[%s]' % ','.join(responses)
         elif len(responses) == 1:
@@ -131,7 +124,6 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
             response = ''
 
         return response
-
 
     def create_session(self):
         session_id = random_string(10)
@@ -149,11 +141,8 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
         return responses
 
 
+class StratumJSONRPCRequestHandler(SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
 
-
-class StratumJSONRPCRequestHandler(
-        SimpleXMLRPCServer.SimpleXMLRPCRequestHandler):
-            
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Allow', 'GET, POST, OPTIONS')
@@ -161,7 +150,7 @@ class StratumJSONRPCRequestHandler(
         self.send_header('Access-Control-Allow-Headers', '*')
         self.send_header('Content-Length', '0')
         self.end_headers()
-            
+
     def do_GET(self):
         if not self.is_rpc_path_valid():
             self.report_404()
@@ -170,7 +159,7 @@ class StratumJSONRPCRequestHandler(
             session_id = None
             c = self.headers.get('cookie')
             if c:
-                if c[0:8]=='SESSION=':
+                if c[0:8] == 'SESSION=':
                     #print "found cookie", c[8:]
                     session_id = c[8:]
 
@@ -188,11 +177,11 @@ class StratumJSONRPCRequestHandler(
             fault = jsonrpclib.Fault(-32603, 'Server error: %s' % trace_string)
             response = fault.response()
             print "500", trace_string
-        if response == None:
+        if response is None:
             response = ''
 
         if session_id:
-            self.send_header("Set-Cookie", "SESSION=%s"%session_id)
+            self.send_header("Set-Cookie", "SESSION=%s" % session_id)
 
         self.send_header("Content-type", "application/json-rpc")
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -201,7 +190,6 @@ class StratumJSONRPCRequestHandler(
         self.wfile.write(response)
         self.wfile.flush()
         self.shutdown_connection()
-
 
     def do_POST(self):
         if not self.is_rpc_path_valid():
@@ -220,7 +208,7 @@ class StratumJSONRPCRequestHandler(
             session_id = None
             c = self.headers.get('cookie')
             if c:
-                if c[0:8]=='SESSION=':
+                if c[0:8] == 'SESSION=':
                     #print "found cookie", c[8:]
                     session_id = c[8:]
 
@@ -237,11 +225,11 @@ class StratumJSONRPCRequestHandler(
             fault = jsonrpclib.Fault(-32603, 'Server error: %s' % trace_string)
             response = fault.response()
             print "500", trace_string
-        if response == None:
+        if response is None:
             response = ''
 
         if session_id:
-            self.send_header("Set-Cookie", "SESSION=%s"%session_id)
+            self.send_header("Set-Cookie", "SESSION=%s" % session_id)
 
         self.send_header("Content-type", "application/json-rpc")
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -276,7 +264,7 @@ class SSLTCPServer(SocketServer.TCPServer):
             self.server_bind()
             self.server_activate()
 
-    def shutdown_request(self,request):
+    def shutdown_request(self, request):
         #request.shutdown()
         pass
 
@@ -298,7 +286,7 @@ class StratumHTTPServer(SocketServer.TCPServer, StratumJSONRPCDispatcher):
             # Unix sockets can't be bound if they already exist in the
             # filesystem. The convention of e.g. X11 is to unlink
             # before binding again.
-            if os.path.exists(addr): 
+            if os.path.exists(addr):
                 try:
                     os.unlink(addr)
                 except OSError:
@@ -331,7 +319,7 @@ class StratumHTTPSSLServer(SSLTCPServer, StratumJSONRPCDispatcher):
             # Unix sockets can't be bound if they already exist in the
             # filesystem. The convention of e.g. X11 is to unlink
             # before binding again.
-            if os.path.exists(addr): 
+            if os.path.exists(addr):
                 try:
                     os.unlink(addr)
                 except OSError:
@@ -344,13 +332,6 @@ class StratumHTTPSSLServer(SSLTCPServer, StratumJSONRPCDispatcher):
             flags |= fcntl.FD_CLOEXEC
             fcntl.fcntl(self.fileno(), fcntl.F_SETFD, flags)
 
-
-
-
-
-
-from processor import Session
-import Queue
 
 class HttpSession(Session):
 
@@ -370,6 +351,7 @@ class HttpSession(Session):
                 self._stopped = True
             return self._stopped
 
+
 class HttpServer(threading.Thread):
     def __init__(self, dispatcher, host, port, use_ssl, certfile, keyfile):
         self.shared = dispatcher.shared
@@ -383,22 +365,22 @@ class HttpServer(threading.Thread):
         self.keyfile = keyfile
         self.lock = threading.Lock()
 
-
     def run(self):
         # see http://code.google.com/p/jsonrpclib/
         from SocketServer import ThreadingMixIn
         if self.use_ssl:
-            class StratumThreadedServer(ThreadingMixIn, StratumHTTPSSLServer): pass
-            self.server = StratumThreadedServer(( self.host, self.port), self.certfile, self.keyfile)
-            print_log( "HTTPS server started.")
+            class StratumThreadedServer(ThreadingMixIn, StratumHTTPSSLServer):
+                pass
+            self.server = StratumThreadedServer((self.host, self.port), self.certfile, self.keyfile)
+            print_log("HTTPS server started.")
         else:
-            class StratumThreadedServer(ThreadingMixIn, StratumHTTPServer): pass
-            self.server = StratumThreadedServer(( self.host, self.port))
-            print_log( "HTTP server started.")
+            class StratumThreadedServer(ThreadingMixIn, StratumHTTPServer):
+                pass
+            self.server = StratumThreadedServer((self.host, self.port))
+            print_log("HTTP server started.")
 
         self.server.dispatcher = self.dispatcher
         self.server.register_function(None, 'server.stop')
         self.server.register_function(None, 'server.info')
 
         self.server.serve_forever()
-
