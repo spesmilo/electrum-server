@@ -74,7 +74,7 @@ def header_to_string(res):
 
 
 def hex_to_int(s):
-    return eval('0x' + s[::-1].encode('hex'))
+    return int('0x' + s[::-1].encode('hex'), 16)
 
 
 def header_from_string(s):
