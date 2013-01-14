@@ -627,10 +627,9 @@ class BlockchainProcessor(Processor):
             return -1
 
         if error:
-            response = {'id': message_id, 'error': error}
+            self.push_response({'id': message_id, 'error': error})
         elif result != '':
-            response = {'id': message_id, 'result': result}
-        self.push_response(response)
+            self.push_response({'id': message_id, 'result': result})
 
     def watch_address(self, addr):
         if addr not in self.watched_addresses:
