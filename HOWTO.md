@@ -54,7 +54,7 @@ It is a light setup with diskspace requirements well under 1 GB growing
 very moderately and less taxing on I/O and CPU once it's up and running. 
 Full (archival) servers on the other hand use SQL. At the time of this writing, 
 the Bitcoin blockchain is 5.5 GB large. The corresponding SQL database is 
-about 4 time larger, so you should have a minimum of 22 GB free space just 
+about 4 times larger, so you should have a minimum of 22 GB free space just 
 for SQL, growing continuously. 
 CPU speed is also important, mostly for the initial block chain import, but 
 also if you plan to run a public Electrum server, which could serve tens 
@@ -93,7 +93,7 @@ our ~/bin directory:
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum
 
-### Step 2. Donwnload Bitcoind from git & patch it
+### Step 2. Download Bitcoind from git & patch it
 
 In order for the latest versions of Electrum to work properly we will need to use the latest 
 build from Git and also patch it with an electrum specific patch.
@@ -263,7 +263,7 @@ options.
 Go through the sample config options and set them to your liking.
 If you intend to run the server publicly have a look at README-IRC.md 
 
-Ifu're looking to run SSL / HTTPS you need to generate a self-signed certificate
+If you're looking to run SSL / HTTPS you need to generate a self-signed certificate
 using openssl. Otherwise you can just comment out the SSL / HTTPS ports and run 
 without.
 
