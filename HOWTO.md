@@ -98,10 +98,10 @@ our ~/bin directory:
 In order for the latest versions of Electrum to work properly we will need to use the latest 
 build from Git and also patch it with an electrum specific patch.
 
-   $ cd src && git clone git://github.com/bitcoin/bitcoin.git
-   $ cd bitcoin 
-   $ patch -p1 < ~/src/electrum/server/patch/patch
-   $ cd src && make -f makefile.unix
+    $ cd src && git clone git://github.com/bitcoin/bitcoin.git
+    $ cd bitcoin 
+    $ patch -p1 < ~/src/electrum/server/patch/patch
+    $ cd src && make -f makefile.unix
 
 ### Step 3. Configure and start bitcoind
 
@@ -169,13 +169,13 @@ l need to install "by hand": `Abe` and `JSONRPClib`.
 
     $ sudo easy_install jsonrpclib
     $ cd ~/src
-    $ wget https://github.com/jtobey/bitcoin-abe/archive/v0.7.1.tar.gz
+    $ git clone https://github.com/jtobey/bitcoin-abe
     $ cd bitcoin-abe
+    $ git checkout c2a9969e20305faa41c40ae47533f2138f222ffc
     $ sudo python setup.py install
 
-Electrum server does not currently support abe > 0.7.1 so please stick 
-with 0.7.1 for the time being. If you're version is < 0.7 you need to upgrade
-to 0.7.1!
+Electrum server does not currently support abe 0.7.2+ so please stick 
+with a specific commit between 0.7.1 and 0.7.2 for the time being.
 
 Please note that the path below might be slightly different on your system,
 for example python2.6 or 2.8.
