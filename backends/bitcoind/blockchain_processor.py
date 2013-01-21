@@ -244,7 +244,7 @@ class BlockchainProcessor(Processor):
                 is_known = False
 
         # should not be necessary
-        hist.sort(key=lambda tup: tup[1])
+        hist.sort(key=lambda tup: tup[2])
         # check uniqueness too...
 
         # add memory pool
@@ -608,8 +608,8 @@ class BlockchainProcessor(Processor):
                     tx_height = params[1]
                     result = self.get_merkle(tx_hash, tx_height)
                 except BaseException, e:
-                    error = str(e) + ': ' + tx_hash
-                    print_log("error:", error)
+                    error = str(e) + ': ' + repr(params)
+                    print_log("get_merkle error:", error)
 
         elif method == 'blockchain.transaction.get':
             try:
@@ -617,8 +617,8 @@ class BlockchainProcessor(Processor):
                 height = params[1]
                 result = self.bitcoind('getrawtransaction', [tx_hash, 0, height])
             except BaseException, e:
-                error = str(e) + ': ' + tx_hash
-                print_log("error:", error)
+                error = str(e) + ': ' + repr(params)
+                print_log("tx get error:", error)
 
         else:
             error = "unknown method:%s" % method
