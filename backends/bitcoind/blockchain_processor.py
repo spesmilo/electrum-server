@@ -744,7 +744,7 @@ class BlockchainProcessor(Processor):
 
     def invalidate_cache(self, address):
         with self.cache_lock:
-            if 'address' in self.history_cache:
+            if address in self.history_cache:
                 print_log("cache: invalidating", address)
                 self.history_cache.pop(address)
 
