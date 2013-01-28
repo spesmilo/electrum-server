@@ -551,7 +551,7 @@ class BlockchainProcessor(Processor):
                 address = params[1]
                 if password == self.config.get('server', 'password'):
                     self.watched_addresses.remove(address)
-                    print_log('unsubscribed', address)
+                    # print_log('unsubscribed', address)
                     result = "ok"
                 else:
                     print_log('incorrect password')
@@ -745,7 +745,7 @@ class BlockchainProcessor(Processor):
     def invalidate_cache(self, address):
         with self.cache_lock:
             if address in self.history_cache:
-                print_log("cache: invalidating", address)
+                # print_log("cache: invalidating", address)
                 self.history_cache.pop(address)
 
         if address in self.watched_addresses:
