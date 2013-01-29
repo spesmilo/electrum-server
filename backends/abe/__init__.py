@@ -517,8 +517,8 @@ class AbeStore(Datastore.Datastore):
         # find subset.
         # TODO: do not compute this on client request, better store the hash tree of each block in a database...
 
-        merkle = map(decode, merkle)
-        target_hash = decode(tx_hash)
+        merkle = map(hash_decode, merkle)
+        target_hash = hash_decode(tx_hash)
 
         s = []
         while len(merkle) != 1:
@@ -528,10 +528,10 @@ class AbeStore(Datastore.Datastore):
             while merkle:
                 new_hash = Hash(merkle[0] + merkle[1])
                 if merkle[0] == target_hash:
-                    s.append(encode(merkle[1]))
+                    s.append(hash_encode(merkle[1]))
                     target_hash = new_hash
                 elif merkle[1] == target_hash:
-                    s.append(encode(merkle[0]))
+                    s.append(hash_encode(merkle[0]))
                     target_hash = new_hash
                 n.append(new_hash)
                 merkle = merkle[2:]
