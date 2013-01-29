@@ -16,7 +16,7 @@ from processor import Processor, print_log
 from utils import *
 
 
-class AbeStore(Datastore.Datastore):
+class AbeStore(DataStore.DataStore):
 
     def __init__(self, config):
         conf = DataStore.CONFIG_DEFAULTS
@@ -39,7 +39,7 @@ class AbeStore(Datastore.Datastore):
             print_log('  addrtype = 48')
             self.addrtype = 48
 
-        Datastore.Datastore.__init__(self, args)
+        DataStore.DataStore.__init__(self, args)
 
         # Use 1 (Bitcoin) if chain_id is not sent
         self.chain_id = self.datadirs[0]["chain_id"] or 1
