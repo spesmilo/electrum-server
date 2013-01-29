@@ -97,6 +97,7 @@ our ~/bin directory:
 
 In order for the latest versions of Electrum to work properly we will need to use the latest 
 build from Git and also patch it with an electrum specific patch.
+Please make sure you run a version of bitcoind from git from at least December 2012 or newer:
 
     $ cd src && git clone git://github.com/bitcoin/bitcoin.git
     $ cd bitcoin 
@@ -251,6 +252,18 @@ expect it to take hours. Here are some benchmarks for importing
 	  * CPU: Intel Xeon X3430 @ 2.40GHz
 	  * HDD: 2 x SATA in a RAID1.
 
+### Step 7b. Alternatively: Fetch abe blockchain from the net for import
+
+It's much faster to import an existing dataset than to index the blockchain 
+using abe yourself. 
+
+Importing a mysql dump of ~8 GB takes around 18-20 hours on a regular HDD 
+and can be sped up by using SSDs or importing into /dev/shm memory
+
+You can fetch recent copies of mysql dumps and further instructions 
+from the Electrum full archival server foundry at:
+http://electrum-foundry.no-ip.org/ 
+
 ### Step 8. Configure Electrum server
 
 Electrum reads a config file (/etc/electrum.conf) when starting up. This
@@ -299,8 +312,14 @@ addresses and transactions history. You can see the number of blocks and
 response time in the Server selection window. You should send/receive some
 bitcoins to confirm that everything is working properly.
 
-### Step 11. Join us on IRC
+### Step 11. Join us on IRC, subscribe to the server thread
 
 Say hi to the dev crew, other server operators and fans on 
 irc.freenode.net #electrum and we'll try to congratulate you
 on supporting the community by running an Electrum node
+
+If you're operating a public Electrum server please subscribe
+to or regulary check the following thread:
+https://bitcointalk.org/index.php?topic=85475.0
+It'll contain announcements about important updates to Electrum
+server required for a smooth user experience.
