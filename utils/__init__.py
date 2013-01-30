@@ -90,7 +90,6 @@ def header_from_string(s):
 
 ############ functions from pywallet #####################
 
-addrtype = 0
 
 
 def hash_160(public_key):
@@ -108,7 +107,7 @@ def public_key_to_bc_address(public_key):
     return hash_160_to_bc_address(hash_160(public_key))
 
 
-def hash_160_to_bc_address(h160):
+def hash_160_to_bc_address(h160, addrtype = 0):
     if h160 == 'None':
         return 'None'
     vh160 = chr(addrtype) + h160
@@ -194,21 +193,6 @@ def DecodeBase58Check(psz):
         return key
 
 
-def PrivKeyToSecret(privkey):
-    return privkey[9:9+32]
-
-
-def SecretToASecret(secret):
-    vchIn = chr(addrtype+128) + secret
-    return EncodeBase58Check(vchIn)
-
-
-def ASecretToSecret(key):
-    vch = DecodeBase58Check(key)
-    if vch and vch[0] == chr(addrtype+128):
-        return vch[1:]
-    else:
-        return False
 
 
 ########### end pywallet functions #######################

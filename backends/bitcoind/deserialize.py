@@ -225,8 +225,7 @@ def parse_TxOut(vds, i):
     d = {}
     d['value'] = vds.read_int64()
     scriptPubKey = vds.read_bytes(vds.read_compact_size())
-    d['address'] = extract_public_key(scriptPubKey)
-    #d['script'] = decode_script(scriptPubKey)
+    d['address'] = get_address_from_output_script(scriptPubKey)
     d['raw_output_script'] = scriptPubKey.encode('hex')
     d['index'] = i
     return d
@@ -336,15 +335,10 @@ def match_decoded(decoded, to_match):
     return True
 
 
-def extract_public_key(bytes):
-    decoded = list(script_GetOp(bytes))
 
-    # non-generated TxIn transactions push a signature
-    # (seventy-something bytes) and then their public key
-    # (65 bytes) onto the stack:
-    match = [opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4]
-    if match_decoded(decoded, match):
-        return public_key_to_bc_address(decoded[1][1])
+
+def get_address_from_output_script(bytes):
+    decoded = [ x for x in script_GetOp(bytes) ]
 
     # The Genesis Block, self-payments, and pay-by-IP-address payments look like:
     # 65 BYTES:... CHECKSIG
@@ -368,6 +362,13 @@ def extract_public_key(bytes):
     match = [opcodes.OP_DUP, opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG, opcodes.OP_NOP]
     if match_decoded(decoded, match):
         return hash_160_to_bc_address(decoded[2][1])
+
+    # p2sh
+    match = [ opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUAL ]
+    if match_decoded(decoded, match):
+        addr = hash_160_to_bc_address(decoded[1][1],5)
+        print "p2sh", addr
+        return addr
 
     #raise BaseException("address not found in script") see ce35795fb64c268a52324b884793b3165233b1e6d678ccaadf760628ec34d76b
     return "None"
