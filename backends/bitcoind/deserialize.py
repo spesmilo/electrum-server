@@ -367,8 +367,6 @@ def get_address_from_output_script(bytes):
     match = [ opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUAL ]
     if match_decoded(decoded, match):
         addr = hash_160_to_bc_address(decoded[1][1],5)
-        print "p2sh", addr
         return addr
 
-    #raise BaseException("address not found in script") see ce35795fb64c268a52324b884793b3165233b1e6d678ccaadf760628ec34d76b
     return "None"
