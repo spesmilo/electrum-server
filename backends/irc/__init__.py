@@ -96,7 +96,11 @@ class IrcThread(threading.Thread):
                     elif '352' in line:  # answer to /who
                         # warning: this is a horrible hack which apparently works
                         k = line.index('352')
-                        ip = socket.gethostbyname(line[k+4])
+                        try:
+                            ip = socket.gethostbyname(line[k+4])
+                        except:
+                            print_log("gethostbyname error", line[k+4])
+                            continue
                         name = line[k+6]
                         host = line[k+9]
                         ports = line[k+10:]
