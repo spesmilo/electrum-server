@@ -57,6 +57,15 @@ class BlockchainProcessor(Processor):
         self.sent_header = None
 
         try:
+            hash_160 = bc_address_to_hash_160("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa")
+            self.db.Get(hash_160)
+            print_log("Your database '%s' is deprecated. Please create a new database"%self.dbpath)
+            self.shared.stop()
+            return
+        except:
+            pass
+
+        try:
             hist = self.deserialize(self.db.Get('height'))
             self.last_hash, self.height, _ = hist[0]
             print_log("hist", hist)
@@ -236,8 +245,7 @@ class BlockchainProcessor(Processor):
 
         with self.dblock:
             try:
-                hash_160 = bc_address_to_hash_160(addr)
-                hist = self.deserialize(self.db.Get(hash_160))
+                hist = self.deserialize(self.db.Get(addr))
                 is_known = True
             except:
                 hist = []
@@ -414,8 +422,7 @@ class BlockchainProcessor(Processor):
         # read histories of addresses
         for txid, tx in txdict.items():
             for x in tx.get('outputs'):
-                hash_160 = bc_address_to_hash_160(x.get('address'))
-                addr_to_read.append(hash_160)
+                addr_to_read.append(x.get('address'))
 
         addr_to_read.sort()
         for addr in addr_to_read:
@@ -446,13 +453,11 @@ class BlockchainProcessor(Processor):
                 undo_info[txid] = undo
 
                 for x in tx.get('outputs'):
-                    hash_160 = bc_address_to_hash_160(x.get('address'))
-                    self.add_to_history(hash_160, txid, x.get('index'), block_height)
+                    self.add_to_history(x.get('address'), txid, x.get('index'), block_height)
 
             else:
                 for x in tx.get('outputs'):
-                    hash_160 = bc_address_to_hash_160(x.get('address'))
-                    self.remove_from_history(hash_160, txid, x.get('index'))
+                    self.remove_from_history(x.get('address'), txid, x.get('index'))
 
                 i = 0
                 for x in tx.get('inputs'):
@@ -465,7 +470,7 @@ class BlockchainProcessor(Processor):
 
                     # re-add them to the history
                     self.add_to_history(prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
-                    # print_log("new hist for", hash_160_to_bc_address(prevout_addr), self.deserialize(self.batch_list[prevout_addr]) )
+                    # print_log("new hist for", prevout_addr, self.deserialize(self.batch_list[prevout_addr]) )
 
         # write
         max_len = 0
@@ -510,10 +515,9 @@ class BlockchainProcessor(Processor):
                       "read:%0.2f " % (t1 - t00),
                       "proc:%.2f " % (t2-t1),
                       "write:%.2f " % (t3-t2),
-                      "max:", max_len, hash_160_to_bc_address(max_addr))
+                      "max:", max_len, max_addr)
 
-        for h160 in self.batch_list.keys():
-            addr = hash_160_to_bc_address(h160)
+        for addr in self.batch_list.keys():
             self.invalidate_cache(addr)
 
     def add_request(self, request):
@@ -697,8 +701,7 @@ class BlockchainProcessor(Processor):
             for x in tx.get('inputs'):
                 txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
                 try:
-                    h160 = self.db.Get(txi)
-                    addr = hash_160_to_bc_address(h160)
+                    addr = self.db.Get(txi)
                 except:
                     continue
                 l = self.mempool_addresses.get(tx_hash, [])
@@ -723,7 +726,7 @@ class BlockchainProcessor(Processor):
             if tx_hash not in self.mempool_hashes:
                 self.mempool_addresses.pop(tx_hash)
 
-        # rebuild histories
+        # rebuild mempool histories
         new_mempool_hist = {}
         for tx_hash, addresses in self.mempool_addresses.items():
             for addr in addresses:
@@ -732,6 +735,7 @@ class BlockchainProcessor(Processor):
                     h.append(tx_hash)
                 new_mempool_hist[addr] = h
 
+        # invalidate cache for mempool addresses whose mempool history has changed
         for addr in new_mempool_hist.keys():
             if addr in self.mempool_hist.keys():
                 if self.mempool_hist[addr] != new_mempool_hist[addr]:
@@ -739,13 +743,20 @@ class BlockchainProcessor(Processor):
             else:
                 self.invalidate_cache(addr)
 
+        # invalidate cache for addresses that are removed from mempool ?
+        # this should not be necessary if they go into a block, but they might not
+        for addr in self.mempool_hist.keys():
+            if addr not in new_mempool_hist.keys():
+                self.invalidate_cache(addr)
+        
+
         with self.mempool_lock:
             self.mempool_hist = new_mempool_hist
 
     def invalidate_cache(self, address):
         with self.cache_lock:
             if address in self.history_cache:
-                # print_log("cache: invalidating", address)
+                print_log("cache: invalidating", address)
                 self.history_cache.pop(address)
 
         if address in self.watched_addresses:
