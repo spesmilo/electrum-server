@@ -290,7 +290,7 @@ class AbeStore(DataStore.DataStore):
                 "index": int(pos),
                 "value": int(value),
             })
-            known_tx.append(self.hashout_hex(tx_hash))
+            known_tx.append(tx_hash)
 
         # todo: sort them really...
         txpoints = sorted(txpoints, key=operator.itemgetter("timestamp"))
