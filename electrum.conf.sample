@@ -16,17 +16,24 @@ irc = yes
 #ssl_certfile = /path/to/electrum-server.crt
 #ssl_keyfile = /path/to/electrum-server.key
 
-#default backend is abe
-#backend = leveldb
+# default backend is leveldb (pruning server)
+backend = leveldb
 
-#for abe only, number of requests per single hash
-#limit = 1000
+[leveldb]
+path = /path/to/your/database
+pruning_limit = 10
 
-[database]
-type = MySQLdb
-database = electrum
-username = electrum
-password = secret
+
+# ABE configuration for full servers
+
+# number of requests per single hash
+# limit = 1000
+
+# [database]
+# type = MySQLdb
+# database = electrum
+# username = electrum
+# password = secret
 
 # [database]
 # type = psycopg2
@@ -36,10 +43,6 @@ password = secret
 # type = sqlite3
 # database = electrum.sqlite
 
-# comment database section above 
-# if you use backend = leveldb
-# [leveldb]
-# path = /path/to/your/database
 
 [bitcoind]
 host = localhost

@@ -37,6 +37,8 @@ class BlockchainProcessor(Processor):
 
         self.address_queue = Queue()
         self.dbpath = config.get('leveldb', 'path')
+        self.pruning_limit = config.getint('leveldb', 'pruning_limit')
+        self.db_version = 1 # increase this when database needs to be updated
 
         self.dblock = threading.Lock()
         try:
@@ -57,23 +59,21 @@ class BlockchainProcessor(Processor):
         self.sent_header = None
 
         try:
-            hash_160 = bc_address_to_hash_160("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa")
-            self.db.Get(hash_160)
-            print_log("Your database '%s' is deprecated. Please create a new database"%self.dbpath)
-            self.shared.stop()
-            return
-        except:
-            pass
-
-        try:
             hist = self.deserialize(self.db.Get('height'))
-            self.last_hash, self.height, _ = hist[0]
-            print_log("hist", hist)
+            self.last_hash, self.height, db_version = hist[0]
+            print_log("Database version", self.db_version)
+            print_log("Blockchain height", self.height)
         except:
-            #traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stdout)
             print_log('initializing database')
             self.height = 0
             self.last_hash = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f'
+
+        # check version
+        if self.db_version != db_version:
+            print_log("Your database '%s' is deprecated. Please create a new database"%self.dbpath)
+            self.shared.stop()
+            return
 
         # catch_up headers
         self.init_headers(self.height)
@@ -107,17 +107,29 @@ class BlockchainProcessor(Processor):
     def serialize(self, h):
         s = ''
         for txid, txpos, height in h:
-            s += txid + int_to_hex(txpos, 4) + int_to_hex(height, 4)
-        return s.decode('hex')
+            s += self.serialize_item(txid, txpos, height)
+        return s
+
+    def serialize_item(self, txid, txpos, height, spent=chr(0)):
+        s = (txid + int_to_hex(txpos, 4) + int_to_hex(height, 3)).decode('hex') + spent 
+        return s
+
+    def deserialize_item(self,s):
+        txid = s[0:32].encode('hex')
+        txpos = int(rev_hex(s[32:36].encode('hex')), 16)
+        height = int(rev_hex(s[36:39].encode('hex')), 16)
+        spent = s[39:40]
+        return (txid, txpos, height, spent)
 
     def deserialize(self, s):
         h = []
         while s:
-            txid = s[0:32].encode('hex')
-            txpos = int(rev_hex(s[32:36].encode('hex')), 16)
-            height = int(rev_hex(s[36:40].encode('hex')), 16)
+            txid, txpos, height, spent = self.deserialize_item(s[0:40])
             h.append((txid, txpos, height))
-            s = s[40:]
+            if spent == chr(1):
+                txid, txpos, height, spent = self.deserialize_item(s[40:80])
+                h.append((txid, txpos, height))
+            s = s[80:]
         return h
 
     def block2header(self, b):
@@ -251,16 +263,20 @@ class BlockchainProcessor(Processor):
                 hist = []
                 is_known = False
 
-        # should not be necessary
+        # sort history, because redeeming transactions are next to the corresponding txout
         hist.sort(key=lambda tup: tup[2])
-        # check uniqueness too...
+
+        # uniqueness
+        hist = set(map(lambda x: (x[0], x[2]), hist))
 
         # add memory pool
         with self.mempool_lock:
             for txid in self.mempool_hist.get(addr, []):
                 hist.append((txid, 0, 0))
 
-        hist = map(lambda x: {'tx_hash': x[0], 'height': x[2]}, hist)
+        # convert to dict
+        hist = map(lambda x: {'tx_hash': x[0], 'height': x[1]}, hist)
+
         # add something to distinguish between unused and empty addresses
         if hist == [] and is_known:
             hist = ['*']
@@ -311,18 +327,20 @@ class BlockchainProcessor(Processor):
 
         return {"block_height": height, "merkle": s, "pos": tx_pos}
 
+
     def add_to_history(self, addr, tx_hash, tx_pos, tx_height):
         # keep it sorted
-        s = (tx_hash + int_to_hex(tx_pos, 4) + int_to_hex(tx_height, 4)).decode('hex')
+        s = self.serialize_item(tx_hash, tx_pos, tx_height) + 40*chr(0)
+        assert len(s) == 80
 
         serialized_hist = self.batch_list[addr]
 
-        l = len(serialized_hist)/40
+        l = len(serialized_hist)/80
         for i in range(l-1, -1, -1):
-            item = serialized_hist[40*i:40*(i+1)]
-            item_height = int(rev_hex(item[36:40].encode('hex')), 16)
+            item = serialized_hist[80*i:80*(i+1)]
+            item_height = int(rev_hex(item[36:39].encode('hex')), 16)
             if item_height < tx_height:
-                serialized_hist = serialized_hist[0:40*(i+1)] + s + serialized_hist[40*(i+1):]
+                serialized_hist = serialized_hist[0:80*(i+1)] + s + serialized_hist[80*(i+1):]
                 break
         else:
             serialized_hist = s + serialized_hist
@@ -333,30 +351,91 @@ class BlockchainProcessor(Processor):
         txo = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
         self.batch_txio[txo] = addr
 
-    def remove_from_history(self, addr, tx_hash, tx_pos):
-        txi = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
 
-        if addr is None:
-            try:
-                addr = self.batch_txio[txi]
-            except:
-                raise BaseException(tx_hash, tx_pos)
+
+    def revert_add_to_history(self, addr, tx_hash, tx_pos, tx_height):
 
         serialized_hist = self.batch_list[addr]
+        s = self.serialize_item(tx_hash, tx_pos, tx_height) + 40*chr(0)
+        if serialized_hist.find(s) == -1: raise
+        serialized_hist = serialized_hist.replace(s, '')
+        self.batch_list[addr] = serialized_hist
 
-        l = len(serialized_hist)/40
+
+
+    def prune_history(self, addr, undo):
+        # remove items that have bit set to one
+        if undo.get(addr) is None: undo[addr] = []
+
+        serialized_hist = self.batch_list[addr]
+        l = len(serialized_hist)/80
         for i in range(l):
-            item = serialized_hist[40*i:40*(i+1)]
+            if len(serialized_hist)/80 < self.pruning_limit: break
+            item = serialized_hist[80*i:80*(i+1)] 
+            if item[39:40] == chr(1):
+                assert item[79:80] == chr(2)
+                serialized_hist = serialized_hist[0:80*i] + serialized_hist[80*(i+1):]
+                undo[addr].append(item)  # items are ordered
+        self.batch_list[addr] = serialized_hist
+
+
+    def revert_prune_history(self, addr, undo):
+        # restore removed items
+        serialized_hist = self.batch_list[addr]
+
+        if undo.get(addr) is not None: 
+            itemlist = undo.pop(addr)
+        else:
+            return 
+
+        if not itemlist: return
+
+        l = len(serialized_hist)/80
+        tx_item = ''
+        for i in range(l-1, -1, -1):
+            if tx_item == '':
+                if not itemlist: 
+                    break
+                else:
+                    tx_item = itemlist.pop(-1) # get the last element
+                    tx_height = int(rev_hex(tx_item[36:39].encode('hex')), 16)
+            
+            item = serialized_hist[80*i:80*(i+1)]
+            item_height = int(rev_hex(item[36:39].encode('hex')), 16)
+
+            if item_height < tx_height:
+                serialized_hist = serialized_hist[0:80*(i+1)] + tx_item + serialized_hist[80*(i+1):]
+                tx_item = ''
+
+        else:
+            serialized_hist = ''.join(itemlist) + tx_item + serialized_hist
+
+        self.batch_list[addr] = serialized_hist
+
+
+    def set_spent_bit(self, addr, txi, is_spent, txid=None, index=None, height=None):
+        serialized_hist = self.batch_list[addr]
+        l = len(serialized_hist)/80
+        for i in range(l):
+            item = serialized_hist[80*i:80*(i+1)]
             if item[0:36] == txi:
-                height = int(rev_hex(item[36:40].encode('hex')), 16)
-                serialized_hist = serialized_hist[0:40*i] + serialized_hist[40*(i+1):]
+                if is_spent:
+                    new_item = item[0:39] + chr(1) + self.serialize_item(txid, index, height, chr(2))
+                else:
+                    new_item = item[0:39] + chr(0) + chr(0)*40 
+                serialized_hist = serialized_hist[0:80*i] + new_item + serialized_hist[80*(i+1):]
                 break
         else:
             hist = self.deserialize(serialized_hist)
-            raise BaseException("prevout not found", addr, hist, tx_hash, tx_pos)
+            raise BaseException("prevout not found", addr, hist, txi.encode('hex'))
 
         self.batch_list[addr] = serialized_hist
-        return height, addr
+
+
+    def unset_spent_bit(self, addr, txi):
+        self.set_spent_bit(addr, txi, False)
+        self.batch_txio[txi] = addr
+
 
     def deserialize_block(self, block):
         txlist = block.get('tx')
@@ -396,6 +475,13 @@ class BlockchainProcessor(Processor):
 
         t00 = time.time()
 
+        # undo info
+        if revert:
+            undo_info = self.get_undo_info(block_height)
+        else:
+            undo_info = {}
+
+
         if not revert:
             # read addresses of tx inputs
             for tx in txdict.values():
@@ -408,6 +494,7 @@ class BlockchainProcessor(Processor):
                 try:
                     addr = self.db.Get(txi)
                 except:
+                    # print "addr not in db", txi.encode('hex')
                     # the input could come from the same block
                     continue
                 self.batch_txio[txi] = addr
@@ -418,6 +505,16 @@ class BlockchainProcessor(Processor):
                 for x in tx.get('outputs'):
                     txo = (txid + int_to_hex(x.get('index'), 4)).decode('hex')
                     block_outputs.append(txo)
+                    addr_to_read.append( x.get('address') )
+
+                undo = undo_info.get(txid)
+                for i, x in enumerate(tx.get('inputs')):
+                    addr = undo['prev_addr'][i]
+                    addr_to_read.append(addr)
+
+
+
+
 
         # read histories of addresses
         for txid, tx in txdict.items():
@@ -431,46 +528,64 @@ class BlockchainProcessor(Processor):
             except:
                 self.batch_list[addr] = ''
 
-        if revert:
-            undo_info = self.get_undo_info(block_height)
-            # print "undo", block_height, undo_info
-        else:
-            undo_info = {}
 
         # process
         t1 = time.time()
 
         if revert:
             tx_hashes = tx_hashes[::-1]
+
+
         for txid in tx_hashes:  # must be ordered
             tx = txdict[txid]
             if not revert:
 
-                undo = []
-                for x in tx.get('inputs'):
-                    prevout_height, prevout_addr = self.remove_from_history(None, x.get('prevout_hash'), x.get('prevout_n'))
-                    undo.append((prevout_height, prevout_addr))
+                undo = { 'prev_addr':[] } # contains the list of pruned items for each address in the tx; also, 'prev_addr' is a list of prev addresses
+                
+                prev_addr = []
+                for i, x in enumerate(tx.get('inputs')):
+                    txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+                    addr = self.batch_txio[txi]
+
+                    # add redeem item to the history.
+                    # add it right next to the input txi? this will break history sorting, but it's ok if I neglect tx inputs during search
+                    self.set_spent_bit(addr, txi, True, txid, i, block_height)
+
+                    # when I prune, prune a pair
+                    self.prune_history(addr, undo)
+                    prev_addr.append(addr)
+
+                undo['prev_addr'] = prev_addr 
+
+                # here I add only the outputs to history; maybe I want to add inputs too (that's in the other loop)
+                for x in tx.get('outputs'):
+                    addr = x.get('address')
+                    self.add_to_history(addr, txid, x.get('index'), block_height)
+                    self.prune_history(addr, undo)  # prune here because we increased the length of the history
+
                 undo_info[txid] = undo
 
-                for x in tx.get('outputs'):
-                    self.add_to_history(x.get('address'), txid, x.get('index'), block_height)
-
             else:
+
+                undo = undo_info.pop(txid)
+
                 for x in tx.get('outputs'):
-                    self.remove_from_history(x.get('address'), txid, x.get('index'))
+                    addr = x.get('address')
+                    self.revert_prune_history(addr, undo)
+                    self.revert_add_to_history(addr, txid, x.get('index'), block_height)
 
-                i = 0
-                for x in tx.get('inputs'):
-                    prevout_height, prevout_addr = undo_info.get(txid)[i]
-                    i += 1
+                prev_addr = undo.pop('prev_addr')
+                for i, x in enumerate(tx.get('inputs')):
+                    addr = prev_addr[i]
+                    self.revert_prune_history(addr, undo)
+                    txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+                    self.unset_spent_bit(addr, txi)
 
-                    # read the history into batch list
-                    if self.batch_list.get(prevout_addr) is None:
-                        self.batch_list[prevout_addr] = self.db.Get(prevout_addr)
+                assert undo == {}
 
-                    # re-add them to the history
-                    self.add_to_history(prevout_addr, x.get('prevout_hash'), x.get('prevout_n'), prevout_height)
-                    # print_log("new hist for", prevout_addr, self.deserialize(self.batch_list[prevout_addr]) )
+        if revert: 
+            assert undo_info == {}
+
 
         # write
         max_len = 0
@@ -480,7 +595,7 @@ class BlockchainProcessor(Processor):
         batch = leveldb.WriteBatch()
         for addr, serialized_hist in self.batch_list.items():
             batch.Put(addr, serialized_hist)
-            l = len(serialized_hist)
+            l = len(serialized_hist)/80
             if l > max_len:
                 max_len = l
                 max_addr = addr
@@ -497,13 +612,14 @@ class BlockchainProcessor(Processor):
         else:
             # restore spent inputs
             for txio, addr in self.batch_txio.items():
+                # print "restoring spent input", repr(txio)
                 batch.Put(txio, addr)
             # delete spent outputs
             for txo in block_outputs:
                 batch.Delete(txo)
 
         # add the max
-        batch.Put('height', self.serialize([(block_hash, block_height, 0)]))
+        batch.Put('height', self.serialize([(block_hash, block_height, self.db_version)]))
 
         # actual write
         self.db.Write(batch, sync=sync)
