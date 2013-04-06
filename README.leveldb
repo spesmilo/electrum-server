@@ -37,6 +37,7 @@ backend = leveldb
 
 [leveldb]
 path = /path/to/your/database
+pruning_limit = 10
 
 ______________________________________________________________
 

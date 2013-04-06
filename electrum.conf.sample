@@ -21,6 +21,7 @@ backend = leveldb
 
 [leveldb]
 path = /path/to/your/database
+# for each address, history will be pruned if it is longer than this limit
 pruning_limit = 10
 
 
