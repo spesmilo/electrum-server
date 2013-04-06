@@ -852,8 +852,11 @@ class BlockchainProcessor(Processor):
                 new_mempool_hist[addr] = h
 
         # invalidate cache for mempool addresses whose mempool history has changed
-        for addr in new_mempool_hist.keys():
-            if addr in self.mempool_hist.keys():
+        new_mempool_hist_keys = new_mempool_hist.keys()
+        self_mempool_hist_keys = self.mempool_hist.keys()
+        
+        for addr in new_mempool_hist_keys:
+            if addr in self_mempool_hist_keys:
                 if self.mempool_hist[addr] != new_mempool_hist[addr]:
                     self.invalidate_cache(addr)
             else:
@@ -861,8 +864,8 @@ class BlockchainProcessor(Processor):
 
         # invalidate cache for addresses that are removed from mempool ?
         # this should not be necessary if they go into a block, but they might not
-        for addr in self.mempool_hist.keys():
-            if addr not in new_mempool_hist.keys():
+        for addr in self_mempool_hist_keys:
+            if addr not in new_mempool_hist_keys:
                 self.invalidate_cache(addr)
         
 
