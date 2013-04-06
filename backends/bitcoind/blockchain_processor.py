@@ -266,13 +266,13 @@ class BlockchainProcessor(Processor):
         # sort history, because redeeming transactions are next to the corresponding txout
         hist.sort(key=lambda tup: tup[2])
 
-        # uniqueness
-        hist = set(map(lambda x: (x[0], x[2]), hist))
-
         # add memory pool
         with self.mempool_lock:
             for txid in self.mempool_hist.get(addr, []):
                 hist.append((txid, 0, 0))
+
+        # uniqueness
+        hist = set(map(lambda x: (x[0], x[2]), hist))
 
         # convert to dict
         hist = map(lambda x: {'tx_hash': x[0], 'height': x[1]}, hist)
