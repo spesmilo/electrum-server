@@ -427,6 +427,7 @@ class BlockchainProcessor(Processor):
                 serialized_hist = serialized_hist[0:80*i] + new_item + serialized_hist[80*(i+1):]
                 break
         else:
+            self.shared.stop()
             hist = self.deserialize(serialized_hist)
             raise BaseException("prevout not found", addr, hist, txi.encode('hex'))
 
@@ -494,10 +495,14 @@ class BlockchainProcessor(Processor):
             for txi in block_inputs:
                 try:
                     addr = self.db.Get(txi)
-                except:
-                    # print "addr not in db", txi.encode('hex')
+                except KeyError:
                     # the input could come from the same block
                     continue
+                except:
+                    traceback.print_exc(file=sys.stdout)
+                    self.shared.stop()
+                    raise
+
                 self.batch_txio[txi] = addr
                 addr_to_read.append(addr)
 
@@ -526,8 +531,12 @@ class BlockchainProcessor(Processor):
         for addr in addr_to_read:
             try:
                 self.batch_list[addr] = self.db.Get(addr)
-            except:
+            except KeyError:
                 self.batch_list[addr] = ''
+            except:
+                traceback.print_exc(file=sys.stdout)
+                self.shared.stop()
+                raise
 
 
         # process
