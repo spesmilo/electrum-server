@@ -147,6 +147,7 @@ class TcpServer(threading.Thread):
             except BaseException, e:
                 error = str(e)
                 print_log("cannot start TCP session", error)
+                time.sleep(0.1)
                 continue
             self.dispatcher.add_session(session)
             self.dispatcher.collect_garbage()
