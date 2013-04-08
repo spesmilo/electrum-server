@@ -67,4 +67,13 @@ Other commands are available:
 ./server load   : view the size of the queue
 
 
+______________________
+Troubleshooting:
+
+* if your server or bitcoind is killed because is uses too much
+memory, configure bitcoind to limit the number of connections
+
+* if you see "Too many open files" errors, you may need to increase
+your user's File Descriptors limit. For this, see
+http://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
 
