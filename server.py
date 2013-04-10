@@ -61,11 +61,12 @@ def create_config():
     config.set('server', 'irc_nick', '')
     config.set('server', 'coin', '')
     config.set('server', 'datadir', '')
-    config.add_section('database')
-    config.set('database', 'type', 'psycopg2')
-    config.set('database', 'database', 'abe')
-    config.set('database', 'limit', '1000')
-    config.set('server', 'backend', 'abe')
+
+    # use leveldb as default
+    config.set('server', 'backend', 'leveldb')
+    config.add_section('leveldb')
+    config.set('leveldb', 'path', '/dev/shm/electrum_db')
+    config.set('leveldb', 'pruning_limit', '100')
 
     for path in ('/etc/', ''):
         filename = path + 'electrum.conf'
