@@ -55,14 +55,19 @@ class IrcThread(threading.Thread):
         s = 'v' + VERSION + ' '
         if self.pruning:
             s += 'p' + self.pruning_limit + ' '
-        if self.stratum_tcp_port:
-            s += 't' + self.stratum_tcp_port + ' '
-        if self.stratum_http_port:
-            s += 'h' + self.stratum_http_port + ' '
-        if self.stratum_tcp_port:
-            s += 's' + self.stratum_tcp_ssl_port + ' '
-        if self.stratum_http_port:
-            s += 'g' + self.stratum_http_ssl_port + ' '
+
+        def add_port(letter, number):
+            DEFAULT_PORTS = {'t':'50001', 's':'50002', 'h':'8081', 'g':'8082'}
+            if not number: return ''
+            if DEFAULT_PORTS[letter] == number:
+                return letter + ' '
+            else:
+                return letter + number + ' '
+
+        s += add_port('t',self.stratum_tcp_port)
+        s += add_port('h',self.stratum_http_port)
+        s += add_port('s',self.stratum_tcp_ssl_port)
+        s += add_port('g',self.stratum_http_ssl_port)
         return s
 
     def run(self):
