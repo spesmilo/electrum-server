@@ -44,27 +44,22 @@ perform the operation described here, you are expected to fix the
 issue so you can continue following this howto.
 
 **Software.** A recent Linux distribution with the following software
-installed: `python`, `easy_install`, `git`, a SQL server, standard C/C++
+installed: `python`, `easy_install`, `git`, standard C/C++
 build chain. You will need root access in order to install other software or
-Python libraries. You will need access to the SQL server to create users and
-databases.
+Python libraries. 
 
-**Hardware.** It's recommended to run a pruning server with leveldb.
-It is a light setup with diskspace requirements well under 1 GB growing 
-very moderately and less taxing on I/O and CPU once it's up and running. 
-Full (archival) servers on the other hand use SQL. At the time of this writing, 
-the Bitcoin blockchain is 5.5 GB large. The corresponding SQL database is 
-about 4 times larger, so you should have a minimum of 22 GB free space just 
-for SQL, growing continuously. 
+**Hardware.** The lightest setup is a pruning server with diskspace 
+requirements well under 1 GB growing very moderately and less taxing 
+on I/O and CPU once it's up and running. If you have more ressources to spare
+you can run the server with a higher limit of historic transactions per address.
 CPU speed is also important, mostly for the initial block chain import, but 
 also if you plan to run a public Electrum server, which could serve tens 
-of concurrent requests. See step 6 below for some initial import benchmarks 
-on SQL.
+of concurrent requests. 
 
 Instructions
 ------------
 
-### Step 0. Create a user for running bitcoind and Electrum server
+### Step 1. Create a user for running bitcoind and Electrum server
 
 This step is optional, but for better security and resource separation I
 suggest you create a separate user just for running `bitcoind` and Electrum.
@@ -82,7 +77,7 @@ to your `.bashrc`, `.profile` or `.bash_profile`, then logout and relogin:
 
     PATH="$HOME/bin:$PATH"
 
-### Step 1. Download and install Electrum
+### Step 2. Download and install Electrum
 
 We will download the latest git snapshot for Electrum and 'install' it in
 our ~/bin directory:
@@ -132,135 +127,55 @@ You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
 
-
-### Step 4. Select your backend - pruning leveldb or full abe server
-
-Electrum server can currently be operated in two modes - as a pruning server
-or as a full server. The pruning server uses leveldb and keeps a smaller and
-faster database by pruning spent transactions. It's a lot quicker to get up
-and running and requires less maintenance and diskspace than the full abe
-server.
-
-The full version uses abe as a backend. While the blockchain in bitcoind
-is at roughly 5.5 GB in January 2013, the abe mysql for a full server requires
-~25 GB diskspace for innodb and can take a week or two (!) to freshly index 
-on most but the fastest of hardware.
-
-Full servers are useful for recovering all past transactions when restoring 
-from seed. Those are then stored in electrum.dat and won't need to be recovered
-until electrum.dat is removed. Pruning servers summarize spent transactions
-when restoring from seed which can be feature. Once seed recovery is done
-switching between pruning and full servers can be done at any time without effect
-to the transaction history stored in electrum.dat.
-
-While it's useful for Electrum to have a number of full servers it is 
-expected that the vast majority of servers available publicly will be 
-pruning servers.
-
-If you decide to setup a pruning server with leveldb take a break from this 
-document, read and work through README.leveldb then come back
-install jsonrcp (but not abe) from step 5 and then skip to step 8
-
-### Step 5. Install Electrum dependencies
+### Step 5. Install Electrum dependencies and leveldb
 
 Electrum server depends on various standard Python libraries. These will be
 already installed on your distribution, or can be installed with your
-package manager. Electrum also depends on two Python libraries which we wil
-l need to install "by hand": `Abe` and `JSONRPClib`.
+package manager. Electrum also depends on two Python libraries which we will
+need to install "by hand": `JSONRPClib`.
 
     $ sudo easy_install jsonrpclib
-    $ cd ~/src
-    $ git clone https://github.com/jtobey/bitcoin-abe
-    $ cd bitcoin-abe
-    $ git checkout c2a9969e20305faa41c40ae47533f2138f222ffc
-    $ sudo python setup.py install
-
-Electrum server does not currently support abe 0.7.2+ so please stick 
-with a specific commit between 0.7.1 and 0.7.2 for the time being.
-
-Please note that the path below might be slightly different on your system,
-for example python2.6 or 2.8.
-
-    $ sudo chmod +x /usr/local/lib/python2.7/dist-packages/Abe/abe.py
-    $ ln -s /usr/local/lib/python2.7/dist-packages/Abe/abe.py ~/bin/abe
 
 
-### Step 6. Configure the database
+Then carry out the steps in README.leveldb to get your system ready for
+leveldb setups.
 
-Electrum server uses a SQL database to store the blockchain data. In theory,
-it supports all databases supported by Abe. At the time of this writing,
-MySQL and PostgreSQL are tested and work ok, SQLite was tested and *does not
-work* with Electrum server.
+### Step 6. Select your limit
 
-For MySQL:
+Electrum server uses leveldb to store transactions. You can choose
+how many spent transactions per address you want to store on the server.
+The default is 100, but there are also servers with 1000 or even 10000.
+Very few addresses have more than 10000 transactions. A limit this high
+can be considered to be equivalent to a "full" server. Full servers previously
+used abe to store the blockchain. The use of abe for electrum servers is now
+deprecated.
 
-    $ mysql -u root -p
-    mysql> create user 'electrum'@'localhost' identified by '<db-password>';
-    mysql> create database electrum;
-    mysql> grant all on electrum.* to 'electrum'@'localhost';
-    mysql> exit
+The pruning server uses leveldb and keeps a smaller and
+faster database by pruning spent transactions. It's a lot quicker to get up
+and running and requires less maintenance and diskspace than abe.
 
-For PostgreSQL:
+The section in the configuration file looks like this:
 
-    TBW!
+[leveldb]
+path = /path/to/your/database
+# for each address, history will be pruned if it is longer than this limit
+pruning_limit = 100
 
-### Step 7. Configure Abe and import blockchain into the database
+### Step 7. Import blockchain into the database or download it
 
-When you run Electrum server for the first time, it will automatically
-import the blockchain into the database, so it is safe to skip this step.
-However, our tests showed that, at the time of this writing, importing the
-blockchain via Abe is much faster (about 20-30 times faster) than
-allowing Electrum to do it.
+As of April 2013 it takes between 12-24 to import 230k of blocks, depending
+on CPU speed, I/O speed and selected pruning limit.
 
-    $ cp ~/src/bitcoin-abe/abe.conf ~/abe.conf
-    $ $EDITOR ~/abe.conf
+It's considerably faster to index in memory. You can use /dev/shm or indexing in RAM
+or create a tmpfs which will also use swap if you run out of memory:
 
-For MySQL, you need these lines:
+    $ sudo mount -t tmpfs -o rw,nodev,nosuid,noatime,size=6000M,mode=0777 none /tmpfs
 
-    dbtype MySQLdb
-    connect-args = { "db" : "electrum", "user" : "electrum" , "passwd" : "<database-password>" }
+At limit 10000 the database comes to 3,5 GB with 230k blocks.
 
-For PostgreSQL, you need these lines:
+Alternatively you can fetch a pre-processed leveldb from the net
 
-    TBD!
-
-Start Abe:
-
-    $ abe --config ~/abe.conf
-
-Abe will now start to import blocks. You will see a lot of lines like this:
-
-    'block_tx <block-number> <tx-number>'
-
-You should wait until you see this message on the screen:
-
-    Listening on http://localhost:2750
-
-It means the blockchain is imported and you can exit Abe by pressing CTRL-C.
-You will not need to run Abe again after this step, Electrum server will
-update the blockchain by itself. We only used Abe because it is much faster
-for the initial import.
-
-Important notice: This is a *very* long process. Even on fast machines,
-expect it to take hours. Here are some benchmarks for importing
-~196K blocks (size of the Bitcoin blockchain in Septeber 2012):
-
-  * System 1: ~9 hours.
-	  * CPU: Intel Core i7 Q740 @ 1.73GHz
-	  * HDD: very fast SSD
-  * System 2: ~55 hours.
-	  * CPU: Intel Xeon X3430 @ 2.40GHz
-	  * HDD: 2 x SATA in a RAID1.
-
-### Step 7b. Alternatively: Fetch abe blockchain from the net for import
-
-It's much faster to import an existing dataset than to index the blockchain 
-using abe yourself. 
-
-Importing a mysql dump of ~8 GB takes around 18-20 hours on a regular HDD 
-and can be sped up by using SSDs or importing into /dev/shm memory
-
-You can fetch recent copies of mysql dumps and further instructions 
+You can fetch recent copies of electrum leveldb databases and further instructions 
 from the Electrum full archival server foundry at:
 http://electrum-foundry.no-ip.org/ 
 
