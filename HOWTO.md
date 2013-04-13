@@ -50,11 +50,15 @@ Python libraries.
 
 **Hardware.** The lightest setup is a pruning server with diskspace 
 requirements well under 1 GB growing very moderately and less taxing 
-on I/O and CPU once it's up and running. If you have more ressources to spare
-you can run the server with a higher limit of historic transactions per address.
-CPU speed is also important, mostly for the initial block chain import, but 
-also if you plan to run a public Electrum server, which could serve tens 
-of concurrent requests. 
+on I/O and CPU once it's up and running. However note that you also need
+to run bitcoind and keep a copy of the full blockchain, which is roughly
+9 GB in April 2013. If you have less than 2 GB of RAM make sure you limit
+bitcoind to 8 concurrent connections. If you have more ressources to 
+spare you can run the server with a higher limit of historic transactions 
+per address. CPU speed is also important, mostly for the initial block 
+chain import, but also if you plan to run a public Electrum server, which 
+could serve tens of concurrent requests. Any multi-core x86 CPU ~2009 or
+newer other than Atom should do for good performance.
 
 Instructions
 ------------
@@ -88,14 +92,15 @@ our ~/bin directory:
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum
 
-### Step 2. Download Bitcoind from git & patch it
+### Step 2. Download Bitcoind stable from git & patch it
 
-In order for the latest versions of Electrum to work properly we will need to use the latest 
-build from Git and also patch it with an electrum specific patch.
-Please make sure you run a version of bitcoind from git from at least December 2012 or newer:
+In order for the latest versions of Electrum to work properly we will need to use 
+bitcoind 0.8.1 stable or higher. It can be downloaded from github and 
+it needs to be patched with an electrum specific patch.
 
-    $ cd src && git clone git://github.com/bitcoin/bitcoin.git
-    $ cd bitcoin 
+    $ cd src && wget https://github.com/bitcoin/bitcoin/archive/v0.8.1.tar.gz
+    $ tar xfz v0.8.1.tar.gz
+    $ cd bitcoin-0.8.1
     $ patch -p1 < ~/src/electrum/server/patch/patch
     $ cd src && make -f makefile.unix
 
