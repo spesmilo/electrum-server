@@ -26,6 +26,7 @@ pruning_limit = 100
 
 
 # ABE configuration for full servers
+# Backends other than level db are deprecated and currently unsupported
 
 # number of requests per single hash
 # limit = 1000

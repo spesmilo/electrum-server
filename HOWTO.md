@@ -92,7 +92,7 @@ our ~/bin directory:
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum
 
-### Step 2. Download Bitcoind stable from git & patch it
+### Step 3. Download Bitcoind stable from git & patch it
 
 In order for the latest versions of Electrum to work properly we will need to use 
 bitcoind 0.8.1 stable or higher. It can be downloaded from github and 
@@ -102,9 +102,9 @@ it needs to be patched with an electrum specific patch.
     $ tar xfz v0.8.1.tar.gz
     $ cd bitcoin-0.8.1
     $ patch -p1 < ~/src/electrum/server/patch/patch
-    $ cd src && make -f makefile.unix
+    $ cd src && make USE_UPNP= -f makefile.unix
 
-### Step 3. Configure and start bitcoind
+### Step 4. Configure and start bitcoind
 
 In order to allow Electrum to "talk" to `bitcoind`, we need to set up a RPC
 username and password for `bitcoind`. We will then start `bitcoind` and
@@ -132,7 +132,7 @@ You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
 
-### Step 5. Install Electrum dependencies and leveldb
+### Step 5. Install Electrum dependencies
 
 Electrum server depends on various standard Python libraries. These will be
 already installed on your distribution, or can be installed with your
@@ -140,12 +140,16 @@ package manager. Electrum also depends on two Python libraries which we will
 need to install "by hand": `JSONRPClib`.
 
     $ sudo easy_install jsonrpclib
+    $ sudo apt-get install python-openssl
 
+### Step 6. Install leveldb
 
-Then carry out the steps in README.leveldb to get your system ready for
-leveldb setups.
+    $ sudo apt-get install python-leveldb
+ 
+See the steps in README.leveldb for further details, especially if your system
+doesn't have the python-leveldb package.
 
-### Step 6. Select your limit
+### Step 7. Select your limit
 
 Electrum server uses leveldb to store transactions. You can choose
 how many spent transactions per address you want to store on the server.
@@ -166,9 +170,9 @@ The section in the configuration file looks like this:
      # for each address, history will be pruned if it is longer than this limit
      pruning_limit = 100
 
-### Step 7. Import blockchain into the database or download it
+### Step 8. Import blockchain into the database or download it
 
-As of April 2013 it takes between 12-24 to import 230k of blocks, depending
+As of April 2013 it takes between 6-24 hours to import 230k of blocks, depending
 on CPU speed, I/O speed and selected pruning limit.
 
 It's considerably faster to index in memory. You can use /dev/shm or indexing in RAM
@@ -176,7 +180,9 @@ or create a tmpfs which will also use swap if you run out of memory:
 
     $ sudo mount -t tmpfs -o rw,nodev,nosuid,noatime,size=6000M,mode=0777 none /tmpfs
 
-At limit 10000 the database comes to 3,5 GB with 230k blocks.
+At limit 100 the database comes to 2,6 GB with 230k blocks and takes roughly 6h to import in /dev/shm.
+At limit 1000 the database comes to 3,0 GB with 230k blocks and takes roughly 10h to import in /dev/shm.
+At limit 10000 the database comes to 3,5 GB with 230k blocks and takes roughly 24h to import in /dev/shm.
 
 Alternatively you can fetch a pre-processed leveldb from the net
 
@@ -184,7 +190,7 @@ You can fetch recent copies of electrum leveldb databases and further instructio
 from the Electrum full archival server foundry at:
 http://electrum-foundry.no-ip.org/ 
 
-### Step 8. Configure Electrum server
+### Step 9. Configure Electrum server
 
 Electrum reads a config file (/etc/electrum.conf) when starting up. This
 file includes the database setup, bitcoind RPC setup, and a few other
@@ -200,7 +206,7 @@ If you're looking to run SSL / HTTPS you need to generate a self-signed certific
 using openssl. Otherwise you can just comment out the SSL / HTTPS ports and run 
 without.
 
-### Step 9. (Finally!) Run Electrum server
+### Step 10. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server:
 
@@ -219,7 +225,7 @@ You should also take a look at the 'start' and 'stop' scripts in
 `~/src/electrum/server`. You can use them as a starting point to create a
 init script for your system.
 
-### Step 10. Test the Electrum server
+### Step 11. Test the Electrum server
 
 We will assume you have a working Electrum client, a wallet and some
 transactions history. You should start the client and click on the green
@@ -232,7 +238,7 @@ addresses and transactions history. You can see the number of blocks and
 response time in the Server selection window. You should send/receive some
 bitcoins to confirm that everything is working properly.
 
-### Step 11. Join us on IRC, subscribe to the server thread
+### Step 12. Join us on IRC, subscribe to the server thread
 
 Say hi to the dev crew, other server operators and fans on 
 irc.freenode.net #electrum and we'll try to congratulate you
