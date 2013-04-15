@@ -829,7 +829,12 @@ class BlockchainProcessor(Processor):
                 try:
                     addr = self.db.Get(txi)
                 except:
-                    continue
+                    tx_prev = self.get_mempool_transaction(x.get('prevout_hash'))
+                    try:
+                        addr = tx_prev['outputs'][x.get('prevout_n')]['address']
+                        if not addr: continue
+                    except:
+                        continue
                 l = self.mempool_addresses.get(tx_hash, [])
                 if addr not in l:
                     l.append(addr)
