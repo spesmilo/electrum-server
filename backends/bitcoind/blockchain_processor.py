@@ -340,7 +340,7 @@ class BlockchainProcessor(Processor):
         for i in range(l-1, -1, -1):
             item = serialized_hist[80*i:80*(i+1)]
             item_height = int(rev_hex(item[36:39].encode('hex')), 16)
-            if item_height < tx_height:
+            if item_height <= tx_height:
                 serialized_hist = serialized_hist[0:80*(i+1)] + s + serialized_hist[80*(i+1):]
                 break
         else:
