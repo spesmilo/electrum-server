@@ -83,35 +83,50 @@ class IrcThread(threading.Thread):
                 time.sleep(10)
                 continue
 
+            self.message = ''
             try:
                 s.send('USER electrum 0 * :' + self.host + ' ' + ircname + '\n')
                 s.send('NICK ' + self.nick + '\n')
                 s.send('JOIN #electrum\n')
-                sf = s.makefile('r', 0)
                 t = 0
                 while not self.processor.shared.stopped():
-                    line = sf.readline().rstrip('\r\n').split()
-                    if not line:
-                        continue
-                    if line[0] == 'PING':
-                        s.send('PONG ' + line[1] + '\n')
-                    elif '353' in line:  # answer to /names
-                        k = line.index('353')
-                        for item in line[k+1:]:
-                            if item.startswith(self.prepend):
-                                s.send('WHO %s\n' % item)
-                    elif '352' in line:  # answer to /who
-                        # warning: this is a horrible hack which apparently works
-                        k = line.index('352')
-                        try:
-                            ip = socket.gethostbyname(line[k+4])
-                        except:
-                            print_log("gethostbyname error", line[k+4])
+                    try:
+                        data = s.recv(2048)
+                    except:
+                        print_log( "irc: socket error" )
+                        time.sleep(1)
+                        break
+
+                    self.message += data
+
+                    while self.message.find('\n') != -1:
+                        pos = self.message.find('\n')
+                        line = self.message[0:pos]
+                        self.message = self.message[pos+1:]
+                        line = line.strip('\r')
+                        if not line:
                             continue
-                        name = line[k+6]
-                        host = line[k+9]
-                        ports = line[k+10:]
-                        self.peers[name] = (ip, host, ports)
+                        line = line.split()
+                        if line[0] == 'PING':
+                            s.send('PONG ' + line[1] + '\n')
+                        elif '353' in line:  # answer to /names
+                            k = line.index('353')
+                            for item in line[k+1:]:
+                                if item.startswith(self.prepend):
+                                    s.send('WHO %s\n' % item)
+                        elif '352' in line:  # answer to /who
+                            # warning: this is a horrible hack which apparently works
+                            k = line.index('352')
+                            try:
+                                ip = socket.gethostbyname(line[k+4])
+                            except:
+                                print_log("gethostbyname error", line[k+4])
+                                continue
+                            name = line[k+6]
+                            host = line[k+9]
+                            ports = line[k+10:]
+                            self.peers[name] = (ip, host, ports)
+
                     if time.time() - t > 5*60:
                         self.processor.push_response({'method': 'server.peers', 'params': [self.get_peers()]})
                         s.send('NAMES #electrum\n')
@@ -120,7 +135,6 @@ class IrcThread(threading.Thread):
             except:
                 traceback.print_exc(file=sys.stdout)
             finally:
-                sf.close()
                 s.close()
 
         print_log("quitting IRC")
