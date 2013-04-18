@@ -175,15 +175,20 @@ class RequestDispatcher(threading.Thread):
 
     def collect_garbage(self):
         # Deep copy entire sessions list and blank it
-        # This is done to minimise lock contention
+        # This is done to minimize lock contention
         with self.lock:
             sessions = self.sessions[:]
-            self.sessions = []
+
+        active_sessions = []
         for session in sessions:
             if not session.stopped():
                 # If session is still alive then re-add it back
                 # to our internal register
-                self.add_session(session)
+                active_sessions.append(session)
+
+        with self.lock:
+            self.sessions = active_sessions[:]
+
 
 
 class Session:
