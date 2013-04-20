@@ -894,6 +894,7 @@ class BlockchainProcessor(Processor):
                 self.history_cache.pop(address)
 
         if address in self.watched_addresses:
+            # TODO: update cache here. if new value equals cached value, do not send notification
             self.address_queue.put(address)
 
     def main_iteration(self):

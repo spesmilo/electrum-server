@@ -3,6 +3,7 @@ import Queue as queue
 import socket
 import threading
 import time
+import traceback, sys
 
 from processor import Session, Dispatcher
 from utils import print_log
@@ -33,8 +34,17 @@ class TcpSession(Session):
             return self._connection
 
     def stop(self):
+        if self.stopped():
+            return
+
+        try:
+            self._connection.shutdown(socket.SHUT_RDWR)
+        except:
+            # print_log("problem shutting down", self.address)
+            # traceback.print_exc(file=sys.stdout)
+            pass
+
         self._connection.close()
-        #print "Terminating connection:", self.address
         with self.lock:
             self._stopped = True
 
@@ -140,16 +150,26 @@ class TcpServer(threading.Thread):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self.host, self.port))
-        sock.listen(1)
+        sock.listen(5)
+
         while not self.shared.stopped():
+
             try:
                 connection, address = sock.accept()
+            except:
+                traceback.print_exc(file=sys.stdout)
+                time.sleep(0.1)
+                continue
+
+            try:
                 session = TcpSession(connection, address, use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
             except BaseException, e:
                 error = str(e)
                 print_log("cannot start TCP session", error, address)
+                connection.close()
                 time.sleep(0.1)
                 continue
+
             self.dispatcher.add_session(session)
             self.dispatcher.collect_garbage()
             client_req = TcpClientRequestor(self.dispatcher, session)

@@ -95,6 +95,7 @@ def run_rpc_command(command, stratum_tcp_port):
     msg = ''
     while True:
         o = s.recv(1024)
+        if not o: break
         msg += o
         if msg.find('\n') != -1:
             break

@@ -83,6 +83,7 @@ class RequestDispatcher(threading.Thread):
         self.internal_ids = {}
         self.internal_id = 1
         self.lock = threading.Lock()
+        self.idlock = threading.Lock()
         self.sessions = []
         self.processors = {}
 
@@ -104,11 +105,11 @@ class RequestDispatcher(threading.Thread):
                 return x
 
     def get_session_id(self, internal_id):
-        with self.lock:
+        with self.idlock:
             return self.internal_ids.pop(internal_id)
 
     def store_session_id(self, session, msgid):
-        with self.lock:
+        with self.idlock:
             self.internal_ids[self.internal_id] = session, msgid
             r = self.internal_id
             self.internal_id += 1
@@ -137,7 +138,6 @@ class RequestDispatcher(threading.Thread):
         suffix = method.split('.')[-1]
 
         if session is not None:
-            is_new = session.protocol_version >= 0.5
             if suffix == 'subscribe':
                 session.subscribe_to_service(method, params)
 
@@ -160,9 +160,6 @@ class RequestDispatcher(threading.Thread):
             except:
                 pass
 
-            #if session.protocol_version < 0.6:
-            #    print_log("stopping session from old client", session.protocol_version)
-            #    session.stop()
 
     def get_sessions(self):
         with self.lock:
