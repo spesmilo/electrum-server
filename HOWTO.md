@@ -98,9 +98,9 @@ In order for the latest versions of Electrum to work properly we will need to us
 bitcoind 0.8.1 stable or higher. It can be downloaded from github and 
 it needs to be patched with an electrum specific patch.
 
-    $ cd src && wget https://github.com/bitcoin/bitcoin/archive/v0.8.1.tar.gz
-    $ tar xfz v0.8.1.tar.gz
-    $ cd bitcoin-0.8.1
+    $ cd src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.1/bitcoin-0.8.1-linux.tar.gz
+    $ tar xfz bitcoin-0.8.1-linux.tar.gz
+    $ cd bitcoin-0.8.1-linux
     $ patch -p1 < ~/src/electrum/server/patch/patch
     $ cd src && make USE_UPNP= -f makefile.unix
 
