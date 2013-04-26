@@ -177,8 +177,9 @@ class RequestDispatcher(threading.Thread):
             sessions = self.sessions[:]
 
         active_sessions = []
+        now = time.time()
         for session in sessions:
-            if not session.stopped():
+            if not session.stopped() and (now - session.time) < 1000:
                 # If session is still alive then re-add it back
                 # to our internal register
                 active_sessions.append(session)
