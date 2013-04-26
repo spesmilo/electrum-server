@@ -13,6 +13,7 @@ class TcpSession(Session):
 
     def __init__(self, connection, address, use_ssl, ssl_certfile, ssl_keyfile):
         Session.__init__(self)
+        self.use_ssl = use_ssl
         if use_ssl:
             import ssl
             self._connection = ssl.wrap_socket(
@@ -20,12 +21,17 @@ class TcpSession(Session):
                 server_side=True,
                 certfile=ssl_certfile,
                 keyfile=ssl_keyfile,
-                ssl_version=ssl.PROTOCOL_SSLv23)
+                ssl_version=ssl.PROTOCOL_SSLv23,
+                do_handshake_on_connect=False)
         else:
             self._connection = connection
 
         self.address = address[0]
         self.name = "TCP " if not use_ssl else "SSL "
+
+    def do_handshake(self):
+        if self.use_ssl:
+            self._connection.do_handshake()
 
     def connection(self):
         if self.stopped():
@@ -72,6 +78,11 @@ class TcpClientRequestor(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
+        try:
+            self.session.do_handshake()
+        except:
+            return
+
         while not self.shared.stopped():
             if not self.update():
                 break
@@ -143,10 +154,7 @@ class TcpServer(threading.Thread):
         self.ssl_certfile = ssl_certfile
 
     def run(self):
-        if self.use_ssl:
-            print_log("TCP/SSL server started.")
-        else:
-            print_log("TCP server started.")
+        print_log( ("SSL" if self.use_ssl else "TCP") + " server started on port %d"%self.port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((self.host, self.port))
