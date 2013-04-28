@@ -20,6 +20,11 @@ __________________________________________________________
 
 2. Install python-leveldb: 
 
+Starting at Ubuntu 12.10 you can use apt to install leveldb. If you 
+rather stay on 12.04 LTS you can use the backport and add 
+"deb http://archive.ubuntu.com/ubuntu precise-backports main restricted universe"
+to your sources file. Install the package with: 
+
 sudo apt-get install python-leveldb
 
 alternatively build yourself, see
