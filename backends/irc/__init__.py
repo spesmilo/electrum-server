@@ -204,7 +204,7 @@ class ServerProcessor(Processor):
 
         elif method == 'server.cache':
             p = self.dispatcher.request_dispatcher.processors['blockchain']
-            result = len(repr(p.store.tx_cache))
+            result = len(repr(p.history_cache))
 
         elif method == 'server.load':
             p = self.dispatcher.request_dispatcher.processors['blockchain']
