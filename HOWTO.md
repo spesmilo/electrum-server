@@ -90,7 +90,7 @@ our ~/bin directory:
     $ cd ~/src/electrum
     $ git clone https://github.com/spesmilo/electrum-server.git server
     $ chmod +x ~/src/electrum/server/server.py
-    $ ln -s ~/src/electrum/server/server.py ~/bin/electrum
+    $ ln -s ~/src/electrum/server/server.py ~/bin/electrum-server
 
 ### Step 3. Download Bitcoind stable from git & patch it
 
@@ -210,7 +210,7 @@ without.
 
 The magic moment has come: you can now start your Electrum server:
 
-    $ server
+    $ electrum-server
 
 You should see this on the screen:
 
