@@ -842,7 +842,8 @@ class BlockchainProcessor(Processor):
                 if addr not in l:
                     l.append(addr)
                     self.mempool_addresses[tx_hash] = l
-                    if addr not in touched_addresses: touched_addresses.append(addr)
+                    #if addr not in touched_addresses: 
+                    touched_addresses.append(addr)
 
             for x in tx.get('outputs'):
                 addr = x.get('address')
@@ -850,7 +851,8 @@ class BlockchainProcessor(Processor):
                 if addr not in l:
                     l.append(addr)
                     self.mempool_addresses[tx_hash] = l
-                    if addr not in touched_addresses: touched_addresses.append(addr)
+                    #if addr not in touched_addresses: 
+                    touched_addresses.append(addr)
 
             self.mempool_hashes.append(tx_hash)
 
@@ -862,7 +864,8 @@ class BlockchainProcessor(Processor):
             if tx_hash not in self.mempool_hashes:
                 self.mempool_addresses.pop(tx_hash)
                 for addr in addresses:
-                    if addr not in touched_addresses: touched_addresses.append(addr)
+                    #if addr not in touched_addresses: 
+                    touched_addresses.append(addr)
 
         # rebuild mempool histories
         new_mempool_hist = {}
