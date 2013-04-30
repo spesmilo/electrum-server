@@ -63,7 +63,6 @@ class TcpClientResponder(threading.Thread):
 
     def __init__(self, session):
         self.session = session
-        self.connection = self.session.connection()
         threading.Thread.__init__(self)
 
     def run(self):
@@ -72,7 +71,7 @@ class TcpClientResponder(threading.Thread):
             data = json.dumps(response) + "\n"
             try:
                 while data:
-                    l = self.connection.send(data)
+                    l = self.session.connection().send(data)
                     data = data[l:]
             except:
                 self.session.stop()
