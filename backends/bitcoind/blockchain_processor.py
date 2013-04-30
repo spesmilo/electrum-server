@@ -827,33 +827,21 @@ class BlockchainProcessor(Processor):
             if not tx:
                 continue
 
+            mpa = self.mempool_addresses.get(tx_hash, [])
             for x in tx.get('inputs'):
-                txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
-                try:
-                    addr = self.db.Get(txi)
-                except:
-                    tx_prev = self.get_mempool_transaction(x.get('prevout_hash'))
-                    try:
-                        addr = tx_prev['outputs'][x.get('prevout_n')]['address']
-                        if not addr: continue
-                    except:
-                        continue
-                l = self.mempool_addresses.get(tx_hash, [])
-                if addr not in l:
-                    l.append(addr)
-                    self.mempool_addresses[tx_hash] = l
-                    #if addr not in touched_addresses: 
+                # we assume that the input address can be parsed by deserialize(); this is true for Electrum transactions
+                addr = x.get('address')
+                if addr and addr not in mpa:
+                    mpa.append(addr)
                     touched_addresses.append(addr)
 
             for x in tx.get('outputs'):
                 addr = x.get('address')
-                l = self.mempool_addresses.get(tx_hash, [])
-                if addr not in l:
-                    l.append(addr)
-                    self.mempool_addresses[tx_hash] = l
-                    #if addr not in touched_addresses: 
+                if addr and addr not in mpa:
+                    mpa.append(addr)
                     touched_addresses.append(addr)
 
+            self.mempool_addresses[tx_hash] = mpa
             self.mempool_hashes.append(tx_hash)
 
         # remove older entries from mempool_hashes
@@ -864,7 +852,6 @@ class BlockchainProcessor(Processor):
             if tx_hash not in self.mempool_hashes:
                 self.mempool_addresses.pop(tx_hash)
                 for addr in addresses:
-                    #if addr not in touched_addresses: 
                     touched_addresses.append(addr)
 
         # rebuild mempool histories
