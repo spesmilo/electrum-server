@@ -43,7 +43,7 @@ commands included in this document is not available or does not
 perform the operation described here, you are expected to fix the
 issue so you can continue following this howto.
 
-**Software.** A recent Linux distribution with the following software
+**Software.** A recent Linux 64-bit distribution with the following software
 installed: `python`, `easy_install`, `git`, standard C/C++
 build chain. You will need root access in order to install other software or
 Python libraries. 
