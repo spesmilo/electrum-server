@@ -53,6 +53,15 @@ class BlockchainProcessor(Processor):
             config.get('bitcoind', 'host'),
             config.get('bitcoind', 'port'))
 
+        while True:
+            try:
+                self.bitcoind('getinfo')
+                break
+            except:
+                print_log('cannot contact bitcoind...')
+                time.sleep(5)
+                continue
+
         self.height = 0
         self.is_test = False
         self.sent_height = 0
