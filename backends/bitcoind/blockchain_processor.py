@@ -42,7 +42,7 @@ class BlockchainProcessor(Processor):
 
         self.dblock = threading.Lock()
         try:
-            self.db = leveldb.LevelDB(self.dbpath)
+            self.db = leveldb.LevelDB(self.dbpath, paranoid_checks=True)
         except:
             traceback.print_exc(file=sys.stdout)
             self.shared.stop()
