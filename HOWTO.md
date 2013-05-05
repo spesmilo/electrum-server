@@ -102,7 +102,9 @@ it needs to be patched with an electrum specific patch.
     $ tar xfz bitcoin-0.8.1-linux.tar.gz
     $ cd bitcoin-0.8.1-linux/src
     $ patch -p1 < ~/src/electrum/server/patch/patch
+    $ cd src
     $ make USE_UPNP= -f makefile.unix
+    $ ln -s ~/src/bitcoin-0.8.1-linux/src/src/bitcoind ~/bin/bitcoind
 
 ### Step 4. Configure and start bitcoind
 
