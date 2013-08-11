@@ -293,7 +293,7 @@ def script_GetOp(bytes):
         vch = None
         opcode = ord(bytes[i])
         i += 1
-        if opcode >= opcodes.OP_SINGLEBYTE_END:
+        if opcode >= opcodes.OP_SINGLEBYTE_END and i < len(bytes):
             opcode <<= 8
             opcode |= ord(bytes[i])
             i += 1
