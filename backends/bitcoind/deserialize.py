@@ -280,10 +280,8 @@ opcodes = Enumeration("Opcodes", [
     "OP_WITHIN", "OP_RIPEMD160", "OP_SHA1", "OP_SHA256", "OP_HASH160",
     "OP_HASH256", "OP_CODESEPARATOR", "OP_CHECKSIG", "OP_CHECKSIGVERIFY", "OP_CHECKMULTISIG",
     "OP_CHECKMULTISIGVERIFY",
-    ("OP_SINGLEBYTE_END", 0xF0),
-    ("OP_DOUBLEBYTE_BEGIN", 0xF000),
-    "OP_PUBKEY", "OP_PUBKEYHASH",
-    ("OP_INVALIDOPCODE", 0xFFFF),
+    "OP_NOP1", "OP_NOP2", "OP_NOP3", "OP_NOP4", "OP_NOP5", "OP_NOP6", "OP_NOP7", "OP_NOP8", "OP_NOP9", "OP_NOP10",
+    ("OP_INVALIDOPCODE", 0xFF),
 ])
 
 
@@ -293,10 +291,6 @@ def script_GetOp(bytes):
         vch = None
         opcode = ord(bytes[i])
         i += 1
-        if opcode >= opcodes.OP_SINGLEBYTE_END and i < len(bytes):
-            opcode <<= 8
-            opcode |= ord(bytes[i])
-            i += 1
 
         if opcode <= opcodes.OP_PUSHDATA4:
             nSize = opcode
@@ -309,14 +303,21 @@ def script_GetOp(bytes):
             elif opcode == opcodes.OP_PUSHDATA4:
                 (nSize,) = struct.unpack_from('<I', bytes, i)
                 i += 4
-            vch = bytes[i:i+nSize]
-            i += nSize
+            if i+nSize > len(bytes):
+              vch = "_INVALID_"+bytes[i:]
+              i = len(bytes)
+            else:
+             vch = bytes[i:i+nSize]
+             i += nSize
 
         yield (opcode, vch, i)
 
 
 def script_GetOpName(opcode):
+  try:
     return (opcodes.whatis(opcode)).replace("OP_", "")
+  except KeyError:
+    return "InvalidOp_"+str(opcode)
 
 
 def decode_script(bytes):
@@ -353,7 +354,7 @@ def get_address_from_input_script(bytes):
 
     # non-generated TxIn transactions push a signature
     # (seventy-something bytes) and then their public key
-    # (65 bytes) onto the stack:
+    # (33 or 65 bytes) onto the stack:
 
     match = [ opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4 ]
     if match_decoded(decoded, match):
