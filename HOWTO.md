@@ -95,8 +95,9 @@ our ~/bin directory:
 ### Step 3. Download Bitcoind stable from git & patch it
 
 In order for the latest versions of Electrum to work properly we will need to use 
-bitcoind 0.8.1 stable or higher. It can be downloaded from github and 
-it needs to be patched with an electrum specific patch.
+bitcoind 0.8.1 stable to 0.8.3 stable.  
+0.8.3 can be downloaded from github or sourceforge and it needs to be patched with an electrum specific patch.
+A higher version than 0.8.3 i.e. git head is currently unsupported because the patch needs to be ported
 
     $ cd ~/src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.3/bitcoin-0.8.3-linux.tar.gz
     $ tar xfz bitcoin-0.8.3-linux.tar.gz
@@ -156,7 +157,7 @@ doesn't have the python-leveldb package.
 Electrum server uses leveldb to store transactions. You can choose
 how many spent transactions per address you want to store on the server.
 The default is 100, but there are also servers with 1000 or even 10000.
-Very few addresses have more than 10000 transactions. A limit this high
+Few addresses have more than 10000 transactions. A limit this high
 can be considered to be equivalent to a "full" server. Full servers previously
 used abe to store the blockchain. The use of abe for electrum servers is now
 deprecated.
@@ -208,7 +209,22 @@ If you're looking to run SSL / HTTPS you need to generate a self-signed certific
 using openssl. Otherwise you can just comment out the SSL / HTTPS ports and run 
 without.
 
-### Step 10. (Finally!) Run Electrum server
+### Step 10. Tweak your system for running electrum
+
+Electrum server currently needs quite a few file handles to use leveldb. It also requires
+file handles for each connection made to the server. It's good practice to increase the
+open files limit to 16k. This is most easily achived by sticking the value in .bashrc of the
+root user who usually passes this value to all unprivileged user sessions too.
+
+   $ sudo sed -i '$a ulimit -n 16384' /root/.bashrc
+
+We're aware the leveldb part in electrum server may leak some memory and it's good practice to
+to either restart the server once in a while from cron (preferred) or to at least monitor 
+it for crashes and then restart the server. Weekly restarts should be fine for most setups.
+If your server gets a lot of traffic and you have a limited amount of RAM you may need to restart
+more often.
+
+### Step 11. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server:
 
@@ -227,7 +243,7 @@ You should also take a look at the 'start' and 'stop' scripts in
 `~/src/electrum/server`. You can use them as a starting point to create a
 init script for your system.
 
-### Step 11. Test the Electrum server
+### Step 12. Test the Electrum server
 
 We will assume you have a working Electrum client, a wallet and some
 transactions history. You should start the client and click on the green
@@ -240,7 +256,7 @@ addresses and transactions history. You can see the number of blocks and
 response time in the Server selection window. You should send/receive some
 bitcoins to confirm that everything is working properly.
 
-### Step 12. Join us on IRC, subscribe to the server thread
+### Step 13. Join us on IRC, subscribe to the server thread
 
 Say hi to the dev crew, other server operators and fans on 
 irc.freenode.net #electrum and we'll try to congratulate you
