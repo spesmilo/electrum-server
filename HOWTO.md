@@ -224,6 +224,11 @@ it for crashes and then restart the server. Weekly restarts should be fine for m
 If your server gets a lot of traffic and you have a limited amount of RAM you may need to restart
 more often.
 
+Two more things for you to consider:
+1. To increase security you may want to close bitcoind for incoming connections and connect outbound only
+2. Consider restarting bitcoind (together with electrum-server) on a weekly basis to clear out unconfirmed
+   transactions from the local the memory pool which did not propagate over the network
+
 ### Step 11. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server:
