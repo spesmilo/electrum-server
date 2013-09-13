@@ -31,6 +31,10 @@ notation with shell redirection ('command < file' or 'command > file')!
 Lines that lack hash or dollar signs are pastes from config files. They
 should be copied verbatim or adapted, without the indentation tab.
 
+apt-get install commands are suggestions for required dependencies.
+They conform to an Ubuntu 13.04 system but may well work with Debian
+or earlier and later versions of Ubuntu.
+
 Prerequisites
 -------------
 
@@ -71,7 +75,7 @@ We will also use the `~/bin` directory to keep locally installed files
 (others might want to use `/usr/local/bin` instead). We will download source
 code files to the `~/src` directory.
 
-    # sudo adduser bitcoin
+    # sudo adduser bitcoin --disabled-password
     # su - bitcoin
     $ mkdir ~/bin ~/src
     $ echo $PATH
@@ -88,24 +92,26 @@ our ~/bin directory:
 
     $ mkdir -p ~/src/electrum
     $ cd ~/src/electrum
+    $ sudo apt-get install git
     $ git clone https://github.com/spesmilo/electrum-server.git server
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum-server
 
 ### Step 3. Download Bitcoind stable from git & patch it
 
-In order for the latest versions of Electrum to work properly we currently recommend bitcoind 0.8.4 stable.  
-0.8.4 can be downloaded from github or sourceforge and it needs to be patched with an electrum specific patch.
+In order for the latest versions of Electrum to work properly we currently recommend bitcoind 0.8.5 stable.  
+0.8.5 can be downloaded from github or sourceforge and it needs to be patched with an electrum specific patch.
 bitcoin@master i.e. git head may not currently work with electrum-server even if the patch applies cleanly.
 
-    $ cd ~/src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.4/bitcoin-0.8.4-linux.tar.gz
-    $ tar xfz bitcoin-0.8.4-linux.tar.gz
-    $ cd bitcoin-0.8.4-linux/src
+    $ cd ~/src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.5/bitcoin-0.8.5-linux.tar.gz
+    $ tar xfz bitcoin-0.8.5-linux.tar.gz
+    $ cd bitcoin-0.8.5-linux/src
     $ patch -p1 < ~/src/electrum/server/patch/patch
     $ cd src
+    $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev 
     $ make USE_UPNP= -f makefile.unix
-    $ strip ~/src/bitcoin-0.8.4-linux/src/src/bitcoind
-    $ ln -s ~/src/bitcoin-0.8.4-linux/src/src/bitcoind ~/bin/bitcoind
+    $ strip ~/src/bitcoin-0.8.5-linux/src/src/bitcoind
+    $ ln -s ~/src/bitcoin-0.8.5-linux/src/src/bitcoind ~/bin/bitcoind
 
 ### Step 4. Configure and start bitcoind
 
@@ -142,6 +148,7 @@ already installed on your distribution, or can be installed with your
 package manager. Electrum also depends on two Python libraries which we will
 need to install "by hand": `JSONRPClib`.
 
+    $ sudo apt-get install python-setuptools
     $ sudo easy_install jsonrpclib
     $ sudo apt-get install python-openssl
 
@@ -191,7 +198,7 @@ Alternatively you can fetch a pre-processed leveldb from the net
 
 You can fetch recent copies of electrum leveldb databases and further instructions 
 from the Electrum full archival server foundry at:
-http://electrum-foundry.no-ip.org/ 
+http://foundry.electrum.org/ 
 
 ### Step 9. Configure Electrum server
 
@@ -216,7 +223,7 @@ file handles for each connection made to the server. It's good practice to incre
 open files limit to 16k. This is most easily achived by sticking the value in .bashrc of the
 root user who usually passes this value to all unprivileged user sessions too.
 
-   $ sudo sed -i '$a ulimit -n 16384' /root/.bashrc
+    $ sudo sed -i '$a ulimit -n 16384' /root/.bashrc
 
 We're aware the leveldb part in electrum server may leak some memory and it's good practice to
 to either restart the server once in a while from cron (preferred) or to at least monitor 
@@ -226,6 +233,7 @@ more often.
 
 Two more things for you to consider:
 1. To increase security you may want to close bitcoind for incoming connections and connect outbound only
+
 2. Consider restarting bitcoind (together with electrum-server) on a weekly basis to clear out unconfirmed
    transactions from the local the memory pool which did not propagate over the network
 
