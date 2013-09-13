@@ -97,7 +97,7 @@ our ~/bin directory:
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum-server
 
-### Step 3. Download Bitcoind stable from git & patch it
+### Step 3. Download Bitcoind stable & patch it
 
 In order for the latest versions of Electrum to work properly we currently recommend bitcoind 0.8.5 stable.  
 0.8.5 can be downloaded from github or sourceforge and it needs to be patched with an electrum specific patch.
@@ -232,6 +232,7 @@ If your server gets a lot of traffic and you have a limited amount of RAM you ma
 more often.
 
 Two more things for you to consider:
+
 1. To increase security you may want to close bitcoind for incoming connections and connect outbound only
 
 2. Consider restarting bitcoind (together with electrum-server) on a weekly basis to clear out unconfirmed
