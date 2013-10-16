@@ -200,7 +200,46 @@ You can fetch recent copies of electrum leveldb databases and further instructio
 from the Electrum full archival server foundry at:
 http://foundry.electrum.org/ 
 
-### Step 9. Configure Electrum server
+
+### Step 9. Create a self-signed SSL cert
+
+To run SSL / HTTPS you need to generate a self-signed certificate
+using openssl. You could just comment out the SSL / HTTPS ports in the config and run 
+without, but this is not recommended.
+
+Use the sample code below to create a self-signed cert with a recommended validity 
+of 5 years. You may supply any information for your sign request to identify your server.
+They are not currently checked by the client except for the validity date.
+When asked for a challenge password just leave it empty and press enter.
+
+    $ openssl genrsa -des3 -passout pass:x -out server.pass.key 2048
+    $ openssl rsa -passin pass:x -in server.pass.key -out server.key
+    writing RSA key
+    $ rm server.pass.key
+    $ openssl req -new -key server.key -out server.csr
+    ...
+    Country Name (2 letter code) [AU]:US
+    State or Province Name (full name) [Some-State]:California
+    Common Name (eg, YOUR name) []: electrum-server.tld
+    ...
+    A challenge password []:
+    ...
+
+    $ openssl x509 -req -days 730 -in server.csr -signkey server.key -out server.crt
+
+The server.crt file is your certificate suitable for the ssl_certfile= parameter and
+server.key corresponds to ssl_keyfile= in your electrum server config
+
+Starting with Electrum 1.9 the client will learn and locally cache the SSL certificate 
+for your server upon the first request to prevent man-in-the middle attacks for all
+further connections.
+
+If your certificate is lost or expires on the server side you currently need to run
+your server with a different server name along with a new certificate for this server.
+Therefore it's a good idea to make an offline backup copy of your certificate and key
+in case you need to restore it.
+
+### Step 10. Configure Electrum server
 
 Electrum reads a config file (/etc/electrum.conf) when starting up. This
 file includes the database setup, bitcoind RPC setup, and a few other
@@ -212,11 +251,7 @@ options.
 Go through the sample config options and set them to your liking.
 If you intend to run the server publicly have a look at README-IRC.md 
 
-If you're looking to run SSL / HTTPS you need to generate a self-signed certificate
-using openssl. Otherwise you can just comment out the SSL / HTTPS ports and run 
-without.
-
-### Step 10. Tweak your system for running electrum
+### Step 11. Tweak your system for running electrum
 
 Electrum server currently needs quite a few file handles to use leveldb. It also requires
 file handles for each connection made to the server. It's good practice to increase the
@@ -238,7 +273,7 @@ Two more things for you to consider:
 2. Consider restarting bitcoind (together with electrum-server) on a weekly basis to clear out unconfirmed
    transactions from the local the memory pool which did not propagate over the network
 
-### Step 11. (Finally!) Run Electrum server
+### Step 12. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server:
 
@@ -257,7 +292,7 @@ You should also take a look at the 'start' and 'stop' scripts in
 `~/src/electrum/server`. You can use them as a starting point to create a
 init script for your system.
 
-### Step 12. Test the Electrum server
+### Step 13. Test the Electrum server
 
 We will assume you have a working Electrum client, a wallet and some
 transactions history. You should start the client and click on the green
