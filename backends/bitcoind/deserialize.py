@@ -388,7 +388,10 @@ def get_address_from_input_script(bytes):
 
 
 def get_address_from_output_script(bytes):
-    decoded = [ x for x in script_GetOp(bytes) ]
+    try:
+        decoded = [ x for x in script_GetOp(bytes) ]
+    except:
+        return "None"
 
     # The Genesis Block, self-payments, and pay-by-IP-address payments look like:
     # 65 BYTES:... CHECKSIG

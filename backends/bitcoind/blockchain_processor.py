@@ -256,8 +256,11 @@ class BlockchainProcessor(Processor):
 
         vds = deserialize.BCDataStream()
         vds.write(raw_tx.decode('hex'))
-
-        return deserialize.parse_Transaction(vds, is_coinbase=False)
+        try:
+            return deserialize.parse_Transaction(vds, is_coinbase=False)
+        except:
+            print_log("ERROR: cannot parse", txid)
+            return None
 
     def get_history(self, addr, cache_only=False):
         with self.cache_lock:
@@ -457,10 +460,14 @@ class BlockchainProcessor(Processor):
         is_coinbase = True
         for raw_tx in txlist:
             tx_hash = hash_encode(Hash(raw_tx.decode('hex')))
-            tx_hashes.append(tx_hash)
             vds = deserialize.BCDataStream()
             vds.write(raw_tx.decode('hex'))
-            tx = deserialize.parse_Transaction(vds, is_coinbase)
+            try:
+                tx = deserialize.parse_Transaction(vds, is_coinbase)
+            except:
+                print_log("ERROR: cannot parse", tx_hash)
+                continue
+            tx_hashes.append(tx_hash)
             txdict[tx_hash] = tx
             is_coinbase = False
         return tx_hashes, txdict
