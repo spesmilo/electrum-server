@@ -782,7 +782,7 @@ class BlockchainProcessor(Processor):
         if addr not in self.watched_addresses:
             self.watched_addresses.append(addr)
 
-    def getfullblock(block_hash):
+    def getfullblock(self, block_hash):
         block = self.bitcoind('getblock', [block_hash])
 
         rawtxreq = []
@@ -805,9 +805,9 @@ class BlockchainProcessor(Processor):
         r = loads(respdata)
         rawtxdata = []
         for ir in r:
-            if r['error'] is not None:
+            if ir['error'] is not None:
                 raise BaseException(r['error'])
-            rawtxdata.append(r['result'])
+            rawtxdata.append(ir['result'])
         block['tx'] = rawtxdata
         return block
 
