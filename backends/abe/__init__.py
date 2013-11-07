@@ -473,8 +473,8 @@ class AbeStore(DataStore.DataStore):
         print_log("get_chunk", index, len(msg))
         return msg
 
-    def get_raw_tx(self, tx_hash, height):
-        postdata = dumps({"method": 'getrawtransaction', 'params': [tx_hash, 0, height], 'id': 'jsonrpc'})
+    def get_raw_tx(self, tx_hash):
+        postdata = dumps({"method": 'getrawtransaction', 'params': [tx_hash, 0], 'id': 'jsonrpc'})
         respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
         r = loads(respdata)
         if r['error'] is not None:
@@ -717,7 +717,7 @@ class BlockchainProcessor(Processor):
             try:
                 tx_hash = params[0]
                 height = params[1]
-                result = self.store.get_raw_tx(tx_hash, height)
+                result = self.store.get_raw_tx(tx_hash)
             except Exception, e:
                 error = str(e) + ': ' + tx_hash
                 print_log("error:", error)

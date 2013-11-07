@@ -250,7 +250,7 @@ class BlockchainProcessor(Processor):
 
     def get_mempool_transaction(self, txid):
         try:
-            raw_tx = self.bitcoind('getrawtransaction', [txid, 0, -1])
+            raw_tx = self.bitcoind('getrawtransaction', [txid, 0])
         except:
             return None
 
@@ -762,8 +762,7 @@ class BlockchainProcessor(Processor):
         elif method == 'blockchain.transaction.get':
             try:
                 tx_hash = params[0]
-                height = params[1]
-                result = self.bitcoind('getrawtransaction', [tx_hash, 0, height])
+                result = self.bitcoind('getrawtransaction', [tx_hash, 0])
             except BaseException, e:
                 error = str(e) + ': ' + repr(params)
                 print_log("tx get error:", error)
@@ -783,6 +782,35 @@ class BlockchainProcessor(Processor):
         if addr not in self.watched_addresses:
             self.watched_addresses.append(addr)
 
+    def getfullblock(block_hash):
+        block = self.bitcoind('getblock', [block_hash])
+
+        rawtxreq = []
+        i = 0
+        for txid in block['tx']:
+            rawtxreq.append({
+                "method": "getrawtransaction",
+                "params": [txid],
+                "id": i,
+            })
+            i += 1
+
+        postdata = dumps(rawtxreq)
+        try:
+            respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+        except:
+            traceback.print_exc(file=sys.stdout)
+            self.shared.stop()
+
+        r = loads(respdata)
+        rawtxdata = []
+        for ir in r:
+            if r['error'] is not None:
+                raise BaseException(r['error'])
+            rawtxdata.append(r['result'])
+        block['tx'] = rawtxdata
+        return block
+
     def catch_up(self, sync=True):
         t1 = time.time()
 
@@ -798,7 +826,7 @@ class BlockchainProcessor(Processor):
             # not done..
             self.up_to_date = False
             next_block_hash = self.bitcoind('getblockhash', [self.height + 1])
-            next_block = self.bitcoind('getblock', [next_block_hash, 1])
+            next_block = self.getfullblock(next_block_hash)
 
             # fixme: this is unsafe, if we revert when the undo info is not yet written
             revert = (random.randint(1, 100) == 1) if self.is_test else False
@@ -817,7 +845,7 @@ class BlockchainProcessor(Processor):
 
             else:
                 # revert current block
-                block = self.bitcoind('getblock', [self.last_hash, 1])
+                block = self.getfullblock(self.last_hash)
                 print_log("blockchain reorg", self.height, block.get('previousblockhash'), self.last_hash)
                 self.import_block(block, self.last_hash, self.height, sync, revert=True)
                 self.pop_header()
