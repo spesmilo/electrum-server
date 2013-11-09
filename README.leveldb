@@ -12,9 +12,10 @@ Install version 0.8 or equivalent.
 Patch it with the patch distributed with Electrum.
 
 Note: Even though Electrum's database uses pruning, you cannot use it
-with a pruning bitcoind. A full bitcoin node is required in order to
-know for each address if it has been used. Pruning occurs only at the
-level of the Electrum database.
+with a ultra-pruning bitcoind (forthcoming in 0.9 or later).
+A full bitcoin node is required in order to know for each address 
+if it has been used. Pruning occurs only at the level of the Electrum database.
+txindex=1 however is *not* needed!
 
 __________________________________________________________
 
