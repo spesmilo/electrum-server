@@ -173,7 +173,7 @@ The pruning server uses leveldb and keeps a smaller and
 faster database by pruning spent transactions. It's a lot quicker to get up
 and running and requires less maintenance and diskspace than abe.
 
-The section in the configuration file looks like this:
+The section in the electrum server configuration file (see step 10) looks like this:
 
      [leveldb]
      path = /path/to/your/database
@@ -182,23 +182,29 @@ The section in the configuration file looks like this:
 
 ### Step 8. Import blockchain into the database or download it
 
-As of April 2013 it takes between 6-24 hours to import 230k of blocks, depending
-on CPU speed, I/O speed and selected pruning limit.
-
-It's considerably faster to index in memory. You can use /dev/shm or indexing in RAM
-or create a tmpfs which will also use swap if you run out of memory:
-
-    $ sudo mount -t tmpfs -o rw,nodev,nosuid,noatime,size=6000M,mode=0777 none /tmpfs
-
-At limit 100 the database comes to 2,6 GB with 230k blocks and takes roughly 6h to import in /dev/shm.
-At limit 1000 the database comes to 3,0 GB with 230k blocks and takes roughly 10h to import in /dev/shm.
-At limit 10000 the database comes to 3,5 GB with 230k blocks and takes roughly 24h to import in /dev/shm.
-
-Alternatively you can fetch a pre-processed leveldb from the net
+It's recommended to fetch a pre-processed leveldb from the net
 
 You can fetch recent copies of electrum leveldb databases and further instructions 
 from the Electrum full archival server foundry at:
 http://foundry.electrum.org/ 
+
+Alternatively if you have the time and nerve you can import the blockchain yourself.
+
+As of April 2013 it takes between 6-24 hours to import 230k of blocks, depending
+on CPU speed, I/O speed and selected pruning limit.
+
+It's considerably faster to index in memory. You can use /dev/shm or
+or create a tmpfs which will also use swap if you run out of memory:
+
+    $ sudo mount -t tmpfs -o rw,nodev,nosuid,noatime,size=6000M,mode=0777 none /tmpfs
+
+Figures from April 2013:
+At limit 100 the database comes to 2,6 GB with 230k blocks and takes roughly 6h to import in /dev/shm.
+At limit 1000 the database comes to 3,0 GB with 230k blocks and takes roughly 10h to import in /dev/shm.
+At limit 10000 the database comes to 3,5 GB with 230k blocks and takes roughly 24h to import in /dev/shm.
+
+As of November 2013 expect at least double the time for indexing the blockchain. Databases have grown to
+roughly 4 GB, give or take a few hundred MB between pruning limits 100 and 10000. 
 
 
 ### Step 9. Create a self-signed SSL cert
