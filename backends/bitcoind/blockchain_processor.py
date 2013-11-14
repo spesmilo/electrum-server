@@ -806,7 +806,7 @@ class BlockchainProcessor(Processor):
         rawtxdata = []
         for ir in r:
             if ir['error'] is not None:
-                raise BaseException(r['error'])
+                raise BaseException(ir['error'])
             rawtxdata.append(ir['result'])
         block['tx'] = rawtxdata
         return block
