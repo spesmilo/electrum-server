@@ -120,7 +120,7 @@ Write this in `bitcoin.conf`:
     txindex=1
 
 
-If you have an existing installation of bitcoind and have not previously,
+If you have an existing installation of bitcoind and have not previously
 set txindex=1 you need to reindex the blockchain by running
 
     $ bitcoind -reindex
