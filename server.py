@@ -138,9 +138,7 @@ if __name__ == '__main__':
     from backends.irc import ServerProcessor
 
     backend_name = config.get('server', 'backend')
-    if backend_name == 'abe':
-        from backends.abe import BlockchainProcessor
-    elif backend_name == 'libbitcoin':
+    if backend_name == 'libbitcoin':
         from backends.libbitcoin import BlockchainProcessor
     elif backend_name == 'leveldb':
         from backends.bitcoind import BlockchainProcessor
