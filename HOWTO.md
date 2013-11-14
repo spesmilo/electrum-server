@@ -97,11 +97,11 @@ our ~/bin directory:
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum-server
 
-### Step 3. Download Bitcoind
+### Step 3. Download bitcoind
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.8.5 stable. 
+We currently recommend bitcoind 0.8.5 stable.
 
 ### Step 4. Configure and start bitcoind
 
@@ -119,7 +119,13 @@ Write this in `bitcoin.conf`:
     daemon=1
     txindex=1
 
-Restart `bitcoind`:
+
+If you have an existing installation of bitcoind and have not previously
+set txindex=1 you need to reindex the blockchain by running
+
+    $ bitcoind -reindex
+
+If you have a fresh copy of bitcoind start `bitcoind`:
 
     $ bitcoind
 

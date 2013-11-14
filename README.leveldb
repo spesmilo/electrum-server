@@ -4,18 +4,21 @@ Pruning nodes use a lightweight database to store address histories.
 Only unspent coins are kept in that database; spent outputs are
 pruned.
 
-
+As of November 2013 all public servers operate this way.
+Please see HOWTO.md for more detailled information. The following is a 
+short outline:
 __________________________________________________________
-1. patch and compile bitcoind.
+1. Run bitcoind.
 
-Install version 0.8 or equivalent.
-Patch it with the patch distributed with Electrum.
+Install version 0.8.5 or higher.
+There is no need to patch bitcoind anymore.
+You need to run it with the config option txindex=1 .
+If you have not previously done so, you may need to reindex the bitcoind blockchain
 
 Note: Even though Electrum's database uses pruning, you cannot use it
 with a ultra-pruning bitcoind (forthcoming in 0.9 or later).
 A full bitcoin node is required in order to know for each address 
 if it has been used. Pruning occurs only at the level of the Electrum database.
-txindex=1 however is *not* needed!
 
 __________________________________________________________
 
