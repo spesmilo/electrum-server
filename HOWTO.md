@@ -97,21 +97,11 @@ our ~/bin directory:
     $ chmod +x ~/src/electrum/server/server.py
     $ ln -s ~/src/electrum/server/server.py ~/bin/electrum-server
 
-### Step 3. Download Bitcoind stable & patch it
+### Step 3. Download Bitcoind
 
-In order for the latest versions of Electrum to work properly we currently recommend bitcoind 0.8.5 stable.  
-0.8.5 can be downloaded from github or sourceforge and it needs to be patched with an electrum specific patch.
-bitcoin@master i.e. git head may not currently work with electrum-server even if the patch applies cleanly.
-
-    $ cd ~/src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.5/bitcoin-0.8.5-linux.tar.gz
-    $ tar xfz bitcoin-0.8.5-linux.tar.gz
-    $ cd bitcoin-0.8.5-linux/src
-    $ patch -p1 < ~/src/electrum/server/patch/patch
-    $ cd src
-    $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev 
-    $ make USE_UPNP= -f makefile.unix
-    $ strip ~/src/bitcoin-0.8.5-linux/src/src/bitcoind
-    $ ln -s ~/src/bitcoin-0.8.5-linux/src/src/bitcoind ~/bin/bitcoind
+Older versions of Electrum used to require a patched version of bitcoind. 
+This is not the case anymore since bitcoind supports the 'txindex' option.
+We currently recommend bitcoind 0.8.5 stable. 
 
 ### Step 4. Configure and start bitcoind
 
@@ -127,6 +117,7 @@ Write this in `bitcoin.conf`:
     rpcuser=<rpc-username>
     rpcpassword=<rpc-password>
     daemon=1
+    txindex=1
 
 Restart `bitcoind`:
 
