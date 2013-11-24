@@ -806,6 +806,8 @@ class BlockchainProcessor(Processor):
         rawtxdata = []
         for ir in r:
             if ir['error'] is not None:
+                self.shared.stop()
+                print_log("Error: make sure you run bitcoind with txindex=1; use -reindex if needed.")
                 raise BaseException(ir['error'])
             rawtxdata.append(ir['result'])
         block['tx'] = rawtxdata
