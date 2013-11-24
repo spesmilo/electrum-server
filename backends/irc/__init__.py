@@ -169,7 +169,7 @@ class ServerProcessor(Processor):
         params = request['params']
         result = None
 
-        if method in ['server.stop', 'server.info']:
+        if method in ['server.stop', 'server.info', 'server.heapy']:
             try:
                 password = request['params'][0]
             except:
@@ -210,6 +210,19 @@ class ServerProcessor(Processor):
             p = self.dispatcher.request_dispatcher.processors['blockchain']
             result = p.queue.qsize()
 
+        elif method == 'server.heapy':
+            try:
+                s = request['params'][1]
+            except:
+                s = None
+
+            if s:
+                from guppy import hpy
+                h = hpy()
+                try:
+                    result = str(eval(s))
+                except:
+                    result = "error"
         else:
             print_log("unknown method", request)
 

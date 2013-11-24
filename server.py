@@ -90,7 +90,11 @@ def run_rpc_command(command, stratum_tcp_port):
         return
 
     method = 'server.' + command
-    request = json.dumps({'id': 0, 'method': method, 'params': [password]})
+    params = [password]
+    if len(sys.argv) > 2:
+        params.append(sys.argv[2])
+    
+    request = json.dumps({'id': 0, 'method': method, 'params': params})
     s.send(request + '\n')
     msg = ''
     while True:
