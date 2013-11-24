@@ -67,7 +67,10 @@ class TcpClientResponder(threading.Thread):
 
     def run(self):
         while not self.session.stopped():
-            response = self.session.response_queue.get()
+            try:
+                response = self.session.response_queue.get(timeout=10)
+            except queue.Empty:
+                continue
             data = json.dumps(response) + "\n"
             try:
                 while data:
