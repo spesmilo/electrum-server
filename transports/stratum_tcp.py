@@ -94,26 +94,22 @@ class TcpClientRequestor(threading.Thread):
         try:
             self.session.do_handshake()
         except:
+            self.session.stop()
             return
 
         while not self.shared.stopped():
-            if not self.update():
+
+            data = self.receive()
+            if not data:
+                self.session.stop()
                 break
 
+            self.message += data
             self.session.time = time.time()
 
             while self.parse():
                 pass
 
-    def update(self):
-        data = self.receive()
-        if not data:
-            # close_session
-            self.session.stop()
-            return False
-
-        self.message += data
-        return True
 
     def receive(self):
         try:
