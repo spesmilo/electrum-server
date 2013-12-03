@@ -128,7 +128,7 @@ class IrcThread(threading.Thread):
                             self.peers[name] = (ip, host, ports)
 
                     if time.time() - t > 5*60:
-                        self.processor.push_response({'method': 'server.peers', 'params': [self.get_peers()]})
+                        #self.processor.push_response({'method': 'server.peers', 'params': [self.get_peers()]})
                         s.send('NAMES #electrum\n')
                         t = time.time()
                         self.peers = {}
@@ -164,19 +164,20 @@ class ServerProcessor(Processor):
             self.irc.start()
         Processor.run(self)
 
-    def process(self, request):
+    def process(self, session, request):
         method = request['method']
         params = request['params']
         result = None
 
-        if method in ['server.stop', 'server.info', 'server.heapy']:
+        if method in ['server.stop', 'server.info', 'server.debug']:
             try:
                 password = request['params'][0]
             except:
                 password = None
 
             if password != self.password:
-                self.push_response({'id': request['id'],
+                self.push_response(session, 
+                                   {'id': request['id'],
                                     'result': None,
                                     'error': 'incorrect password'})
                 return
@@ -202,15 +203,7 @@ class ServerProcessor(Processor):
                                     "subscriptions": len(s.subscriptions)},
                          self.dispatcher.request_dispatcher.get_sessions())
 
-        elif method == 'server.cache':
-            p = self.dispatcher.request_dispatcher.processors['blockchain']
-            result = len(repr(p.history_cache))
-
-        elif method == 'server.load':
-            p = self.dispatcher.request_dispatcher.processors['blockchain']
-            result = p.queue.qsize()
-
-        elif method == 'server.heapy':
+        elif method == 'server.debug':
             try:
                 s = request['params'][1]
             except:
@@ -219,12 +212,13 @@ class ServerProcessor(Processor):
             if s:
                 from guppy import hpy
                 h = hpy()
+                bp = self.dispatcher.request_dispatcher.processors['blockchain']
                 try:
                     result = str(eval(s))
                 except:
                     result = "error"
         else:
-            print_log("unknown method", request)
+            print_log("unknown method", method)
 
         if result != '':
-            self.push_response({'id': request['id'], 'result': result})
+            self.push_response(session, {'id': request['id'], 'result': result})
