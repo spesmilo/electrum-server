@@ -967,7 +967,7 @@ class BlockchainProcessor(Processor):
                 break
 
             status = self.get_status(addr)
-            for session in self.watched_addresses[addr]:
+            for session in self.watched_addresses.get(addr,[]):
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.address.subscribe',
