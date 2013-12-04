@@ -97,6 +97,11 @@ class RequestDispatcher(threading.Thread):
     def pop_request(self):
         return self.request_queue.get()
 
+    def get_session_by_address(self, address):
+        for x in self.sessions:
+            if x.address == address:
+                return x
+
     def run(self):
         if self.shared is None:
             raise TypeError("self.shared not set in Processor")
