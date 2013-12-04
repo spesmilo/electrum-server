@@ -686,14 +686,14 @@ class BlockchainProcessor(Processor):
         error = None
 
         if method == 'blockchain.numblocks.subscribe':
-            if session not in self.watch_headers:
-                with self.watch_lock:
+            with self.watch_lock:
+                if session not in self.watch_blocks:
                     self.watch_blocks.append(session)
             result = self.height
 
         elif method == 'blockchain.headers.subscribe':
-            if session not in self.watch_headers:
-                with self.watch_lock:
+            with self.watch_lock:
+                if session not in self.watch_headers:
                     self.watch_headers.append(session)
             result = self.header
 
