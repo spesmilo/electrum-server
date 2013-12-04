@@ -80,8 +80,6 @@ class RequestDispatcher(threading.Thread):
         self.daemon = True
         self.request_queue = queue.Queue()
         self.response_queue = queue.Queue()
-        self.internal_ids = {}
-        self.internal_id = 1
         self.lock = threading.Lock()
         self.idlock = threading.Lock()
         self.sessions = []
@@ -98,22 +96,6 @@ class RequestDispatcher(threading.Thread):
 
     def pop_request(self):
         return self.request_queue.get()
-
-    def get_session_by_address(self, address):
-        for x in self.sessions:
-            if x.address == address:
-                return x
-
-    def get_session_id(self, internal_id):
-        with self.idlock:
-            return self.internal_ids.pop(internal_id)
-
-    def store_session_id(self, session, msgid):
-        with self.idlock:
-            self.internal_ids[self.internal_id] = session, msgid
-            r = self.internal_id
-            self.internal_id += 1
-            return r
 
     def run(self):
         if self.shared is None:

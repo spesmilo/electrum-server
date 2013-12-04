@@ -144,6 +144,8 @@ class TcpClientRequestor(threading.Thread):
             self.dispatcher.push_response({"error": "syntax error", "request": raw_command})
         else:
             self.dispatcher.push_request(self.session, command)
+            # sleep a bit to prevent a single session from DOSing the queue
+            time.sleep(0.01)
 
         return True
 
