@@ -11,8 +11,8 @@ from utils import print_log
 
 class TcpSession(Session):
 
-    def __init__(self, connection, address, use_ssl, ssl_certfile, ssl_keyfile):
-        Session.__init__(self)
+    def __init__(self, dispatcher, connection, address, use_ssl, ssl_certfile, ssl_keyfile):
+        Session.__init__(self, dispatcher)
         self.use_ssl = use_ssl
         if use_ssl:
             import ssl
@@ -26,9 +26,11 @@ class TcpSession(Session):
         else:
             self._connection = connection
 
-        self.address = address[0]
+        self.address = address[0] + ":%d"%address[1]
         self.name = "TCP " if not use_ssl else "SSL "
+        self.timeout = 1000
         self.response_queue = queue.Queue()
+        self.dispatcher.add_session(self)
 
     def do_handshake(self):
         if self.use_ssl:
@@ -40,10 +42,7 @@ class TcpSession(Session):
         else:
             return self._connection
 
-    def stop(self):
-        if self.stopped():
-            return
-
+    def shutdown(self):
         try:
             self._connection.shutdown(socket.SHUT_RDWR)
         except:
@@ -52,8 +51,6 @@ class TcpSession(Session):
             pass
 
         self._connection.close()
-        with self.lock:
-            self._stopped = True
 
     def send_response(self, response):
         self.response_queue.put(response)
@@ -183,7 +180,7 @@ class TcpServer(threading.Thread):
 
             #if self.use_ssl: print_log("SSL: new session", address)
             try:
-                session = TcpSession(connection, address, use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
+                session = TcpSession(self.dispatcher, connection, address, use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
             except BaseException, e:
                 error = str(e)
                 print_log("cannot start TCP session", error, address)
@@ -191,8 +188,6 @@ class TcpServer(threading.Thread):
                 time.sleep(0.1)
                 continue
 
-            self.dispatcher.add_session(session)
-            self.dispatcher.collect_garbage()
             client_req = TcpClientRequestor(self.dispatcher, session)
             client_req.start()
             responder = TcpClientResponder(session)

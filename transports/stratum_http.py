@@ -126,9 +126,8 @@ class StratumJSONRPCDispatcher(SimpleXMLRPCServer.SimpleXMLRPCDispatcher):
         return response
 
     def create_session(self):
-        session_id = random_string(10)
-        session = HttpSession(session_id)
-        self.dispatcher.add_session(session)
+        session_id = random_string(20)
+        session = HttpSession(self.dispatcher, session_id)
         return session_id
 
     def poll_session(self, session):
@@ -335,21 +334,18 @@ class StratumHTTPSSLServer(SSLTCPServer, StratumJSONRPCDispatcher):
 
 class HttpSession(Session):
 
-    def __init__(self, session_id):
-        Session.__init__(self)
+    def __init__(self, dispatcher, session_id):
+        Session.__init__(self, dispatcher)
         self.pending_responses = Queue.Queue()
         self.address = session_id
         self.name = "HTTP"
+        self.timeout = 60
+        self.dispatcher.add_session(self)
 
     def send_response(self, response):
         raw_response = json.dumps(response)
         self.pending_responses.put(response)
 
-    def stopped(self):
-        with self.lock:
-            if time.time() - self.time > 60:
-                self._stopped = True
-            return self._stopped
 
 
 class HttpServer(threading.Thread):

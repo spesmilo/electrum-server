@@ -925,9 +925,12 @@ class BlockchainProcessor(Processor):
                 print_log("cache: invalidating", address)
                 self.history_cache.pop(address)
 
-        if address in self.watched_addresses:
+        with self.watch_lock:
+            sessions = self.watched_addresses.get(address)
+
+        if sessions:
             # TODO: update cache here. if new value equals cached value, do not send notification
-            self.address_queue.put(address)
+            self.address_queue.put((address,sessions))
 
     def main_iteration(self):
         if self.shared.stopped():
@@ -962,12 +965,12 @@ class BlockchainProcessor(Processor):
 
         while True:
             try:
-                addr = self.address_queue.get(False)
+                addr, sessions = self.address_queue.get(False)
             except:
                 break
 
             status = self.get_status(addr)
-            for session in self.watched_addresses.get(addr,[]):
+            for session in sessions:
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.address.subscribe',

@@ -108,9 +108,9 @@ def run_rpc_command(command, stratum_tcp_port):
 
     if command == 'info':
         now = time.time()
-        print 'type           address   sub  version  time'
+        print 'type           address         sub  version  time'
         for item in r:
-            print '%4s   %15s   %3s  %7s  %.2f' % (item.get('name'),
+            print '%4s   %21s   %3s  %7s  %.2f' % (item.get('name'),
                                                    item.get('address'),
                                                    item.get('subscriptions'),
                                                    item.get('version'),
