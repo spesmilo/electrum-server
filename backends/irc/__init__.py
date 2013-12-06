@@ -39,7 +39,7 @@ class IrcThread(threading.Thread):
         if self.report_host:
             self.host = self.report_host
         if not self.nick:
-            self.nick = Hash(self.report_host)[:10]
+            self.nick = Hash(self.host)[:5].encode("hex")
         self.prepend = 'E_'
         if config.get('server', 'coin') == 'litecoin':
             self.prepend = 'EL_'
