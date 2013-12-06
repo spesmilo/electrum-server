@@ -319,7 +319,7 @@ addresses and transactions history. You can see the number of blocks and
 response time in the Server selection window. You should send/receive some
 bitcoins to confirm that everything is working properly.
 
-### Step 13. Join us on IRC, subscribe to the server thread
+### Step 14. Join us on IRC, subscribe to the server thread
 
 Say hi to the dev crew, other server operators and fans on 
 irc.freenode.net #electrum and we'll try to congratulate you
