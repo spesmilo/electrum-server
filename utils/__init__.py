@@ -198,8 +198,8 @@ def DecodeBase58Check(psz):
 ########### end pywallet functions #######################
 
 def random_string(length):
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for x in xrange(length))
-
+    with open("/dev/urandom", 'rb') as f:
+        return b58encode( f.read(length) )
 
 def timestr():
     return time.strftime("[%d/%m/%Y-%H:%M:%S]")
