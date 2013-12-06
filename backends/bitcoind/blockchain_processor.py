@@ -37,7 +37,7 @@ class BlockchainProcessor(Processor):
 
         self.mempool_addresses = {}
         self.mempool_hist = {}
-        self.mempool_hashes = []
+        self.mempool_hashes = set([])
         self.mempool_lock = threading.Lock()
 
         self.address_queue = Queue()
@@ -863,10 +863,11 @@ class BlockchainProcessor(Processor):
 
         self.header = self.block2header(self.bitcoind('getblock', [self.last_hash]))
 
-    def memorypool_update(self):
-        mempool_hashes = self.bitcoind('getrawmempool')
 
-        touched_addresses = []
+    def memorypool_update(self):
+        mempool_hashes = set(self.bitcoind('getrawmempool'))
+        touched_addresses = set([])
+
         for tx_hash in mempool_hashes:
             if tx_hash in self.mempool_hashes:
                 continue
@@ -881,16 +882,16 @@ class BlockchainProcessor(Processor):
                 addr = x.get('address')
                 if addr and addr not in mpa:
                     mpa.append(addr)
-                    touched_addresses.append(addr)
+                    touched_addresses.add(addr)
 
             for x in tx.get('outputs'):
                 addr = x.get('address')
                 if addr and addr not in mpa:
                     mpa.append(addr)
-                    touched_addresses.append(addr)
+                    touched_addresses.add(addr)
 
             self.mempool_addresses[tx_hash] = mpa
-            self.mempool_hashes.append(tx_hash)
+            self.mempool_hashes.add(tx_hash)
 
         # remove older entries from mempool_hashes
         self.mempool_hashes = mempool_hashes
@@ -900,7 +901,7 @@ class BlockchainProcessor(Processor):
             if tx_hash not in self.mempool_hashes:
                 self.mempool_addresses.pop(tx_hash)
                 for addr in addresses:
-                    touched_addresses.append(addr)
+                    touched_addresses.add(addr)
 
         # rebuild mempool histories
         new_mempool_hist = {}
