@@ -235,38 +235,18 @@ class Session:
 
     def subscribe_to_service(self, method, params):
         with self.lock:
+            if self._stopped:
+                return
             if (method, params) not in self.subscriptions:
                 self.subscriptions.append((method,params))
+        self.bp.do_subscribe(method, params, self)
 
 
     def stop_subscriptions(self):
-        bp = self.bp
-
         with self.lock:
             s = self.subscriptions[:]
-
         for method, params in s:
-            with bp.watch_lock:
-                if method == 'blockchain.numblocks.subscribe':
-                    if self in bp.watch_blocks:
-                        bp.watch_blocks.remove(self)
-                elif method == 'blockchain.headers.subscribe':
-                    if self in bp.watch_headers:
-                        bp.watch_headers.remove(self)
-                elif method == "blockchain.address.subscribe":
-                    addr = params[0]
-                    l = bp.watched_addresses.get(addr)
-                    if not l:
-                        continue
-                    if self in l:
-                        l.remove(self)
-                    if self in l:
-                        print "error rc!!"
-                        bp.shared.stop()
-
-                    if l == []:
-                        bp.watched_addresses.pop(addr)
-
+            self.bp.do_unsubscribe(method, params, self)
         with self.lock:
             self.subscriptions = []
 
