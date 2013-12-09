@@ -101,18 +101,18 @@ our ~/bin directory:
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.8.5 stable.
+We currently recommend bitcoind 0.8.6 stable.
 
 If your package manager does not supply a recent bitcoind and prefer to compile
 here are some pointers for Ubuntu:
 
-    $ cd ~/src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.5/bitcoin-0.8.5-linux.tar.gz
-    $ tar xfz bitcoin-0.8.5-linux.tar.gz
-    $ cd bitcoin-0.8.5-linux/src/src
+    $ cd ~/src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.6/bitcoin-0.8.6-linux.tar.gz
+    $ tar xfz bitcoin-0.8.6-linux.tar.gz
+    $ cd bitcoin-0.8.6-linux/src/src
     $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev 
     $ make USE_UPNP= -f makefile.unix
-    $ strip ~/src/bitcoin-0.8.5-linux/src/src/bitcoind
-    $ ln -s ~/src/bitcoin-0.8.5-linux/src/src/bitcoind ~/bin/bitcoind
+    $ strip ~/src/bitcoin-0.8.6-linux/src/src/bitcoind
+    $ ln -s ~/src/bitcoin-0.8.6-linux/src/src/bitcoind ~/bin/bitcoind
 
 ### Step 4. Configure and start bitcoind
 
