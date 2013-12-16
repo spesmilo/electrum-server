@@ -134,6 +134,7 @@ class IrcThread(threading.Thread):
                         self.peers = {}
             except:
                 traceback.print_exc(file=sys.stdout)
+                time.sleep(1)
             finally:
                 s.close()
 
