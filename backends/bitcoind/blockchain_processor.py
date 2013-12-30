@@ -710,7 +710,7 @@ class BlockchainProcessor(Processor):
         self.batch_write(batch, sync)
 
         t3 = time.time()
-        if t3 - t0 > 0 and not sync:
+        if t3 - t0 > 10 and not sync:
             print_log("block %d  "%block_height,
                       "total:%0.2f  " % (t3 - t0),
                       #"parse:%0.2f  " % (t00 - t0),
