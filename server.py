@@ -57,7 +57,7 @@ def create_config():
     config.set('server', 'ssl_certfile', '')
     config.set('server', 'ssl_keyfile', '')
     config.set('server', 'password', '')
-    config.set('server', 'irc', 'yes')
+    config.set('server', 'irc', 'no')
     config.set('server', 'irc_nick', '')
     config.set('server', 'coin', '')
     config.set('server', 'datadir', '')

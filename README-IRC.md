@@ -13,7 +13,7 @@ The following config file options are used by the IRC part of Electrum server:
     #report_stratum_http_port = 80
 
 `irc` is used to determine whether the IRC thread will be started or the 
-Electrum server will run in private mode. In private mode, 
+Electrum server will run in private mode (default). In private mode, 
 `./server.py peers` will always return an empty list.
 
 `host` is a fully-qualified domain name (FQDN) of your Electrum server. It is
