@@ -63,18 +63,76 @@ class Storage(object):
         return hash_160_to_bc_address(addr)
 
 
+    def get_address_path(self, addr):
+        key = self.address_to_key(addr)
+        p = self.get_path(key) 
+        p.append(key)
+
+        out = []
+        for item in p:
+            v = self.db_tree.get(item)
+            out.append((item.encode('hex'), v.encode('hex')))
+
+        return out
+
+
+    def get_balance(self, addr):
+        key = self.address_to_key(addr)
+        i = self.db_tree.iterator(start=key)
+        k, _ = i.next()
+        if not k.startswith(key): 
+            return 0
+        p = self.get_parent(k)
+        d = self.get_node(p)
+        letter = k[len(p)]
+        return d[letter][1]
+
+
+    def listunspent(self, addr):
+        key = self.address_to_key(addr)
+
+        out = []
+        for k, v in self.db_tree.iterator(start=key):
+            if not k.startswith(key):
+                break
+            if len(k) == KEYLENGTH:
+                txid = k[20:52].encode('hex')
+                txpos = hex_to_int(k[52:56])
+                h = hex_to_int(v[8:12])
+                v = hex_to_int(v[0:8])
+                out.append({'tx_hash': txid, 'tx_pos':txpos, 'height': h, 'value':v})
+
+        out.sort(key=lambda x:x['height'])
+        return out
+
+
     def get_history(self, addr):
-        addr = self.address_to_key(addr)
-        x = self.db_tree.get(addr)
-        if x is None: 
-            return ''
-        try:
-            _hash, v, h = x
-            return h
-        except:
-            traceback.print_exc(file=sys.stdout)
-            self.shared.stop()
-            raise
+        out = []
+
+        o = self.listunspent(addr)
+        for item in o:
+            out.append((item['tx_hash'], item['height']))
+
+        h = self.db_hist.get(addr)
+        
+        while h:
+            item = h[0:80]
+            h = h[80:]
+            txi = item[0:32].encode('hex')
+            hi = hex_to_int(item[36:40])
+            txo = item[40:72].encode('hex')
+            ho = hex_to_int(item[76:80])
+            out.append((txi, hi))
+            out.append((txo, ho))
+
+        # sort
+        out.sort(key=lambda x:x[1])
+
+        # uniqueness
+        out = set(out)
+
+        return map(lambda x: {'tx_hash':x[0], 'height':x[1]}, out)
+
 
 
     def get_address(self, txi):
