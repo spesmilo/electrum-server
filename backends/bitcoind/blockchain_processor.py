@@ -238,6 +238,7 @@ class BlockchainProcessor(Processor):
             print_log("ERROR: cannot parse", txid)
             return None
 
+
     def get_history(self, addr, cache_only=False):
         with self.cache_lock:
             hist = self.history_cache.get(addr)
@@ -248,8 +249,7 @@ class BlockchainProcessor(Processor):
 
         with self.dblock:
             try:
-                h = self.storage.get_history(str((addr)))
-                hist = self.storage.deserialize(h)
+                hist = self.storage.get_history(addr)
                 is_known = True
             except:
                 self.shared.stop()
@@ -260,19 +260,10 @@ class BlockchainProcessor(Processor):
                 hist = []
                 is_known = False
 
-        # sort history, because redeeming transactions are next to the corresponding txout
-        hist.sort(key=lambda tup: tup[2])
-
         # add memory pool
         with self.mempool_lock:
             for txid in self.mempool_hist.get(addr, []):
-                hist.append((txid, 0, 0))
-
-        # uniqueness
-        hist = set(map(lambda x: (x[0], x[2]), hist))
-
-        # convert to dict
-        hist = map(lambda x: {'tx_hash': x[0], 'height': x[1]}, hist)
+                hist.append({'tx_hash':txid, 'height':0})
 
         # add something to distinguish between unused and empty addresses
         if hist == [] and is_known:
@@ -281,6 +272,7 @@ class BlockchainProcessor(Processor):
         with self.cache_lock:
             self.history_cache[addr] = hist
         return hist
+
 
     def get_status(self, addr, cache_only=False):
         tx_points = self.get_history(addr, cache_only)
@@ -476,7 +468,7 @@ class BlockchainProcessor(Processor):
 
         elif method == 'blockchain.address.subscribe':
             try:
-                address = params[0]
+                address = str(params[0])
                 result = self.get_status(address, cache_only)
             except BaseException, e:
                 error = str(e) + ': ' + address
@@ -484,8 +476,32 @@ class BlockchainProcessor(Processor):
 
         elif method == 'blockchain.address.get_history':
             try:
-                address = params[0]
+                address = str(params[0])
                 result = self.get_history(address, cache_only)
+            except BaseException, e:
+                error = str(e) + ': ' + address
+                print_log("error:", error)
+
+        elif method == 'blockchain.address.get_balance':
+            try:
+                address = str(params[0])
+                result = self.storage.get_balance(address)
+            except BaseException, e:
+                error = str(e) + ': ' + address
+                print_log("error:", error)
+
+        elif method == 'blockchain.address.get_path':
+            try:
+                address = str(params[0])
+                result = self.storage.get_address_path(address)
+            except BaseException, e:
+                error = str(e) + ': ' + address
+                print_log("error:", error)
+
+        elif method == 'blockchain.address.listunspent':
+            try:
+                address = str(params[0])
+                result = self.storage.listunspent(address)
             except BaseException, e:
                 error = str(e) + ': ' + address
                 print_log("error:", error)
