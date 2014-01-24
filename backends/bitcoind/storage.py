@@ -22,6 +22,7 @@ class Storage(object):
         self.shared = shared
         self.hash_list = {}
         self.parents = {}
+        self.root_hash = None
 
         self.test_reorgs = test_reorgs
         try:
