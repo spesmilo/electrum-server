@@ -640,8 +640,9 @@ class BlockchainProcessor(Processor):
                     self.mtimes['import'] = 0
 
                 if prh:
-                    if prh != self.storage.get_root_hash().encode('hex'):
-                        print_log("root hash error", prh)
+                    rh = self.storage.get_root_hash().encode('hex')
+                    if prh != rh:
+                        print_log("root hash error", prh, rh)
                         self.shared.stop()
                         raise
                     prh = None
