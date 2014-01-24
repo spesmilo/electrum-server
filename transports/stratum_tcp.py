@@ -128,7 +128,7 @@ class TcpClientRequestor(threading.Thread):
         try:
             command = json.loads(raw_command)
         except:
-            self.dispatcher.push_response({"error": "bad JSON", "request": raw_command})
+            self.dispatcher.push_response(self.session, {"error": "bad JSON", "request": raw_command})
             return True
 
         try:
@@ -138,7 +138,7 @@ class TcpClientRequestor(threading.Thread):
             method = command['method']
         except KeyError:
             # Return an error JSON in response.
-            self.dispatcher.push_response({"error": "syntax error", "request": raw_command})
+            self.dispatcher.push_response(self.session, {"error": "syntax error", "request": raw_command})
         else:
             self.dispatcher.push_request(self.session, command)
             # sleep a bit to prevent a single session from DOSing the queue
