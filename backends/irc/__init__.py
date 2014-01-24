@@ -77,21 +77,29 @@ class IrcThread(threading.Thread):
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
-                s.settimeout(300)
+                s.settimeout(0.1)
             except:
                 s.close()
                 time.sleep(10)
                 continue
 
             self.message = ''
+            out_msg = []
+
             try:
                 s.send('USER electrum 0 * :' + self.host + ' ' + ircname + '\n')
                 s.send('NICK ' + self.nick + '\n')
                 s.send('JOIN #electrum\n')
                 t = 0
+
                 while not self.processor.shared.stopped():
                     try:
                         data = s.recv(2048)
+                    except socket.timeout, e:
+                        if out_msg:
+                            m = out_msg.pop(0)
+                            s.send(m)
+                            continue
                     except:
                         print_log( "irc: socket error" )
                         time.sleep(1)
@@ -108,12 +116,12 @@ class IrcThread(threading.Thread):
                             continue
                         line = line.split()
                         if line[0] == 'PING':
-                            s.send('PONG ' + line[1] + '\n')
+                            out_msg.append('PONG ' + line[1] + '\n')
                         elif '353' in line:  # answer to /names
                             k = line.index('353')
                             for item in line[k+1:]:
                                 if item.startswith(self.prepend):
-                                    s.send('WHO %s\n' % item)
+                                    out_msg.append('WHO %s\n' % item)
                         elif '352' in line:  # answer to /who
                             # warning: this is a horrible hack which apparently works
                             k = line.index('352')
