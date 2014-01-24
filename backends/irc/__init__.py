@@ -99,7 +99,7 @@ class IrcThread(threading.Thread):
                         if out_msg:
                             m = out_msg.pop(0)
                             s.send(m)
-                            continue
+                        continue
                     except:
                         print_log( "irc: socket error" )
                         time.sleep(1)
