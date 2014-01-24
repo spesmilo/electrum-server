@@ -626,6 +626,8 @@ class BlockchainProcessor(Processor):
 
             if (next_block.get('previousblockhash') == self.storage.last_hash) and not revert:
 
+                prev_root_hash = self.storage.get_root_hash()
+
                 self.import_block(next_block, next_block_hash, self.storage.height+1, sync)
                 self.storage.height = self.storage.height + 1
                 self.write_header(self.block2header(next_block), sync)
@@ -639,16 +641,7 @@ class BlockchainProcessor(Processor):
                     self.mtimes['daemon'] = 0
                     self.mtimes['import'] = 0
 
-                if prh:
-                    rh = self.storage.get_root_hash().encode('hex')
-                    if prh != rh:
-                        print_log("root hash error", prh, rh)
-                        self.shared.stop()
-                        raise
-                    prh = None
-
             else:
-                prh = self.storage.get_root_hash().encode('hex')
 
                 # revert current block
                 block = self.getfullblock(self.storage.last_hash)
@@ -662,6 +655,11 @@ class BlockchainProcessor(Processor):
                 # read previous header from disk
                 self.header = self.read_header(self.storage.height)
                 self.storage.last_hash = self.hash_header(self.header)
+
+                if prev_root_hash:
+                    assert prev_root_hash == self.storage.get_root_hash()
+                    prev_root_hash = None
+
 
 
         self.header = self.block2header(self.bitcoind('getblock', [self.storage.last_hash]))
