@@ -26,8 +26,8 @@ class Storage(object):
 
         self.test_reorgs = test_reorgs
         try:
-            self.db_tree = plyvel.DB(os.path.join(self.dbpath,'addr'), create_if_missing=True, compression=None)
-            self.db      = plyvel.DB(os.path.join(self.dbpath,'utxo'), create_if_missing=True, compression=None)
+            self.db_utxo = plyvel.DB(os.path.join(self.dbpath,'utxo'), create_if_missing=True, compression=None)
+            self.db_addr = plyvel.DB(os.path.join(self.dbpath,'addr'), create_if_missing=True, compression=None)
             self.db_hist = plyvel.DB(os.path.join(self.dbpath,'hist'), create_if_missing=True, compression=None)
             self.db_undo = plyvel.DB(os.path.join(self.dbpath,'undo'), create_if_missing=True, compression=None)
         except:
@@ -71,7 +71,7 @@ class Storage(object):
 
         out = []
         for item in p:
-            v = self.db_tree.get(item)
+            v = self.db_utxo.get(item)
             out.append((item.encode('hex'), v.encode('hex')))
 
         return out
@@ -79,7 +79,7 @@ class Storage(object):
 
     def get_balance(self, addr):
         key = self.address_to_key(addr)
-        i = self.db_tree.iterator(start=key)
+        i = self.db_utxo.iterator(start=key)
         k, _ = i.next()
         if not k.startswith(key): 
             return 0
@@ -93,7 +93,7 @@ class Storage(object):
         key = self.address_to_key(addr)
 
         out = []
-        for k, v in self.db_tree.iterator(start=key):
+        for k, v in self.db_utxo.iterator(start=key):
             if not k.startswith(key):
                 break
             if len(k) == KEYLENGTH:
@@ -137,7 +137,7 @@ class Storage(object):
 
 
     def get_address(self, txi):
-        addr = self.db.get(txi)
+        addr = self.db_addr.get(txi)
         return self.key_to_address(addr) if addr else None
 
 
@@ -183,12 +183,12 @@ class Storage(object):
         if batch:
             batch.put(key, out)
         else:
-            self.db_tree.put(key, out) 
+            self.db_utxo.put(key, out) 
 
 
     def get_node(self, key):
 
-        s = self.db_tree.get(key)
+        s = self.db_utxo.get(key)
         if s is None: 
             return 
 
@@ -215,7 +215,7 @@ class Storage(object):
         word = target
         key = ''
         path = [ '' ]
-        i = self.db_tree.iterator()
+        i = self.db_utxo.iterator()
 
         while key != target:
 
@@ -263,7 +263,7 @@ class Storage(object):
 
         # write 
         s = (int_to_hex(value, 8) + int_to_hex(height,4)).decode('hex')
-        self.db_tree.put(target, s)
+        self.db_utxo.put(target, s)
         # the hash of a node is the txid
         _hash = target[20:52]
         self.update_node_hash(target, path, _hash, value)
@@ -322,7 +322,7 @@ class Storage(object):
 
         
         # batch write modified nodes 
-        batch = self.db_tree.write_batch()
+        batch = self.db_utxo.write_batch()
         for k, v in nodes.items():
             self.put_node(k, v, batch)
         batch.write()
@@ -352,7 +352,7 @@ class Storage(object):
         word = target
         key = ''
         path = [ '' ]
-        i = self.db_tree.iterator(start='')
+        i = self.db_utxo.iterator(start='')
 
         while key != target:
 
@@ -375,7 +375,7 @@ class Storage(object):
                         assert key not in path
                         path.append(key)
                 else:
-                    print_log('not in tree', self.db_tree.get(key+word[0]), new_key.encode('hex'))
+                    print_log('not in tree', self.db_utxo.get(key+word[0]), new_key.encode('hex'))
                     return False
             else:
                 assert key in path
@@ -387,12 +387,12 @@ class Storage(object):
     def delete_address(self, leaf):
         path = self.get_path(leaf)
         if path is False:
-            print_log("addr not in tree", leaf.encode('hex'), self.key_to_address(leaf[0:20]), self.db_tree.get(leaf))
+            print_log("addr not in tree", leaf.encode('hex'), self.key_to_address(leaf[0:20]), self.db_utxo.get(leaf))
             raise
 
-        s = self.db_tree.get(leaf)
+        s = self.db_utxo.get(leaf)
         
-        self.db_tree.delete(leaf)
+        self.db_utxo.delete(leaf)
         if leaf in self.hash_list:
             self.hash_list.pop(leaf)
 
@@ -405,12 +405,12 @@ class Storage(object):
         if len(items) == 1:
             letter, v = items.items()[0]
 
-            self.db_tree.delete(parent)
+            self.db_utxo.delete(parent)
             if parent in self.hash_list: 
                 self.hash_list.pop(parent)
 
             # we need the exact length for the iteration
-            i = self.db_tree.iterator()
+            i = self.db_utxo.iterator()
             i.seek(parent+letter)
             k, v = i.next()
 
@@ -431,7 +431,7 @@ class Storage(object):
 
 
     def get_children(self, x):
-        i = self.db_tree.iterator()
+        i = self.db_utxo.iterator()
         l = 0
         while l <256:
             i.seek(x+chr(l))
@@ -450,7 +450,7 @@ class Storage(object):
 
     def get_parent(self, x):
         """ return parent and skip string"""
-        i = self.db_tree.iterator()
+        i = self.db_utxo.iterator()
         for j in range(len(x)):
             p = x[0:-j-1]
             i.seek(p)
@@ -471,8 +471,8 @@ class Storage(object):
 
 
     def close(self):
-        self.db_tree.close()
-        self.db.close()
+        self.db_utxo.close()
+        self.db_addr.close()
         self.db_hist.close()
         self.db_undo.close()
 
@@ -485,7 +485,7 @@ class Storage(object):
         self.add_address(key + txo, value, tx_height)
 
         # backlink
-        self.db.put(txo, key)
+        self.db_addr.put(txo, key)
 
 
 
@@ -497,7 +497,7 @@ class Storage(object):
         self.delete_address(key + txo)
 
         # backlink
-        self.db.delete(txo)
+        self.db_addr.delete(txo)
 
 
 
@@ -511,7 +511,7 @@ class Storage(object):
         undo[leaf] = value, in_height
 
         # delete backlink txi-> addr
-        self.db.delete(txi)
+        self.db_addr.delete(txi)
 
         # add to history
         s = self.db_hist.get(addr)
@@ -528,7 +528,7 @@ class Storage(object):
         leaf = key + txi
 
         # restore backlink
-        self.db.put(txi, key)
+        self.db_addr.put(txi, key)
 
         v, height = undo.pop(leaf)
         self.add_address(leaf, v, height)
