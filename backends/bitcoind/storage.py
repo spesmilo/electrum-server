@@ -22,7 +22,6 @@ class Storage(object):
         self.shared = shared
         self.hash_list = {}
         self.parents = {}
-        self.root_hash = None
 
         self.test_reorgs = test_reorgs
         try:
@@ -55,6 +54,11 @@ class Storage(object):
             return
 
 
+        # compute root hash
+        d = self.get_node('')
+        self.root_hash, v = self.get_node_hash('',d,None)
+        print_log("UTXO tree root hash:", self.root_hash.encode('hex'))
+        print_log("Coins in database:", v)
 
     # convert between bitcoin addresses and 20 bytes keys used for storage. 
     def address_to_key(self, addr):

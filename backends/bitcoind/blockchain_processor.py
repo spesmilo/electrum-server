@@ -661,8 +661,8 @@ class BlockchainProcessor(Processor):
                     prev_root_hash = None
 
 
-
         self.header = self.block2header(self.bitcoind('getblock', [self.storage.last_hash]))
+        self.header['utxo_root'] = self.storage.get_root_hash().encode('hex')
 
         if self.shared.stopped(): 
             print_log( "closing database" )
