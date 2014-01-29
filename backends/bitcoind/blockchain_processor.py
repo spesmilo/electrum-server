@@ -490,10 +490,10 @@ class BlockchainProcessor(Processor):
                 error = str(e) + ': ' + address
                 print_log("error:", error)
 
-        elif method == 'blockchain.address.get_path':
+        elif method == 'blockchain.address.get_proof':
             try:
                 address = str(params[0])
-                result = self.storage.get_address_path(address)
+                result = self.storage.get_proof(address)
             except BaseException, e:
                 error = str(e) + ': ' + address
                 print_log("error:", error)
@@ -506,12 +506,22 @@ class BlockchainProcessor(Processor):
                 error = str(e) + ': ' + address
                 print_log("error:", error)
 
+        elif method == 'blockchain.utxo.get_address':
+            try:
+                txid = str(params[0])
+                pos = int(params[1])
+                txi = (txid + int_to_hex(pos, 4)).decode('hex')
+                result = self.storage.get_address(txi)
+            except BaseException, e:
+                error = str(e)
+                print_log("error:", error, txid, pos)
+
         elif method == 'blockchain.block.get_header':
             if cache_only:
                 result = -1
             else:
                 try:
-                    height = params[0]
+                    height = int(params[0])
                     result = self.get_header(height)
                 except BaseException, e:
                     error = str(e) + ': %d' % height
@@ -522,7 +532,7 @@ class BlockchainProcessor(Processor):
                 result = -1
             else:
                 try:
-                    index = params[0]
+                    index = int(params[0])
                     result = self.get_chunk(index)
                 except BaseException, e:
                     error = str(e) + ': %d' % index

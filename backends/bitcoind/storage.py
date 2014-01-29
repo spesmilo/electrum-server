@@ -68,10 +68,13 @@ class Storage(object):
         return hash_160_to_bc_address(addr)
 
 
-    def get_address_path(self, addr):
+    def get_proof(self, addr):
         key = self.address_to_key(addr)
-        p = self.get_path(key) 
-        p.append(key)
+        i = self.db_utxo.iterator(start=key)
+        k, _ = i.next()
+
+        p = self.get_path(k) 
+        p.append(k)
 
         out = []
         for item in p:
