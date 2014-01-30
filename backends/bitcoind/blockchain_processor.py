@@ -514,7 +514,7 @@ class BlockchainProcessor(Processor):
                 result = self.storage.get_address(txi)
             except BaseException, e:
                 error = str(e)
-                print_log("error:", error, txid, pos)
+                print_log("error:", error, params)
 
         elif method == 'blockchain.block.get_header':
             if cache_only:
