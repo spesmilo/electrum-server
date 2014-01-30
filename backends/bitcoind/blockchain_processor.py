@@ -612,7 +612,7 @@ class BlockchainProcessor(Processor):
 
     def catch_up(self, sync=True):
 
-        prh = None
+        prev_root_hash = None
         while not self.shared.stopped():
 
             self.mtime('')
