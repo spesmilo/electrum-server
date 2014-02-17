@@ -8,7 +8,7 @@ if [ ! -d $path ]; then
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
 	rm -rf fulltree fulltree.tar
-	wget http://ecdsa.net/fulltree.tar 
+	wget http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar -O fulltree.tar
 	tar -xvf fulltree.tar
 	mv fulltree $path
 	rm -rf fulltree fulltree.tar
