@@ -1,2 +1,19 @@
 #!/bin/bash
+
+path=`grep path_fulltree /etc/electrum.conf |awk -F\= '{print $2}'`
+
+if [ ! -d $path ]; then
+    echo "Database not found in $path."
+    read -p "Do you want to download it from the Electrum foundry? " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+	rm -rf fulltree fulltree.tar
+	wget http://ecdsa.net/fulltree.tar 
+	tar -xvf fulltree.tar
+	mv fulltree $path
+	rm -rf fulltree fulltree.tar
+    fi
+fi
+
+echo "starting server as daemon"
 nohup /usr/bin/python -u server.py &> /var/log/electrum.log &
