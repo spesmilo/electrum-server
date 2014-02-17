@@ -87,7 +87,8 @@ class BlockchainProcessor(Processor):
         self.memorypool_update()
         print_log("Memory pool initialized.")
 
-        threading.Timer(10, self.main_iteration).start()
+        self.timer = threading.Timer(10, self.main_iteration)
+        self.timer.start()
 
 
 
@@ -748,10 +749,17 @@ class BlockchainProcessor(Processor):
             # TODO: update cache here. if new value equals cached value, do not send notification
             self.address_queue.put((address,sessions))
 
+    
+    def close(self):
+        self.timer.join()
+        print_log("Closing database...")
+        self.storage.close()
+        print_log("Database is closed")
+
+
     def main_iteration(self):
         if self.shared.stopped():
-            print_log("blockchain processor terminating")
-            self.storage.close()
+            print_log("Stopping timer")
             return
 
         with self.dblock:
@@ -794,7 +802,7 @@ class BlockchainProcessor(Processor):
                         'params': [addr, status],
                         })
 
-        if not self.shared.stopped():
-            threading.Timer(10, self.main_iteration).start()
-        else:
-            print_log("blockchain processor terminating")
+        # next iteration 
+        self.timer = threading.Timer(10, self.main_iteration)
+        self.timer.start()
+

@@ -44,15 +44,21 @@ class Processor(threading.Thread):
         #print "response", response
         self.dispatcher.request_dispatcher.push_response(session, response)
 
+    def close(self):
+        pass
+
     def run(self):
         while not self.shared.stopped():
-            request, session = self.queue.get(10000000000)
+            try:
+                request, session = self.queue.get(True, timeout=1)
+            except:
+                continue
             try:
                 self.process(request, session)
             except:
                 traceback.print_exc(file=sys.stdout)
 
-        print_log("processor terminating")
+        self.close()
 
 
 class Dispatcher:

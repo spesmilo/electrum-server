@@ -196,4 +196,6 @@ if __name__ == '__main__':
         except:
             shared.stop()
 
+    server_proc.join()
+    chain_proc.join()
     print_log("Electrum Server stopped")
