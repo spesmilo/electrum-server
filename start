@@ -1,17 +1,27 @@
 #!/bin/bash
 
-path=`grep path_fulltree /etc/electrum.conf |awk -F\= '{print $2}'`
+electrum_config="/etc/electrum.conf"
+
+if [ ! -f $electrum_config ]; then
+    echo "/etc/electrum.conf does not exist"
+    exit
+fi
+
+path=`grep path_fulltree $electrum_config |awk -F\= '{print $2}'`
+
+#needs more hardening against double definiton of variable, dismiss commented ones
+
+if ! [ "$path" ]; then
+    echo "Variable path_fulltree not set in /etc/electrum.conf"
+    exit
+fi
 
 if [ ! -d $path ]; then
     echo "Database not found in $path."
-    read -p "Do you want to download it from the Electrum foundry? " -n 1 -r
+    read -p "Do you want to download it from the Electrum foundry to $path ? " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-	rm -rf fulltree fulltree.tar
-	wget http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar -O fulltree.tar
-	tar -xvf fulltree.tar
-	mv fulltree $path
-	rm -rf fulltree fulltree.tar
+	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar" | tar -C $path -xvf -
     fi
 fi
 
