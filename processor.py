@@ -151,8 +151,8 @@ class RequestDispatcher(threading.Thread):
         p.add_request(session, request)
 
         if method in ['server.version']:
-            session.version = params[0]
             try:
+                session.version = params[0]
                 session.protocol_version = float(params[1])
             except:
                 pass
