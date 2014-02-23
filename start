@@ -22,7 +22,7 @@ if [ ! -d $path ]; then
     read -p "Do you want to download it from the Electrum foundry to $path ? " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar" | tar -C $path --strip-components 1 -xvf -
+	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar,gz" | tar -C $path --strip-components 1 -xvfz -
     fi
 fi
 
