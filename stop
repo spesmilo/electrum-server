@@ -1,2 +1,6 @@
 #!/bin/bash
+PID=`/usr/bin/python server.py getpid`
 /usr/bin/python server.py stop
+echo "Waiting until process $PID terminates..."
+while ps -p $PID > /dev/null; do sleep 1; done
+echo "Done."

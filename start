@@ -1,2 +1,30 @@
 #!/bin/bash
-nohup /usr/bin/python -u server.py &>> /var/log/electrum.log &
+
+electrum_config="/etc/electrum.conf"
+
+if [ ! -f $electrum_config ]; then
+    echo "$electrum_config does not exist"
+    exit
+fi
+
+path=`grep path_fulltree $electrum_config |awk -F\= '{print $2}'`
+
+#needs more hardening against double definiton of variable, dismiss commented ones
+
+if ! [ "$path" ]; then
+    echo "Variable path_fulltree not set in $electrum_config"
+    exit
+    # we're actually forcing fulltree with this clause, which is ok if displaying v0.9 should use fulltree 
+fi
+
+if [ ! -d $path ]; then
+    echo "Database not found in $path."
+    read -p "Do you want to download it from the Electrum foundry to $path ? " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar.gz" | tar -C $path --strip-components 1 -xvfz -
+    fi
+fi
+
+echo "starting server as daemon"
+nohup /usr/bin/python -u server.py &> /var/log/electrum.log &

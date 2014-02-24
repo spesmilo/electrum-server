@@ -200,6 +200,10 @@ class ServerProcessor(Processor):
         elif method == 'server.version':
             result = VERSION
 
+        elif method == 'server.getpid':
+            import os
+            result = os.getpid()
+
         elif method == 'server.stop':
             self.shared.stop()
             result = 'stopping, please wait until all threads terminate.'
