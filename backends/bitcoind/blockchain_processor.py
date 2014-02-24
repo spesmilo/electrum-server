@@ -112,6 +112,7 @@ class BlockchainProcessor(Processor):
         try:
             respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
         except:
+            print_log("error calling bitcoind")
             traceback.print_exc(file=sys.stdout)
             self.shared.stop()
 
@@ -253,6 +254,7 @@ class BlockchainProcessor(Processor):
                 hist = self.storage.get_history(addr)
                 is_known = True
             except:
+                print_log("error get_history")
                 self.shared.stop()
                 raise
             if hist:
@@ -447,7 +449,7 @@ class BlockchainProcessor(Processor):
                 if session in l:
                     l.remove(session)
                 if session in l:
-                    print "error rc!!"
+                    print_log("error rc!!")
                     self.shared.stop()
                 if l == []:
                     self.watched_addresses.pop(addr)
@@ -597,6 +599,7 @@ class BlockchainProcessor(Processor):
         try:
             respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
         except:
+            print_log("bitcoind error (getfullblock)")
             traceback.print_exc(file=sys.stdout)
             self.shared.stop()
 
