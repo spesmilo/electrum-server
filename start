@@ -1,5 +1,12 @@
 #!/bin/bash
 
+PID=`/usr/bin/python server.py getpid`
+if [[ $PID != *[!0-9]* ]]; then
+    echo "Server already running (pid $PID)"
+    exit
+fi
+
+
 electrum_config="/etc/electrum.conf"
 
 if [ ! -f $electrum_config ]; then
@@ -26,5 +33,5 @@ if [ ! -d $path ]; then
     fi
 fi
 
-echo "starting server as daemon"
+echo "Starting server as daemon"
 nohup /usr/bin/python -u server.py &> /var/log/electrum.log &
