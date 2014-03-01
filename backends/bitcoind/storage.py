@@ -33,7 +33,7 @@ class Storage(object):
             traceback.print_exc(file=sys.stdout)
             self.shared.stop()
 
-        self.db_version = 2 # increase this when database needs to be updated
+        self.db_version = 3 # increase this when database needs to be updated
         try:
             self.last_hash, self.height, db_version = ast.literal_eval(self.db_undo.get('height'))
             print_log("Database version", self.db_version)
