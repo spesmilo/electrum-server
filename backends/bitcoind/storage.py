@@ -507,6 +507,13 @@ class Storage(object):
         self.db_addr.delete(txo)
 
 
+    def get_utxo_value(self, addr, txi):
+        key = self.address_to_key(addr)
+        leaf = key + txi
+        s = self.db_utxo.get(leaf)
+        value = hex_to_int(s[0:8])
+        return value
+
 
     def set_spent(self, addr, txi, txid, index, height, undo):
         key = self.address_to_key(addr)
