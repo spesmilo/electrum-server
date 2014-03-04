@@ -14,9 +14,7 @@ if [ ! -f $electrum_config ]; then
     exit
 fi
 
-path=`grep path_fulltree $electrum_config |awk -F\= '{print $2}'`
-
-#needs more hardening against double definiton of variable, dismiss commented ones
+path=`grep -e ^path_fulltree $electrum_config |awk -F\= '{print $2}' | tail -n 1`
 
 if ! [ "$path" ]; then
     echo "Variable path_fulltree not set in $electrum_config"
@@ -31,7 +29,7 @@ if [ ! -d $path ]; then
     read -p "Do you want to download it from the Electrum foundry to $path ? " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-	mkdir $path
+	mkdir -p $path
 	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar.gz" | tar --extract --gunzip --strip-components 1 --directory $path --file -
     fi
 fi
