@@ -256,7 +256,7 @@ class BlockchainProcessor(Processor):
                 is_known = True
             except:
                 print_log("error get_history")
-                self.shared.stop()
+                traceback.print_exc(file=sys.stdout)
                 raise
             if hist:
                 is_known = True
@@ -755,7 +755,11 @@ class BlockchainProcessor(Processor):
                     value = v[ x.get('prevout_n')]
                 else:
                     txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
-                    value = self.storage.get_utxo_value(addr,txi)
+                    try:
+                        value = self.storage.get_utxo_value(addr,txi)
+                    except:
+                        print_log("utxo not in database; postponing mempool update")
+                        return
 
                 v = mpa.get(addr,0)
                 v -= value
