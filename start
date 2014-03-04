@@ -24,12 +24,15 @@ if ! [ "$path" ]; then
     # we're actually forcing fulltree with this clause, which is ok if displaying v0.9 should use fulltree 
 fi
 
+rmdir $path --ignore-fail-on-non-empty
+
 if [ ! -d $path ]; then
     echo "Database not found in $path."
     read -p "Do you want to download it from the Electrum foundry to $path ? " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar.gz" | tar -C $path --strip-components 1 -xvfz -
+	mkdir $path
+	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar.gz" | tar --extract --gunzip --strip-components 1 --directory $path --file -
     fi
 fi
 
