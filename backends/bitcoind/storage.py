@@ -33,7 +33,7 @@ class Storage(object):
             traceback.print_exc(file=sys.stdout)
             self.shared.stop()
 
-        self.db_version = 2 # increase this when database needs to be updated
+        self.db_version = 3 # increase this when database needs to be updated
         try:
             self.last_hash, self.height, db_version = ast.literal_eval(self.db_undo.get('height'))
             print_log("Database version", self.db_version)
@@ -144,8 +144,7 @@ class Storage(object):
 
 
     def get_address(self, txi):
-        addr = self.db_addr.get(txi)
-        return self.key_to_address(addr) if addr else None
+        return self.db_addr.get(txi)
 
 
     def get_undo_info(self, height):
@@ -492,7 +491,7 @@ class Storage(object):
         self.add_address(key + txo, value, tx_height)
 
         # backlink
-        self.db_addr.put(txo, key)
+        self.db_addr.put(txo, addr)
 
 
 
@@ -542,7 +541,7 @@ class Storage(object):
         leaf = key + txi
 
         # restore backlink
-        self.db_addr.put(txi, key)
+        self.db_addr.put(txi, addr)
 
         v, height = undo.pop(leaf)
         self.add_address(leaf, v, height)
