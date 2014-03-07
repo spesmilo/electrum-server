@@ -72,6 +72,7 @@ class IrcThread(threading.Thread):
 
     def run(self):
         ircname = self.getname()
+        print_log("joining IRC")
 
         while not self.processor.shared.stopped():
             try:
@@ -80,6 +81,7 @@ class IrcThread(threading.Thread):
                 s.settimeout(0.1)
             except:
                 s.close()
+                print_log("IRC: reconnect in 10 s")
                 time.sleep(10)
                 continue
 
@@ -114,6 +116,7 @@ class IrcThread(threading.Thread):
                         line = line.strip('\r')
                         if not line:
                             continue
+                        # print_log("<--", line)
                         line = line.split()
                         if line[0] == 'PING':
                             out_msg.append('PONG ' + line[1] + '\n')
