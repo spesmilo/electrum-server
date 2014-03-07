@@ -291,20 +291,18 @@ Two more things for you to consider:
 
 The magic moment has come: you can now start your Electrum server:
 
-    $ electrum-server
+    $ start
 
 You should see this on the screen:
 
     starting Electrum server
     cache: yes
 
-If you want to stop Electrum server, open another shell and run:
+If you want to stop Electrum server, use the 'stop' script:
 
-    $ electrum-server stop
+    $ stop
 
-You should also take a look at the 'start' and 'stop' scripts in
-`~/src/electrum/server`. You can use them as a starting point to create a
-init script for your system.
+
 
 ### Step 13. Test the Electrum server
 

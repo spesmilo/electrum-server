@@ -68,7 +68,8 @@ _________________________________
 5. enjoy!
 
 Once the server is synchronized, it will listen to ports, and the
-normal way to stop it is to type: ./server.py stop
+normal way to stop it is to use the 'stop' script. This script will
+wait until the database is closed.
 
 Other commands are available: 
 
