@@ -153,6 +153,8 @@ if __name__ == '__main__':
 
     from processor import Dispatcher, print_log
     from backends.irc import ServerProcessor
+    from transports.stratum_tcp import TcpServer
+    from transports.stratum_http import HttpServer
 
     backend_name = config.get('server', 'backend')
     if backend_name == 'libbitcoin':
@@ -163,8 +165,7 @@ if __name__ == '__main__':
         print "Unknown backend '%s' specified\n" % backend_name
         sys.exit(1)
 
-    for i in xrange(5):
-        print ""
+    print "\n\n\n\n\n"
     print_log("Starting Electrum server on", host)
 
     # Create hub
@@ -181,22 +182,18 @@ if __name__ == '__main__':
     transports = []
     # Create various transports we need
     if stratum_tcp_port:
-        from transports.stratum_tcp import TcpServer
         tcp_server = TcpServer(dispatcher, host, stratum_tcp_port, False, None, None)
         transports.append(tcp_server)
 
     if stratum_tcp_ssl_port:
-        from transports.stratum_tcp import TcpServer
         tcp_server = TcpServer(dispatcher, host, stratum_tcp_ssl_port, True, ssl_certfile, ssl_keyfile)
         transports.append(tcp_server)
 
     if stratum_http_port:
-        from transports.stratum_http import HttpServer
         http_server = HttpServer(dispatcher, host, stratum_http_port, False, None, None)
         transports.append(http_server)
 
     if stratum_http_ssl_port:
-        from transports.stratum_http import HttpServer
         http_server = HttpServer(dispatcher, host, stratum_http_ssl_port, True, ssl_certfile, ssl_keyfile)
         transports.append(http_server)
 
