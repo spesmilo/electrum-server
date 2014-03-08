@@ -158,7 +158,6 @@ class ServerProcessor(Processor):
         Processor.__init__(self)
         self.daemon = True
         self.banner = config.get('server', 'banner')
-        self.password = config.get('server', 'password')
 
         if config.get('server', 'irc') == 'yes':
             self.irc = IrcThread(self, config)
@@ -181,19 +180,6 @@ class ServerProcessor(Processor):
         params = request['params']
         result = None
 
-        if method in ['server.stop', 'server.info', 'server.debug']:
-            try:
-                password = request['params'][0]
-            except:
-                password = None
-
-            if password != self.password:
-                self.push_response(session, 
-                                   {'id': request['id'],
-                                    'result': None,
-                                    'error': 'incorrect password'})
-                return
-
         if method == 'server.banner':
             result = self.banner.replace('\\n', '\n')
 
@@ -203,36 +189,6 @@ class ServerProcessor(Processor):
         elif method == 'server.version':
             result = VERSION
 
-        elif method == 'server.getpid':
-            import os
-            result = os.getpid()
-
-        elif method == 'server.stop':
-            self.shared.stop()
-            result = 'stopping, please wait until all threads terminate.'
-
-        elif method == 'server.info':
-            result = map(lambda s: {"time": s.time,
-                                    "name": s.name,
-                                    "address": s.address,
-                                    "version": s.version,
-                                    "subscriptions": len(s.subscriptions)},
-                         self.dispatcher.request_dispatcher.get_sessions())
-
-        elif method == 'server.debug':
-            try:
-                s = request['params'][1]
-            except:
-                s = None
-
-            if s:
-                from guppy import hpy
-                h = hpy()
-                bp = self.dispatcher.request_dispatcher.processors['blockchain']
-                try:
-                    result = str(eval(s))
-                except:
-                    result = "error"
         else:
             print_log("unknown method", method)
 

@@ -24,6 +24,7 @@ import threading
 import traceback
 
 import json
+import os
 
 logging.basicConfig()
 
@@ -81,32 +82,17 @@ def create_config():
     return config
 
 
-def run_rpc_command(command, stratum_tcp_port):
+def run_rpc_command(cmd, stratum_tcp_port):
+    import xmlrpclib
+    server = xmlrpclib.ServerProxy('http://localhost:8000')
+    func = getattr(server, cmd)
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((host, stratum_tcp_port))
-    except:
-        print "cannot connect to server."
-        return
+        r = func()
+    except socket.error:
+        print "server not running"
+        sys.exit(1)
 
-    method = 'server.' + command
-    params = [password]
-    if len(sys.argv) > 2:
-        params.append(sys.argv[2])
-    
-    request = json.dumps({'id': 0, 'method': method, 'params': params})
-    s.send(request + '\n')
-    msg = ''
-    while True:
-        o = s.recv(1024)
-        if not o: break
-        msg += o
-        if msg.find('\n') != -1:
-            break
-    s.close()
-    r = json.loads(msg).get('result')
-
-    if command == 'info':
+    if cmd == 'info':
         now = time.time()
         print 'type           address         sub  version  time'
         for item in r:
@@ -118,6 +104,31 @@ def run_rpc_command(command, stratum_tcp_port):
                                                    )
     else:
         print r
+
+
+def cmd_info():
+    return map(lambda s: {"time": s.time,
+                          "name": s.name,
+                          "address": s.address,
+                          "version": s.version,
+                          "subscriptions": len(s.subscriptions)},
+               dispatcher.request_dispatcher.get_sessions())
+
+def cmd_debug():
+    try:
+        s = request['params'][1]
+    except:
+        s = None
+
+    if s:
+        from guppy import hpy
+        h = hpy()
+        bp = dispatcher.request_dispatcher.processors['blockchain']
+        try:
+            result = str(eval(s))
+        except:
+            result = "error"
+        return result
 
 
 if __name__ == '__main__':
@@ -200,9 +211,20 @@ if __name__ == '__main__':
     for server in transports:
         server.start()
 
+
+
+    from SimpleXMLRPCServer import SimpleXMLRPCServer
+    
+
+    server = SimpleXMLRPCServer(('localhost',8000), allow_none=True, logRequests=False)
+    server.register_function(lambda: os.getpid(), 'getpid')
+    server.register_function(shared.stop, 'stop')
+    server.register_function(cmd_info, 'info')
+    server.register_function(cmd_debug, 'debug')
+ 
     while not shared.stopped():
         try:
-            time.sleep(1)
+            server.handle_request()
         except:
             shared.stop()
 
