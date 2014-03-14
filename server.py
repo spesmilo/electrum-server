@@ -179,6 +179,15 @@ if __name__ == '__main__':
     dispatcher = Dispatcher(config)
     shared = dispatcher.shared
 
+    # handle termination signals
+    import signal
+    def handler(signum = None, frame = None):
+        print_log('Signal handler called with signal', signum)
+        shared.stop()
+    for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
+        signal.signal(sig, handler)
+
+
     # Create and register processors
     chain_proc = BlockchainProcessor(config, shared)
     dispatcher.register('blockchain', chain_proc)
@@ -207,20 +216,21 @@ if __name__ == '__main__':
     for server in transports:
         server.start()
 
-
-
-    from SimpleXMLRPCServer import SimpleXMLRPCServer
     
 
+    from SimpleXMLRPCServer import SimpleXMLRPCServer
     server = SimpleXMLRPCServer(('localhost',8000), allow_none=True, logRequests=False)
     server.register_function(lambda: os.getpid(), 'getpid')
     server.register_function(shared.stop, 'stop')
     server.register_function(cmd_info, 'info')
     server.register_function(cmd_debug, 'debug')
+    server.socket.settimeout(1)
  
     while not shared.stopped():
         try:
             server.handle_request()
+        except socket.timeout:
+            continue
         except:
             shared.stop()
 
