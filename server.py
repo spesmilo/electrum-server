@@ -82,12 +82,13 @@ def create_config():
     return config
 
 
-def run_rpc_command(cmd, stratum_tcp_port):
+def run_rpc_command(params):
+    cmd = params[0]
     import xmlrpclib
     server = xmlrpclib.ServerProxy('http://localhost:8000')
     func = getattr(server, cmd)
     try:
-        r = func()
+        r = func(*params[1:])
     except socket.error:
         print "server not running"
         sys.exit(1)
@@ -114,12 +115,7 @@ def cmd_info():
                           "subscriptions": len(s.subscriptions)},
                dispatcher.request_dispatcher.get_sessions())
 
-def cmd_debug():
-    try:
-        s = request['params'][1]
-    except:
-        s = None
-
+def cmd_debug(s):
     if s:
         from guppy import hpy
         h = hpy()
@@ -146,7 +142,7 @@ if __name__ == '__main__':
         assert ssl_certfile and ssl_keyfile
 
     if len(sys.argv) > 1:
-        run_rpc_command(sys.argv[1], stratum_tcp_port)
+        run_rpc_command(sys.argv[1:])
         sys.exit(0)
 
     try:
