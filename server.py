@@ -49,8 +49,8 @@ def create_config():
     config.set('server', 'report_host', '')
     config.set('server', 'stratum_tcp_port', '50001')
     config.set('server', 'stratum_http_port', '8081')
-    config.set('server', 'stratum_tcp_ssl_port', '')
-    config.set('server', 'stratum_http_ssl_port', '')
+    config.set('server', 'stratum_tcp_ssl_port', '50002')
+    config.set('server', 'stratum_http_ssl_port', '8082')
     config.set('server', 'report_stratum_tcp_port', '')
     config.set('server', 'report_stratum_http_port', '')
     config.set('server', 'report_stratum_tcp_ssl_port', '')
@@ -66,7 +66,7 @@ def create_config():
     # use leveldb as default
     config.set('server', 'backend', 'leveldb')
     config.add_section('leveldb')
-    config.set('leveldb', 'path', '/dev/shm/electrum_db')
+    config.set('leveldb', 'path_fulltree', '/dev/shm/electrum_db')
     config.set('leveldb', 'pruning_limit', '100')
 
     for path in ('/etc/', ''):
@@ -87,11 +87,7 @@ def run_rpc_command(params):
     import xmlrpclib
     server = xmlrpclib.ServerProxy('http://localhost:8000')
     func = getattr(server, cmd)
-    try:
-        r = func(*params[1:])
-    except socket.error:
-        print "server not running"
-        sys.exit(1)
+    r = func(*params[1:])
 
     if cmd == 'info':
         now = time.time()
@@ -127,14 +123,20 @@ def cmd_debug(s):
         return result
 
 
+def get_port(config, name):
+    try:
+        return config.getint('server', name)
+    except:
+        return None
+
 if __name__ == '__main__':
     config = create_config()
     password = config.get('server', 'password')
     host = config.get('server', 'host')
-    stratum_tcp_port = config.getint('server', 'stratum_tcp_port')
-    stratum_http_port = config.getint('server', 'stratum_http_port')
-    stratum_tcp_ssl_port = config.getint('server', 'stratum_tcp_ssl_port')
-    stratum_http_ssl_port = config.getint('server', 'stratum_http_ssl_port')
+    stratum_tcp_port = get_port(config, 'stratum_tcp_port')
+    stratum_http_port = get_port(config, 'stratum_http_port')
+    stratum_tcp_ssl_port = get_port(config, 'stratum_tcp_ssl_port')
+    stratum_http_ssl_port = get_port(config, 'stratum_http_ssl_port')
     ssl_certfile = config.get('server', 'ssl_certfile')
     ssl_keyfile = config.get('server', 'ssl_keyfile')
 
@@ -142,15 +144,17 @@ if __name__ == '__main__':
         assert ssl_certfile and ssl_keyfile
 
     if len(sys.argv) > 1:
-        run_rpc_command(sys.argv[1:])
+        try:
+            run_rpc_command(sys.argv[1:])
+        except socket.error:
+            print "server not running"
+            sys.exit(1)
         sys.exit(0)
 
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((host, stratum_tcp_port))
-        s.close()
+        run_rpc_command(['getpid'])
         is_running = True
-    except:
+    except socket.error:
         is_running = False
 
     if is_running:
