@@ -45,5 +45,7 @@ if [ ! -d $log_dir ]; then
     mkdir -p $log_dir
 fi
 
+datetime=$(date +'%Y-%m-%d_%H:%M')
+
 echo "Starting server as daemon"
-nohup /usr/bin/python -u server.py &> $log_dir/electrum.log &
+nohup /usr/bin/python -u server.py &> $log_dir/electrum_$datetime.log &
