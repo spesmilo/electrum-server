@@ -38,7 +38,7 @@ if [ ! -d $path ]; then
     fi
 fi
 
-log_dir=/home/$USER/log
+log_dir=~/log
 
 if [ ! -d $log_dir ]; then
     echo "Created logging directory in $USER's home."
