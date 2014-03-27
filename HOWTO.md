@@ -32,7 +32,7 @@ Lines that lack hash or dollar signs are pastes from config files. They
 should be copied verbatim or adapted, without the indentation tab.
 
 apt-get install commands are suggestions for required dependencies.
-They conform to an Ubuntu 13.04 system but may well work with Debian
+They conform to an Ubuntu 13.10 system but may well work with Debian
 or earlier and later versions of Ubuntu.
 
 Prerequisites
@@ -53,16 +53,16 @@ build chain. You will need root access in order to install other software or
 Python libraries. 
 
 **Hardware.** The lightest setup is a pruning server with diskspace 
-requirements well under 1 GB growing very moderately and less taxing 
-on I/O and CPU once it's up and running. However note that you also need
-to run bitcoind and keep a copy of the full blockchain, which is roughly
-9 GB in April 2013. If you have less than 2 GB of RAM make sure you limit
-bitcoind to 8 concurrent connections. If you have more ressources to 
-spare you can run the server with a higher limit of historic transactions 
-per address. CPU speed is also important, mostly for the initial block 
+requirements of about 10 GB for the electrum database. However note that 
+you also need to run bitcoind and keep a copy of the full blockchain, 
+which is roughly 20 GB in April 2014. If you have less than 2 GB of RAM 
+make sure you limit bitcoind to 8 concurrent connections. If you have more 
+ressources to  spare you can run the server with a higher limit of historic 
+transactions per address. CPU speed is important, mostly for the initial block 
 chain import, but also if you plan to run a public Electrum server, which 
 could serve tens of concurrent requests. Any multi-core x86 CPU ~2009 or
-newer other than Atom should do for good performance.
+newer other than Atom should do for good performance. An ideal setup
+has enough RAM to hold and procss the leveldb database in tmpfs (e.g. /dev/shm).
 
 Instructions
 ------------
@@ -75,7 +75,8 @@ We will also use the `~/bin` directory to keep locally installed files
 (others might want to use `/usr/local/bin` instead). We will download source
 code files to the `~/src` directory.
 
-    # sudo adduser bitcoin --disabled-password
+    $ sudo adduser bitcoin --disabled-password
+    $ sudo apt-get install git
     # su - bitcoin
     $ mkdir ~/bin ~/src
     $ echo $PATH
@@ -92,27 +93,31 @@ our ~/bin directory:
 
     $ mkdir -p ~/src/electrum
     $ cd ~/src/electrum
-    $ sudo apt-get install git
     $ git clone https://github.com/spesmilo/electrum-server.git server
-    $ chmod +x ~/src/electrum/server/server.py
-    $ ln -s ~/src/electrum/server/server.py ~/bin/electrum-server
+    $ chmod +x ~/src/electrum/server/start
+    $ ln -s ~/src/electrum/server/start ~/bin/electrum-server
 
 ### Step 3. Download bitcoind
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.8.6 stable.
+We currently recommend bitcoind 0.9.0 stable.
 
 If your package manager does not supply a recent bitcoind and prefer to compile
 here are some pointers for Ubuntu:
 
-    $ cd ~/src && wget http://sourceforge.net/projects/bitcoin/files/Bitcoin/bitcoin-0.8.6/bitcoin-0.8.6-linux.tar.gz
-    $ tar xfz bitcoin-0.8.6-linux.tar.gz
-    $ cd bitcoin-0.8.6-linux/src/src
-    $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev 
-    $ make USE_UPNP= -f makefile.unix
-    $ strip ~/src/bitcoin-0.8.6-linux/src/src/bitcoind
-    $ ln -s ~/src/bitcoin-0.8.6-linux/src/src/bitcoind ~/bin/bitcoind
+    # apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
+    # su - bitcoin
+    $ cd ~/src && wget https://bitcoin.org/bin/0.9.0/bitcoin-0.9.0-linux.tar.gz
+    $ sha256sum bitcoin-0.9.0-linux.tar.gz | grep 0f767c13b2c670939750a26558cbb40a7f89ff5ba7d42ce63da0bcc0b701642d
+    $ tar xfz bitcoin-0.9.0-linux.tar.gz
+    $ cd bitcoin-0.9.0-linux/src
+    $ tar xfz bitcoin-0.9.0.tar.gz
+    $ cd bitcoin-0.9.0
+    $ ./configure --disable-wallet --without-miniupnpc
+    $ make
+    $ strip ~/src/bitcoin-0.9.0-linux/src/bitcoin-0.9.0/src/bitcoind
+    $ cp -a ~/src/bitcoin-0.9.0-linux/src/bitcoin-0.9.0/src/bitcoind ~/bin/bitcoind
 
 ### Step 4. Configure and start bitcoind
 
@@ -145,6 +150,8 @@ downloading blocks. You can check its progress by running:
 
     $ bitcoind getinfo
 
+Before starting electrum server your bitcoind should have processed all 
+blockes and caught up to the current height of the network.
 You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
@@ -156,16 +163,18 @@ already installed on your distribution, or can be installed with your
 package manager. Electrum also depends on two Python libraries which we will
 need to install "by hand": `JSONRPClib`.
 
-    $ sudo apt-get install python-setuptools
+    $ sudo apt-get install python-setuptools python-openssl
     $ sudo easy_install jsonrpclib
-    $ sudo apt-get install python-openssl
 
-### Step 6. Install leveldb
+### Step 6. Install leveldb and plyvel
 
-    $ sudo apt-get install python-leveldb
+    $ sudo apt-get install python-leveldb libleveldb-dev
+    $ sudo easy_install plyvel
  
 See the steps in README.leveldb for further details, especially if your system
-doesn't have the python-leveldb package.
+doesn't have the python-leveldb package or if plyvel installation fails.
+
+leveldb should be at least version 1.1.9. Earlier version are believed to be buggy.
 
 ### Step 7. Select your limit
 
@@ -184,7 +193,7 @@ and running and requires less maintenance and diskspace than abe.
 The section in the electrum server configuration file (see step 10) looks like this:
 
      [leveldb]
-     path = /path/to/your/database
+     path_fulltree = /path/to/your/database
      # for each address, history will be pruned if it is longer than this limit
      pruning_limit = 100
 
@@ -198,21 +207,25 @@ http://foundry.electrum.org/
 
 Alternatively if you have the time and nerve you can import the blockchain yourself.
 
-As of April 2013 it takes between 6-24 hours to import 230k of blocks, depending
+As of April 2014 it takes between two days and over a week to import 300k of blocks, depending
 on CPU speed, I/O speed and selected pruning limit.
 
-It's considerably faster to index in memory. You can use /dev/shm or
+It's considerably faster and strongly recommended to index in memory. You can use /dev/shm or
 or create a tmpfs which will also use swap if you run out of memory:
 
-    $ sudo mount -t tmpfs -o rw,nodev,nosuid,noatime,size=6000M,mode=0777 none /tmpfs
+    $ sudo mount -t tmpfs -o rw,nodev,nosuid,noatime,size=15000M,mode=0777 none /tmpfs
 
-Figures from April 2013:
-At limit 100 the database comes to 2,6 GB with 230k blocks and takes roughly 6h to import in /dev/shm.
-At limit 1000 the database comes to 3,0 GB with 230k blocks and takes roughly 10h to import in /dev/shm.
-At limit 10000 the database comes to 3,5 GB with 230k blocks and takes roughly 24h to import in /dev/shm.
+If you use tmpfs make sure you have enough RAM and swap to cover the size. If you only have 4 gigs of
+RAM but add 15 gigs of swap from a file that's fine too. tmpfs is rather smart to swap out the least
+used parts. It's fine to use a file on a SSD for swap in thise case. 
 
-As of November 2013 expect at least double the time for indexing the blockchain. Databases have grown to
-roughly 4 GB, give or take a few hundred MB between pruning limits 100 and 10000. 
+It's not recommended to do initial indexing of the database on a SSD because the indexing process
+does at least 20 TB (!) of disk writes and puts considerable wear-and-tear on a SSD. It's a lot better
+to use tmpfs and just swap out to disk when necessary.   
+
+Databases have grown to roughly 8 GB in April 2014, give or take a gigabyte between pruning limits 
+100 and 10000. Leveldb prunes the database from time to time, so it's not uncommon to see databases
+~50% larger at times when it's writing a lot especially when indexing from the beginning.
 
 
 ### Step 9. Create a self-signed SSL cert
@@ -274,11 +287,12 @@ root user who usually passes this value to all unprivileged user sessions too.
 
     $ sudo sed -i '$a ulimit -n 16384' /root/.bashrc
 
-We're aware the leveldb part in electrum server may leak some memory and it's good practice to
-to either restart the server once in a while from cron (preferred) or to at least monitor 
-it for crashes and then restart the server. Weekly restarts should be fine for most setups.
-If your server gets a lot of traffic and you have a limited amount of RAM you may need to restart
-more often.
+Also make sure the bitcoin user can actually increase the ulimit by allowing it accordingly in
+/etc/security/limits.conf
+
+While most bugs are fixed in this regard electrum server may leak some memory and it's good practice to
+to restart the server once in a while from cron (preferred) or to at least monitor 
+it for crashes and then restart the server. Monthly restarts should be fine for most setups.
 
 Two more things for you to consider:
 
@@ -301,7 +315,6 @@ You should see this on the screen:
 If you want to stop Electrum server, use the 'stop' script:
 
     $ stop
-
 
 
 ### Step 13. Test the Electrum server
