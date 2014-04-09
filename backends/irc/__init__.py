@@ -137,6 +137,11 @@ class IrcThread(threading.Thread):
                             host = line[k+9]
                             ports = line[k+10:]
                             self.peers[name] = (ip, host, ports)
+                        elif 'KICK' in line:
+                            try:
+                                print_log("KICK", line[3] + line[4])
+                            except:
+                                print_log("KICK", "error")
 
                     if time.time() - t > 5*60:
                         #self.processor.push_response({'method': 'server.peers', 'params': [self.get_peers()]})
