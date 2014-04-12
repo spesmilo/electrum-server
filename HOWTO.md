@@ -91,33 +91,30 @@ to your `.bashrc`, `.profile` or `.bash_profile`, then logout and relogin:
 We will download the latest git snapshot for Electrum and 'install' it in
 our ~/bin directory:
 
-    $ mkdir -p ~/src/electrum
-    $ cd ~/src/electrum
-    $ git clone https://github.com/spesmilo/electrum-server.git server
-    $ chmod +x ~/src/electrum/server/start
-    $ ln -s ~/src/electrum/server/start ~/bin/electrum-server
+    $ mkdir -p ~/electrum-server
+    $ git clone https://github.com/spesmilo/electrum-server.git
 
 ### Step 3. Download bitcoind
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.9.0 stable.
+We currently recommend bitcoind 0.9.1 stable.
 
 If your package manager does not supply a recent bitcoind and prefer to compile
 here are some pointers for Ubuntu:
 
     # apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
     # su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/0.9.0/bitcoin-0.9.0-linux.tar.gz
-    $ sha256sum bitcoin-0.9.0-linux.tar.gz | grep 0f767c13b2c670939750a26558cbb40a7f89ff5ba7d42ce63da0bcc0b701642d
-    $ tar xfz bitcoin-0.9.0-linux.tar.gz
-    $ cd bitcoin-0.9.0-linux/src
-    $ tar xfz bitcoin-0.9.0.tar.gz
-    $ cd bitcoin-0.9.0
+    $ cd ~/src && wget https://bitcoin.org/bin/0.9.1/bitcoin-0.9.1-linux.tar.gz
+    $ sha256sum bitcoin-0.9.1-linux.tar.gz | grep 3fabc1c629007b465a278525883663d41a2ba62699f2773536a8bf59ca210425
+    $ tar xfz bitcoin-0.9.1-linux.tar.gz
+    $ cd bitcoin-0.9.1-linux/src
+    $ tar xfz bitcoin-0.9.1.tar.gz
+    $ cd bitcoin-0.9.1
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
-    $ strip ~/src/bitcoin-0.9.0-linux/src/bitcoin-0.9.0/src/bitcoind
-    $ cp -a ~/src/bitcoin-0.9.0-linux/src/bitcoin-0.9.0/src/bitcoind ~/bin/bitcoind
+    $ strip ~/src/bitcoin-0.9.1-linux/src/bitcoin-0.9.1/src/bitcoind
+    $ cp -a ~/src/bitcoin-0.9.1-linux/src/bitcoin-0.9.1/src/bitcoind ~/bin/bitcoind
 
 ### Step 4. Configure and start bitcoind
 
@@ -305,16 +302,17 @@ Two more things for you to consider:
 
 The magic moment has come: you can now start your Electrum server:
 
-    $ start
+    $ cd ~/electrum-server
+    $ ./start
 
-You should see this on the screen:
+You should see this in the log file:
 
     starting Electrum server
-    cache: yes
 
 If you want to stop Electrum server, use the 'stop' script:
 
-    $ stop
+    $ cd ~/electrum-server
+    $ ./stop
 
 
 ### Step 13. Test the Electrum server
