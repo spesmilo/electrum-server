@@ -120,24 +120,21 @@ class IrcThread(threading.Thread):
                         line = line.split()
                         if line[0] == 'PING':
                             out_msg.append('PONG ' + line[1] + '\n')
-                        elif '353' in line[1]:  # answer to /names
-                            k = line.index('353')
-                            for item in line[k+1:]:
+                        elif line[1] == '353':  # answer to /names
+                            for item in line[2:]:
                                 if item.startswith(self.prepend):
                                     out_msg.append('WHO %s\n' % item)
-                        elif '352' in line[1]:  # answer to /who
-                            # warning: this is a horrible hack which apparently works
-                            k = line.index('352')
+                        elif line[1] == '352':  # answer to /who
                             try:
-                                ip = socket.gethostbyname(line[k+4])
+                                ip = socket.gethostbyname(line[5])
                             except:
-                                print_log("gethostbyname error", line[k+4])
+                                print_log("gethostbyname error", line[5])
                                 continue
-                            name = line[k+6]
-                            host = line[k+9]
-                            ports = line[k+10:]
+                            name = line[7]
+                            host = line[10]
+                            ports = line[11:]
                             self.peers[name] = (ip, host, ports)
-                        elif 'KICK' in line[1]:
+                        elif line[1] == 'KICK':
                             try:
                                 print_log("KICK", line[3] + line[4])
                             except:
