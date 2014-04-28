@@ -78,7 +78,7 @@ class IrcThread(threading.Thread):
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
-                s.settimeout(0.1)
+                s.settimeout(0.3)
             except:
                 s.close()
                 print_log("IRC: reconnect in 10 s")
