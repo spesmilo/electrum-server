@@ -15,6 +15,7 @@
 # License along with this program.  If not, see
 # <http://www.gnu.org/licenses/agpl.html>.
 
+import argparse
 import ConfigParser
 import logging
 import socket
@@ -25,6 +26,9 @@ import traceback
 
 import json
 import os
+
+import utils
+from backends.bitcoind import storage
 
 logging.basicConfig()
 
@@ -40,12 +44,18 @@ def attempt_read_config(config, filename):
         pass
 
 
-def create_config():
+def setup_network_params(config):
+    utils.PUBKEY_ADDRESS = config.getint('network', 'pubkey_address')
+    utils.SCRIPT_ADDRESS = config.getint('network', 'script_address')
+    storage.GENESIS_HASH = config.get('network', 'genesis_hash')
+
+def create_config(filename=None):
     config = ConfigParser.ConfigParser()
     # set some defaults, which will be overwritten by the config file
     config.add_section('server')
     config.set('server', 'banner', 'Welcome to Electrum!')
     config.set('server', 'host', 'localhost')
+    config.set('server', 'electrum_rpc_port', '8000')
     config.set('server', 'report_host', '')
     config.set('server', 'stratum_tcp_port', '50001')
     config.set('server', 'stratum_http_port', '8081')
@@ -69,9 +79,24 @@ def create_config():
     config.set('leveldb', 'path_fulltree', '/dev/shm/electrum_db')
     config.set('leveldb', 'pruning_limit', '100')
 
-    for path in ('/etc/', ''):
-        filename = path + 'electrum.conf'
-        attempt_read_config(config, filename)
+    # set network parameters
+    config.add_section('network')
+    config.set('network', 'pubkey_address', '0')
+    config.set('network', 'script_address', '5')
+    config.set('network', 'genesis_hash', '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f')
+
+    # try to find the config file in the default paths
+    if not filename:
+        for path in ('/etc/', ''):
+            filename = path + 'electrum.conf'
+            if os.path.isfile(filename):
+                break
+
+    if not os.path.isfile(filename):
+        print 'could not find electrum configuration file "%s"' % filename
+        sys.exit(1)
+
+    attempt_read_config(config, filename)
 
     try:
         with open('/etc/electrum.banner', 'r') as f:
@@ -82,10 +107,10 @@ def create_config():
     return config
 
 
-def run_rpc_command(params):
+def run_rpc_command(params, electrum_rpc_port):
     cmd = params[0]
     import xmlrpclib
-    server = xmlrpclib.ServerProxy('http://localhost:8000')
+    server = xmlrpclib.ServerProxy('http://localhost:%d' % electrum_rpc_port)
     func = getattr(server, cmd)
     r = func(*params[1:])
 
@@ -130,9 +155,15 @@ def get_port(config, name):
         return None
 
 if __name__ == '__main__':
-    config = create_config()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--conf', metavar='path', default=None, help='specify a configuration file')
+    parser.add_argument('command', nargs='*', default=[], help='send a command to the server')
+    args = parser.parse_args()
+
+    config = create_config(args.conf)
     password = config.get('server', 'password')
     host = config.get('server', 'host')
+    electrum_rpc_port = get_port(config, 'electrum_rpc_port')
     stratum_tcp_port = get_port(config, 'stratum_tcp_port')
     stratum_http_port = get_port(config, 'stratum_http_port')
     stratum_tcp_ssl_port = get_port(config, 'stratum_tcp_ssl_port')
@@ -140,19 +171,21 @@ if __name__ == '__main__':
     ssl_certfile = config.get('server', 'ssl_certfile')
     ssl_keyfile = config.get('server', 'ssl_keyfile')
 
+    setup_network_params(config)
+
     if stratum_tcp_ssl_port or stratum_http_ssl_port:
         assert ssl_certfile and ssl_keyfile
 
-    if len(sys.argv) > 1:
+    if len(args.command) >= 1:
         try:
-            run_rpc_command(sys.argv[1:])
+            run_rpc_command(args.command, electrum_rpc_port)
         except socket.error:
             print "server not running"
             sys.exit(1)
         sys.exit(0)
 
     try:
-        run_rpc_command(['getpid'])
+        run_rpc_command(['getpid'], electrum_rpc_port)
         is_running = True
     except socket.error:
         is_running = False
@@ -223,7 +256,7 @@ if __name__ == '__main__':
     
 
     from SimpleXMLRPCServer import SimpleXMLRPCServer
-    server = SimpleXMLRPCServer(('localhost',8000), allow_none=True, logRequests=False)
+    server = SimpleXMLRPCServer(('localhost', electrum_rpc_port), allow_none=True, logRequests=False)
     server.register_function(lambda: os.getpid(), 'getpid')
     server.register_function(shared.stop, 'stop')
     server.register_function(cmd_info, 'info')
