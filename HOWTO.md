@@ -98,23 +98,23 @@ our ~/bin directory:
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.9.1 stable.
+We currently recommend bitcoind 0.9.2 stable.
 
 If your package manager does not supply a recent bitcoind and prefer to compile
 here are some pointers for Ubuntu:
 
     # apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
     # su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/0.9.1/bitcoin-0.9.1-linux.tar.gz
-    $ sha256sum bitcoin-0.9.1-linux.tar.gz | grep 3fabc1c629007b465a278525883663d41a2ba62699f2773536a8bf59ca210425
-    $ tar xfz bitcoin-0.9.1-linux.tar.gz
-    $ cd bitcoin-0.9.1-linux/src
-    $ tar xfz bitcoin-0.9.1.tar.gz
-    $ cd bitcoin-0.9.1
+    $ cd ~/src && wget https://bitcoin.org/bin/0.9.2/bitcoin-0.9.2-linux.tar.gz
+    $ sha256sum bitcoin-0.9.2-linux.tar.gz | grep 58a77aeb4c81b54d3903d85abce4f0fb580694a3611a415c5fe69a27dea5935b
+    $ tar xfz bitcoin-0.9.2-linux.tar.gz
+    $ cd bitcoin-0.9.2-linux/src
+    $ tar xfz bitcoin-0.9.2.tar.gz
+    $ cd bitcoin-0.9.2
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
-    $ strip ~/src/bitcoin-0.9.1-linux/src/bitcoin-0.9.1/src/bitcoind
-    $ cp -a ~/src/bitcoin-0.9.1-linux/src/bitcoin-0.9.1/src/bitcoind ~/bin/bitcoind
+    $ strip ~/src/bitcoin-0.9.2-linux/src/bitcoin-0.9.2/src/bitcoind
+    $ cp -a ~/src/bitcoin-0.9.2-linux/src/bitcoin-0.9.2/src/bitcoind ~/bin/bitcoind
 
 ### Step 4. Configure and start bitcoind
 
