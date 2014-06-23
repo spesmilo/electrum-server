@@ -28,7 +28,7 @@ import json
 import os
 
 import utils
-from backends.bitcoind import storage
+from backends.bitcoind import storage, networks
 
 logging.basicConfig()
 
@@ -45,9 +45,18 @@ def attempt_read_config(config, filename):
 
 
 def setup_network_params(config):
-    utils.PUBKEY_ADDRESS = config.getint('network', 'pubkey_address')
-    utils.SCRIPT_ADDRESS = config.getint('network', 'script_address')
-    storage.GENESIS_HASH = config.get('network', 'genesis_hash')
+    type = config.get('network', 'type')
+    params = networks.params.get(type)
+    utils.PUBKEY_ADDRESS = int(params.get('pubkey_address'))
+    utils.SCRIPT_ADDRESS = int(params.get('script_address'))
+    storage.GENESIS_HASH = params.get('genesis_hash')
+
+    if config.has_option('network', 'pubkey_address'):
+        utils.PUBKEY_ADDRESS = config.getint('network', 'pubkey_address')
+    if config.has_option('network', 'script_address'):
+        utils.SCRIPT_ADDRESS = config.getint('network', 'script_address')
+    if config.has_option('network', 'genesis_hash'):
+        storage.GENESIS_HASH = config.get('network', 'genesis_hash')
 
 def create_config(filename=None):
     config = ConfigParser.ConfigParser()
@@ -81,9 +90,7 @@ def create_config(filename=None):
 
     # set network parameters
     config.add_section('network')
-    config.set('network', 'pubkey_address', '0')
-    config.set('network', 'script_address', '5')
-    config.set('network', 'genesis_hash', '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f')
+    config.set('network', 'type', 'bitcoin_main')
 
     # try to find the config file in the default paths
     if not filename:

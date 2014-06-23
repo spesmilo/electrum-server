@@ -20,8 +20,11 @@ banner = Welcome to Electrum!
 # default backend is leveldb (pruning server)
 backend = leveldb
 
-## Change the following to enable testnet
-#[network]
+## Bitcoin network parameters
+[network]
+# Change type to bitcoin_test to enable testnet
+type = bitcoin_main
+# Advanced, manually change the network parameters
 #pubkey_address = 111
 #script_address = 196
 #genesis_hash = 000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
