@@ -11,6 +11,7 @@ stratum_http_port = 8081
 #report_stratum_http_ssl_port = 443
 password = secret
 banner = Welcome to Electrum!
+banner_file = /etc/electrum.banner
 #irc = no
 #irc_nick = <yournickname>
 #ssl_certfile = /path/to/electrum-server.crt

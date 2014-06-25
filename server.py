@@ -39,12 +39,19 @@ def attempt_read_config(config, filename):
     except IOError:
         pass
 
+def load_banner(config):
+    try:
+        with open(config.get('server', 'banner_file'), 'r') as f:
+            config.set('server', 'banner', f.read())
+    except IOError:
+        pass
 
 def create_config():
     config = ConfigParser.ConfigParser()
     # set some defaults, which will be overwritten by the config file
     config.add_section('server')
     config.set('server', 'banner', 'Welcome to Electrum!')
+    config.set('server', 'banner_file', '/etc/electrum.banner')
     config.set('server', 'host', 'localhost')
     config.set('server', 'report_host', '')
     config.set('server', 'stratum_tcp_port', '50001')
@@ -73,11 +80,7 @@ def create_config():
         filename = path + 'electrum.conf'
         attempt_read_config(config, filename)
 
-    try:
-        with open('/etc/electrum.banner', 'r') as f:
-            config.set('server', 'banner', f.read())
-    except IOError:
-        pass
+    load_banner(config)
 
     return config
 
@@ -102,6 +105,9 @@ def run_rpc_command(params):
     else:
         print r
 
+def cmd_banner_update():
+    load_banner(dispatcher.shared.config)
+    return True
 
 def cmd_info():
     return map(lambda s: {"time": s.time,
@@ -228,6 +234,7 @@ if __name__ == '__main__':
     server.register_function(shared.stop, 'stop')
     server.register_function(cmd_info, 'info')
     server.register_function(cmd_debug, 'debug')
+    server.register_function(cmd_banner_update, 'banner_update')
     server.socket.settimeout(1)
  
     while not shared.stopped():
