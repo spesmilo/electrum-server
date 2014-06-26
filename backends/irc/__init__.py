@@ -159,7 +159,7 @@ class ServerProcessor(Processor):
     def __init__(self, config):
         Processor.__init__(self)
         self.daemon = True
-        self.banner = config.get('server', 'banner')
+        self.config = config
 
         if config.get('server', 'irc') == 'yes':
             self.irc = IrcThread(self, config)
@@ -183,7 +183,7 @@ class ServerProcessor(Processor):
         result = None
 
         if method == 'server.banner':
-            result = self.banner.replace('\\n', '\n')
+            result = self.config.get('server', 'banner').replace('\\n', '\n')
 
         elif method == 'server.peers.subscribe':
             result = self.get_peers()
