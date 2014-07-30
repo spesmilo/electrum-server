@@ -7,7 +7,7 @@ Abstract
 This document is an easy to follow guide to installing and running your own
 Electrum server on Linux. It is structured as a series of steps you need to
 follow, ordered in the most logical way. The next two sections describe some
-conventions we use in this document and hardware, software and expertise
+conventions we use in this document and the hardware, software, and expertise
 requirements.
 
 The most up-to date version of this document is available at:
@@ -29,7 +29,7 @@ should be replaced by the user with something appropriate. For example,
 notation with shell redirection ('command < file' or 'command > file')!
 
 Lines that lack hash or dollar signs are pastes from config files. They
-should be copied verbatim or adapted, without the indentation tab.
+should be copied verbatim or adapted without the indentation tab.
 
 apt-get install commands are suggestions for required dependencies.
 They conform to an Ubuntu 13.10 system but may well work with Debian
@@ -39,8 +39,8 @@ Prerequisites
 -------------
 
 **Expertise.** You should be familiar with Linux command line and
-standard Linux commands. You should have basic understanding of git,
-Python packages. You should have knowledge about how to install and
+standard Linux commands. You should have a basic understanding of git
+and Python packages. You should have knowledge about how to install and
 configure software on your Linux distribution. You should be able to
 add commands to your distribution's startup scripts. If one of the
 commands included in this document is not available or does not
@@ -57,12 +57,12 @@ requirements of about 10 GB for the electrum database. However note that
 you also need to run bitcoind and keep a copy of the full blockchain, 
 which is roughly 20 GB in April 2014. If you have less than 2 GB of RAM 
 make sure you limit bitcoind to 8 concurrent connections. If you have more 
-ressources to  spare you can run the server with a higher limit of historic 
-transactions per address. CPU speed is important, mostly for the initial block 
-chain import, but also if you plan to run a public Electrum server, which 
-could serve tens of concurrent requests. Any multi-core x86 CPU ~2009 or
-newer other than Atom should do for good performance. An ideal setup
-has enough RAM to hold and procss the leveldb database in tmpfs (e.g. /dev/shm).
+resources to spare you can run the server with a higher limit of historic 
+transactions per address. CPU speed is important for the initial block 
+chain import, but is also important if you plan to run a public Electrum server, 
+which could serve tens of concurrent requests. Any multi-core x86 CPU from 2009 or
+newer other than an Atom should do for good performance. An ideal setup
+has enough RAM to hold and process the leveldb database in tmpfs (e.g. /dev/shm).
 
 Instructions
 ------------
@@ -82,7 +82,7 @@ code files to the `~/src` directory.
     $ echo $PATH
 
 If you don't see `/home/bitcoin/bin` in the output, you should add this line
-to your `.bashrc`, `.profile` or `.bash_profile`, then logout and relogin:
+to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
     PATH="$HOME/bin:$PATH"
 
@@ -100,7 +100,7 @@ Older versions of Electrum used to require a patched version of bitcoind.
 This is not the case anymore since bitcoind supports the 'txindex' option.
 We currently recommend bitcoind 0.9.2 stable.
 
-If your package manager does not supply a recent bitcoind and prefer to compile
+If your package manager does not supply a recent bitcoind or you prefer to compile it yourself,
 here are some pointers for Ubuntu:
 
     # apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
@@ -118,7 +118,7 @@ here are some pointers for Ubuntu:
 
 ### Step 4. Configure and start bitcoind
 
-In order to allow Electrum to "talk" to `bitcoind`, we need to set up a RPC
+In order to allow Electrum to "talk" to `bitcoind`, we need to set up an RPC
 username and password for `bitcoind`. We will then start `bitcoind` and
 wait for it to complete downloading the blockchain.
 
@@ -142,12 +142,12 @@ If you have a fresh copy of bitcoind start `bitcoind`:
 
     $ bitcoind
 
-Allow some time to pass, so `bitcoind` connects to the network and starts
+Allow some time to pass for `bitcoind` to connect to the network and start
 downloading blocks. You can check its progress by running:
 
     $ bitcoind getinfo
 
-Before starting electrum server your bitcoind should have processed all 
+Before starting the electrum server your bitcoind should have processed all 
 blockes and caught up to the current height of the network.
 You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
@@ -179,7 +179,7 @@ Electrum server uses leveldb to store transactions. You can choose
 how many spent transactions per address you want to store on the server.
 The default is 100, but there are also servers with 1000 or even 10000.
 Few addresses have more than 10000 transactions. A limit this high
-can be considered to be equivalent to a "full" server. Full servers previously
+can be considered equivalent to a "full" server. Full servers previously
 used abe to store the blockchain. The use of abe for electrum servers is now
 deprecated.
 
@@ -196,16 +196,16 @@ The section in the electrum server configuration file (see step 10) looks like t
 
 ### Step 8. Import blockchain into the database or download it
 
-It's recommended to fetch a pre-processed leveldb from the net
+It's recommended to fetch a pre-processed leveldb from the net.
 
 You can fetch recent copies of electrum leveldb databases and further instructions 
 from the Electrum full archival server foundry at:
 http://foundry.electrum.org/ 
 
-Alternatively if you have the time and nerve you can import the blockchain yourself.
+Alternatively, if you have the time and nerve, you can import the blockchain yourself.
 
-As of April 2014 it takes between two days and over a week to import 300k of blocks, depending
-on CPU speed, I/O speed and selected pruning limit.
+As of April 2014 it takes between two days and over a week to import 300k blocks, depending
+on CPU speed, I/O speed, and your selected pruning limit.
 
 It's considerably faster and strongly recommended to index in memory. You can use /dev/shm or
 or create a tmpfs which will also use swap if you run out of memory:
@@ -214,21 +214,21 @@ or create a tmpfs which will also use swap if you run out of memory:
 
 If you use tmpfs make sure you have enough RAM and swap to cover the size. If you only have 4 gigs of
 RAM but add 15 gigs of swap from a file that's fine too. tmpfs is rather smart to swap out the least
-used parts. It's fine to use a file on a SSD for swap in thise case. 
+used parts. It's fine to use a file on an SSD for swap in this case. 
 
-It's not recommended to do initial indexing of the database on a SSD because the indexing process
-does at least 20 TB (!) of disk writes and puts considerable wear-and-tear on a SSD. It's a lot better
-to use tmpfs and just swap out to disk when necessary.   
+It's not recommended to do initial indexing of the database on an SSD because the indexing process
+does at least 20 TB (!) of disk writes and puts considerable wear-and-tear on an SSD. It's a lot better
+to use tmpfs and just swap out to disk when necessary.
 
 Databases have grown to roughly 8 GB in April 2014, give or take a gigabyte between pruning limits 
 100 and 10000. Leveldb prunes the database from time to time, so it's not uncommon to see databases
-~50% larger at times when it's writing a lot especially when indexing from the beginning.
+~50% larger at times when it's writing a lot, especially when indexing from the beginning.
 
 
 ### Step 9. Create a self-signed SSL cert
 
-To run SSL / HTTPS you need to generate a self-signed certificate
-using openssl. You could just comment out the SSL / HTTPS ports in the config and run 
+To run SSL / HTTPS you need to generate a self-signed certificateusing openssl. 
+You could just comment out the SSL / HTTPS ports in the config and run 
 without, but this is not recommended.
 
 Use the sample code below to create a self-signed cert with a recommended validity 
@@ -252,14 +252,14 @@ When asked for a challenge password just leave it empty and press enter.
     $ openssl x509 -req -days 730 -in server.csr -signkey server.key -out server.crt
 
 The server.crt file is your certificate suitable for the ssl_certfile= parameter and
-server.key corresponds to ssl_keyfile= in your electrum server config
+server.key corresponds to ssl_keyfile= in your electrum server config.
 
-Starting with Electrum 1.9 the client will learn and locally cache the SSL certificate 
+Starting with Electrum 1.9, the client will learn and locally cache the SSL certificate 
 for your server upon the first request to prevent man-in-the middle attacks for all
 further connections.
 
-If your certificate is lost or expires on the server side you currently need to run
-your server with a different server name along with a new certificate for this server.
+If your certificate is lost or expires on the server side, you will need to run
+your server with a different server name and a new certificate.
 Therefore it's a good idea to make an offline backup copy of your certificate and key
 in case you need to restore it.
 
@@ -273,7 +273,7 @@ options.
     $ sudo $EDITOR /etc/electrum.conf
 
 Go through the sample config options and set them to your liking.
-If you intend to run the server publicly have a look at README-IRC.md 
+If you intend to run the server publicly have a look at README-IRC.md
 
 ### Step 11. Tweak your system for running electrum
 
@@ -287,7 +287,7 @@ root user who usually passes this value to all unprivileged user sessions too.
 Also make sure the bitcoin user can actually increase the ulimit by allowing it accordingly in
 /etc/security/limits.conf
 
-While most bugs are fixed in this regard electrum server may leak some memory and it's good practice to
+While most bugs are fixed in this regard, electrum server may leak some memory and it's good practice 
 to restart the server once in a while from cron (preferred) or to at least monitor 
 it for crashes and then restart the server. Monthly restarts should be fine for most setups.
 
@@ -296,7 +296,7 @@ Two more things for you to consider:
 1. To increase security you may want to close bitcoind for incoming connections and connect outbound only
 
 2. Consider restarting bitcoind (together with electrum-server) on a weekly basis to clear out unconfirmed
-   transactions from the local the memory pool which did not propagate over the network
+   transactions from the local the memory pool which did not propagate over the network.
 
 ### Step 12. (Finally!) Run Electrum server
 
@@ -317,12 +317,12 @@ If you want to stop Electrum server, use the 'stop' script:
 
 ### Step 13. Test the Electrum server
 
-We will assume you have a working Electrum client, a wallet and some
+We will assume you have a working Electrum client, a wallet, and some
 transactions history. You should start the client and click on the green
 checkmark (last button on the right of the status bar) to open the Server
 selection window. If your server is public, you should see it in the list
 and you can select it. If you server is private, you need to enter its IP
-or hostname and the port. Press Ok, the client will disconnect from the
+or hostname and the port. Press 'Ok' and the client will disconnect from the
 current server and connect to your new Electrum server. You should see your
 addresses and transactions history. You can see the number of blocks and
 response time in the Server selection window. You should send/receive some
@@ -330,9 +330,9 @@ bitcoins to confirm that everything is working properly.
 
 ### Step 14. Join us on IRC, subscribe to the server thread
 
-Say hi to the dev crew, other server operators and fans on 
+Say hi to the dev crew, other server operators, and fans on 
 irc.freenode.net #electrum and we'll try to congratulate you
-on supporting the community by running an Electrum node
+on supporting the community by running an Electrum node.
 
 If you're operating a public Electrum server please subscribe
 to or regulary check the following thread:
