@@ -171,7 +171,7 @@ need to install "by hand": `JSONRPClib`.
 See the steps in README.leveldb for further details, especially if your system
 doesn't have the python-leveldb package or if plyvel installation fails.
 
-leveldb should be at least version 1.1.9. Earlier version are believed to be buggy.
+leveldb should be at least version 1.9.0. Earlier version are believed to be buggy.
 
 ### Step 7. Select your limit
 
