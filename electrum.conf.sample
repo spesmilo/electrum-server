@@ -15,9 +15,7 @@ banner_file = /etc/electrum.banner
 #ssl_keyfile = /path/to/electrum-server.key
 
 [leveldb]
-#path = /path/to/your/database
-#fulltree is the new UTXO tree, required for Electrum 2.0 clients
-path_fulltree = /path/to/your/database
+path = /path/to/your/database
 # for each address, history will be pruned if it is longer than this limit
 pruning_limit = 100
 

@@ -17,7 +17,10 @@ class Storage(object):
 
     def __init__(self, config, shared, test_reorgs):
 
-        self.dbpath = config.get('leveldb', 'path_fulltree')
+        self.dbpath = config.get('leveldb', 'path')
+        if not self.dbpath:
+            # try older path
+            self.dbpath = config.get('leveldb', 'path_fulltree')
         if not os.path.exists(self.dbpath):
             os.mkdir(self.dbpath)
         self.pruning_limit = config.getint('leveldb', 'pruning_limit')

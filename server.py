@@ -91,7 +91,7 @@ def create_config(filename=None):
     config.set('server', 'use_poller', False)
 
     config.add_section('leveldb')
-    config.set('leveldb', 'path_fulltree', '/dev/shm/electrum_db')
+    config.set('leveldb', 'path', '/dev/shm/electrum_db')
     config.set('leveldb', 'pruning_limit', '100')
 
     # set network parameters
