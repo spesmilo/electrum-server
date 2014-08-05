@@ -5,6 +5,7 @@ if [ "$(id -u)" == "0" ]; then
    # exit 1
 fi
 
+cd "$( dirname "${BASH_SOURCE[0]}" )"
 PID=`/usr/bin/python server.py getpid`
 if [[ $PID != *[!0-9]* ]]; then
     echo "Server already running (pid $PID)"
@@ -39,5 +40,4 @@ if [ ! -d $path ]; then
 fi
 
 echo "Starting server as daemon"
-cd "$( dirname "${BASH_SOURCE[0]}" )"
 nohup /usr/bin/python -u server.py &> electrum.log &
