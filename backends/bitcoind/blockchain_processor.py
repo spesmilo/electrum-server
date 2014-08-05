@@ -72,8 +72,9 @@ class BlockchainProcessor(Processor):
 
     def do_catch_up(self):
 
-        # wait until bitcoind is here..
-        self.bitcoind('getinfo')
+        # this will unpause shared
+        self.header = self.block2header(self.bitcoind('getblock', [self.storage.last_hash]))
+        self.header['utxo_root'] = self.storage.get_root_hash().encode('hex')
 
         self.catch_up(sync=False)
         print_log("Blockchain is up to date.")
