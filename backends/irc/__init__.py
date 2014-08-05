@@ -43,9 +43,8 @@ class IrcThread(threading.Thread):
         self.prepend = 'E_'
         if config.get('server', 'coin') == 'litecoin':
             self.prepend = 'EL_'
-        self.pruning = config.get('server', 'backend') == 'leveldb'
-        if self.pruning:
-            self.pruning_limit = config.get('leveldb', 'pruning_limit')
+        self.pruning = True
+        self.pruning_limit = config.get('leveldb', 'pruning_limit')
         self.nick = self.prepend + self.nick
 
     def get_peers(self):

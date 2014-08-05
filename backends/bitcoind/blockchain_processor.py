@@ -36,7 +36,7 @@ class BlockchainProcessor(Processor):
         self.chunk_cache = {}
         self.cache_lock = threading.Lock()
         self.headers_data = ''
-        self.headers_path = config.get('leveldb', 'path_fulltree')
+        self.headers_path = config.get('leveldb', 'path')
 
         self.mempool_values = {}
         self.mempool_addresses = {}

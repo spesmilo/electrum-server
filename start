@@ -19,12 +19,11 @@ if [ ! -f $electrum_config ]; then
     exit
 fi
 
-path=`grep -e ^path_fulltree $electrum_config |awk -F\= '{print $2}' | tail -n 1`
+path=`grep -e ^path $electrum_config |awk -F\= '{print $2}' | tail -n 1`
 
 if ! [ "$path" ]; then
-    echo "Variable path_fulltree not set in $electrum_config"
+    echo "Variable path not set in $electrum_config"
     exit
-    # we're actually forcing fulltree with this clause, which is ok if displaying v0.9 should use fulltree 
 fi
 
 rmdir $path --ignore-fail-on-non-empty
