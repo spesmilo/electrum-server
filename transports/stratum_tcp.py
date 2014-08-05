@@ -170,6 +170,15 @@ class TcpServer(threading.Thread):
 
         while not self.shared.stopped():
 
+            if self.shared.paused():
+                sessions = self.dispatcher.get_sessions()
+                if sessions:
+                    print_log("closing %d sessions"%len(sessions))
+                for s in sessions:
+                    s.stop()
+                time.sleep(1)
+                continue
+
             #if self.use_ssl: print_log("SSL: socket listening")
             try:
                 connection, address = sock.accept()

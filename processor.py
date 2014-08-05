@@ -15,6 +15,19 @@ class Shared:
         self.lock = threading.Lock()
         self._stopped = False
         self.config = config
+        self._paused = True
+
+    def paused(self):
+        with self.lock:
+            return self._paused
+
+    def pause(self):
+        with self.lock:
+            self._paused = True
+
+    def unpause(self):
+        with self.lock:
+            self._paused = False
 
     def stop(self):
         print_log("Stopping Stratum")

@@ -188,6 +188,16 @@ class TcpServer(threading.Thread):
         redo = []
 
         while not self.shared.stopped():
+
+            if self.shared.paused():
+                sessions = self.fd_to_session.keys()
+                if sessions:
+                    print_log("closing %d sessions"%len(sessions))
+                for fd in sessions:
+                    stop_session(fd)
+                time.sleep(1)
+                continue
+
             if redo:
                 events = redo
                 redo = []

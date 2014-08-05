@@ -60,36 +60,31 @@ class BlockchainProcessor(Processor):
             config.get('bitcoind', 'host'),
             config.get('bitcoind', 'port'))
 
-        while True:
-            try:
-                self.bitcoind('getinfo')
-                break
-            except:
-                print_log('cannot contact bitcoind...')
-                time.sleep(5)
-                continue
-
         self.sent_height = 0
         self.sent_header = None
 
         # catch_up headers
         self.init_headers(self.storage.height)
 
-        threading.Timer(0, lambda: self.catch_up(sync=False)).start()
-        while not shared.stopped() and not self.up_to_date:
-            try:
-                time.sleep(1)
-            except:
-                print "keyboard interrupt: stopping threads"
-                shared.stop()
-                sys.exit(0)
+        self.blockchain_thread = threading.Thread(target = self.do_catch_up)
+        self.blockchain_thread.start()
 
+
+    def do_catch_up(self):
+
+        # wait until bitcoind is here..
+        self.bitcoind('getinfo')
+
+        self.catch_up(sync=False)
         print_log("Blockchain is up to date.")
         self.memorypool_update()
         print_log("Memory pool initialized.")
 
-        self.timer = threading.Timer(10, self.main_iteration)
-        self.timer.start()
+        self.shared.unpause()
+
+        while not self.shared.stopped():
+            self.main_iteration()
+            time.sleep(10)
 
 
 
@@ -110,12 +105,21 @@ class BlockchainProcessor(Processor):
 
     def bitcoind(self, method, params=[]):
         postdata = dumps({"method": method, 'params': params, 'id': 'jsonrpc'})
-        try:
-            respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
-        except:
-            print_log("error calling bitcoind")
-            traceback.print_exc(file=sys.stdout)
-            self.shared.stop()
+        while True:
+            try:
+                respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+                if self.shared.paused():
+                    print_log("bitcoind is responding")
+                    self.shared.unpause()
+                break
+            except:
+                print_log("cannot reach bitcoind...")
+                self.shared.pause()
+                time.sleep(10)
+                if self.shared.stopped():
+                    # this will end the thread
+                    raise
+                continue
 
         r = loads(respdata)
         if r['error'] is not None:
@@ -821,7 +825,7 @@ class BlockchainProcessor(Processor):
 
     
     def close(self):
-        self.timer.join()
+        self.blockchain_thread.join()
         print_log("Closing database...")
         self.storage.close()
         print_log("Database is closed")
@@ -872,7 +876,4 @@ class BlockchainProcessor(Processor):
                         'params': [addr, status],
                         })
 
-        # next iteration 
-        self.timer = threading.Timer(10, self.main_iteration)
-        self.timer.start()
 
