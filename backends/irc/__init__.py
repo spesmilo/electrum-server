@@ -70,6 +70,9 @@ class IrcThread(threading.Thread):
         return s
 
     def run(self):
+        while self.processor.shared.paused():
+            time.sleep(1)
+
         ircname = self.getname()
         print_log("joining IRC")
 
