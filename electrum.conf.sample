@@ -14,15 +14,6 @@ banner_file = /etc/electrum.banner
 #ssl_certfile = /path/to/electrum-server.crt
 #ssl_keyfile = /path/to/electrum-server.key
 
-## Bitcoin network parameters
-[network]
-# Change type to bitcoin_test to enable testnet
-type = bitcoin_main
-# Advanced, manually change the network parameters
-#pubkey_address = 111
-#script_address = 196
-#genesis_hash = 000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
-
 [leveldb]
 #path = /path/to/your/database
 #fulltree is the new UTXO tree, required for Electrum 2.0 clients
