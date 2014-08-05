@@ -90,8 +90,6 @@ def create_config(filename=None):
     config.set('server', 'datadir', '')
     config.set('server', 'use_poller', False)
 
-    # use leveldb as default
-    config.set('server', 'backend', 'leveldb')
     config.add_section('leveldb')
     config.set('leveldb', 'path_fulltree', '/dev/shm/electrum_db')
     config.set('leveldb', 'pruning_limit', '100')
@@ -211,21 +209,14 @@ if __name__ == '__main__':
 
     from processor import Dispatcher, print_log
     from backends.irc import ServerProcessor
+    from backends.bitcoind import BlockchainProcessor
+
     use_poller = config.getboolean('server', 'use_poller')
     if use_poller:
         from transports.poller import TcpServer
     else:
         from transports.stratum_tcp import TcpServer
     from transports.stratum_http import HttpServer
-
-    backend_name = config.get('server', 'backend')
-    if backend_name == 'libbitcoin':
-        from backends.libbitcoin import BlockchainProcessor
-    elif backend_name == 'leveldb':
-        from backends.bitcoind import BlockchainProcessor
-    else:
-        print "Unknown backend '%s' specified\n" % backend_name
-        sys.exit(1)
 
     print "\n\n\n\n\n"
     print_log("Starting Electrum server on", host)
