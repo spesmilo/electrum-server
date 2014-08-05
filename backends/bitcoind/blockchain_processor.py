@@ -159,10 +159,17 @@ class BlockchainProcessor(Processor):
 
         try:
             while height < db_height:
-                height = height + 1
+                height += 1
                 header = self.get_header(height)
                 if height > 1:
-                    assert prev_hash == header.get('prev_block_hash')
+                    if prev_hash != header.get('prev_block_hash'):
+                        # The prev_hash block is orphaned, go back
+                        print_log("reorganizing, a block in file is orphaned:", prev_hash)
+                        # Go to the parent of the orphaned block
+                        height -= 2
+                        prev_hash = self.hash_header(self.read_header(height))
+                        continue
+
                 self.write_header(header, sync=False)
                 prev_hash = self.hash_header(header)
                 if (height % 1000) == 0:
