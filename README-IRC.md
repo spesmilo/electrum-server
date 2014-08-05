@@ -38,3 +38,7 @@ Please note the IRC name field can only contain 50 chars and will be composed
 of `host` + protocol version number + Port numbers for the various protocols.
 Please check whether port numbers are cut off at the end   
 
+
+Example of port forwarding using iptables:
+iptables -t nat -A PREROUTING -p tcp --dport 110 -j REDIRECT --to-ports 50002
+
