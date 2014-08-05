@@ -69,6 +69,7 @@ def create_config():
     config.set('server', 'irc_nick', '')
     config.set('server', 'coin', '')
     config.set('server', 'datadir', '')
+    config.set('server', 'use_poller', False)
 
     # use leveldb as default
     config.set('server', 'backend', 'leveldb')
@@ -170,7 +171,11 @@ if __name__ == '__main__':
 
     from processor import Dispatcher, print_log
     from backends.irc import ServerProcessor
-    from transports.stratum_tcp import TcpServer
+    use_poller = config.getboolean('server', 'use_poller')
+    if use_poller:
+        from transports.poller import TcpServer
+    else:
+        from transports.stratum_tcp import TcpServer
     from transports.stratum_http import HttpServer
 
     backend_name = config.get('server', 'backend')
@@ -184,6 +189,7 @@ if __name__ == '__main__':
 
     print "\n\n\n\n\n"
     print_log("Starting Electrum server on", host)
+    print_log("use_poller", use_poller)
 
     # Create hub
     dispatcher = Dispatcher(config)
