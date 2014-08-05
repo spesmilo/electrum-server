@@ -1,11 +1,15 @@
 #!/bin/bash
 
+if [ "$(id -u)" == "0" ]; then
+   echo "Remember you don't have to run electrum server as root. Consider using a non priviled user." 1>&2
+   exit 1
+fi
+
 PID=`/usr/bin/python server.py getpid`
 if [[ $PID != *[!0-9]* ]]; then
     echo "Server already running (pid $PID)"
     exit
 fi
-
 
 electrum_config="/etc/electrum.conf"
 
@@ -34,5 +38,14 @@ if [ ! -d $path ]; then
     fi
 fi
 
+log_dir=~/log
+
+if [ ! -d $log_dir ]; then
+    echo "Created logging directory in $USER's home."
+    mkdir -p $log_dir
+fi
+
+datetime=$(date +'%Y-%m-%d_%H:%M')
+
 echo "Starting server as daemon"
-nohup /usr/bin/python -u server.py &> /var/log/electrum.log &
+nohup /usr/bin/python -u server.py &> $log_dir/electrum_$datetime.log &
