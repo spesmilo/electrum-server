@@ -61,6 +61,7 @@ class TcpClientResponder(threading.Thread):
     def __init__(self, session):
         self.session = session
         threading.Thread.__init__(self)
+        self.daemon = True
 
     def run(self):
         while not self.session.stopped():
@@ -86,6 +87,7 @@ class TcpClientRequestor(threading.Thread):
         self.message = ""
         self.session = session
         threading.Thread.__init__(self)
+        self.daemon = True
 
     def run(self):
         try:
