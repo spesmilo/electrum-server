@@ -1,5 +1,6 @@
 [server]
 host = localhost
+electrum_rpc_port = 8000
 #report_host = 
 stratum_tcp_port = 50001
 stratum_http_port = 8081
@@ -19,6 +20,15 @@ banner_file = /etc/electrum.banner
 
 # default backend is leveldb (pruning server)
 backend = leveldb
+
+## Bitcoin network parameters
+[network]
+# Change type to bitcoin_test to enable testnet
+type = bitcoin_main
+# Advanced, manually change the network parameters
+#pubkey_address = 111
+#script_address = 196
+#genesis_hash = 000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
 
 [leveldb]
 #path = /path/to/your/database

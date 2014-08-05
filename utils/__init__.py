@@ -15,20 +15,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-import base64
-from functools import partial
 from itertools import imap
-import random
-import string
 import threading
 import time
 import hashlib
-import re
 import sys
 
 __b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 __b58base = len(__b58chars)
 
+global PUBKEY_ADDRESS
+global SCRIPT_ADDRESS
+PUBKEY_ADDRESS = 0
+SCRIPT_ADDRESS = 5
 
 def rev_hex(s):
     return s.decode('hex')[::-1].encode('hex')
@@ -103,24 +102,45 @@ def hash_160(public_key):
         return md.digest()
 
 
+def public_key_to_pubkey_address(public_key):
+    return hash_160_to_pubkey_address(hash_160(public_key))
+
+
 def public_key_to_bc_address(public_key):
-    return hash_160_to_bc_address(hash_160(public_key))
+    """ deprecated """
+    return public_key_to_pubkey_address(public_key)
 
 
-def hash_160_to_bc_address(h160, addrtype = 0):
-    if h160 == 'None':
-        return 'None'
+def hash_160_to_pubkey_address(h160, addrtype=None):
+    """ deprecated """
+    if not addrtype:
+        addrtype = PUBKEY_ADDRESS
+    return hash_160_to_address(h160, addrtype)
+
+
+def hash_160_to_pubkey_address(h160):
+    return hash_160_to_address(h160, PUBKEY_ADDRESS)
+
+
+def hash_160_to_script_address(h160):
+    return hash_160_to_address(h160, SCRIPT_ADDRESS)
+
+
+def hash_160_to_address(h160, addrtype = 0):
+    """ Checks if the provided hash is actually 160bits or 20 bytes long and returns the address, else None
+    """
+    if h160 is None or len(h160) is not 20:
+        return None
     vh160 = chr(addrtype) + h160
     h = Hash(vh160)
     addr = vh160 + h[0:4]
     return b58encode(addr)
 
-
 def bc_address_to_hash_160(addr):
-    if addr == 'None':
-        return 'None'
+    if addr is None or len(addr) is 0:
+        return None
     bytes = b58decode(addr, 25)
-    return bytes[1:21]
+    return bytes[1:21] if bytes is not None else None
 
 
 def b58encode(v):

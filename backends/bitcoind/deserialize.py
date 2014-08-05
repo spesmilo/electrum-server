@@ -7,7 +7,8 @@ import string
 import struct
 import types
 
-from utils import *
+from utils import hash_160_to_pubkey_address, hash_160_to_script_address, public_key_to_pubkey_address, hash_encode,\
+    hash_160
 
 
 class SerializationError(Exception):
@@ -358,7 +359,7 @@ def get_address_from_input_script(bytes):
 
     match = [ opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4 ]
     if match_decoded(decoded, match):
-        return None, None, public_key_to_bc_address(decoded[1][1])
+        return None, None, public_key_to_pubkey_address(decoded[1][1])
 
     # p2sh transaction, 2 of n
     match = [ opcodes.OP_0 ]
@@ -376,13 +377,13 @@ def get_address_from_input_script(bytes):
         match2 = [ opcodes.OP_2, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_2, opcodes.OP_CHECKMULTISIG ]
         if match_decoded(dec2, match2):
             pubkeys = [ dec2[1][1].encode('hex'), dec2[2][1].encode('hex') ]
-            return pubkeys, signatures, hash_160_to_bc_address(hash_160(redeemScript), 5)
+            return pubkeys, signatures, hash_160_to_script_address(hash_160(redeemScript))
 
         # 2 of 3
         match2 = [ opcodes.OP_2, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_3, opcodes.OP_CHECKMULTISIG ]
         if match_decoded(dec2, match2):
             pubkeys = [ dec2[1][1].encode('hex'), dec2[2][1].encode('hex'), dec2[3][1].encode('hex') ]
-            return pubkeys, signatures, hash_160_to_bc_address(hash_160(redeemScript), 5)
+            return pubkeys, signatures, hash_160_to_script_address(hash_160(redeemScript))
 
     return [], [], None
 
@@ -397,7 +398,7 @@ def get_address_from_output_script(bytes):
     # 65 BYTES:... CHECKSIG
     match = [opcodes.OP_PUSHDATA4, opcodes.OP_CHECKSIG]
     if match_decoded(decoded, match):
-        return public_key_to_bc_address(decoded[0][1])
+        return public_key_to_pubkey_address(decoded[0][1])
 
     # coins sent to black hole
     # DUP HASH160 20 BYTES:... EQUALVERIFY CHECKSIG
@@ -409,17 +410,17 @@ def get_address_from_output_script(bytes):
     # DUP HASH160 20 BYTES:... EQUALVERIFY CHECKSIG
     match = [opcodes.OP_DUP, opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG]
     if match_decoded(decoded, match):
-        return hash_160_to_bc_address(decoded[2][1])
+        return hash_160_to_pubkey_address(decoded[2][1])
 
     # strange tx
     match = [opcodes.OP_DUP, opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUALVERIFY, opcodes.OP_CHECKSIG, opcodes.OP_NOP]
     if match_decoded(decoded, match):
-        return hash_160_to_bc_address(decoded[2][1])
+        return hash_160_to_pubkey_address(decoded[2][1])
 
     # p2sh
     match = [ opcodes.OP_HASH160, opcodes.OP_PUSHDATA4, opcodes.OP_EQUAL ]
     if match_decoded(decoded, match):
-        addr = hash_160_to_bc_address(decoded[1][1],5)
+        addr = hash_160_to_script_address(decoded[1][1])
         return addr
 
     return None
