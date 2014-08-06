@@ -42,8 +42,8 @@ if [ ! -d $path ]; then
 fi
 
 if [ electrum.log ]; then
-    mv electrum.log electrum.log.1
+    mv ~/electrum.log ~/electrum.log.1
 fi
 
 echo "Starting server as daemon"
-nohup /usr/bin/python -u server.py &> electrum.log &
+nohup /usr/bin/python -u server.py &> ~/electrum.log &
