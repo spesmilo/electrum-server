@@ -1,10 +1,13 @@
 #!/bin/bash
 
-#setting a higher ulimit for open files, you might need to allow it for the user running electrum-sevrer in /etc/security/limits.conf first (see HOWTO)
-ulimit -n 65536
+
+if ! ulimit -n 65536; then
+    echo "Warning: Could not set ulimit."
+    echo "You might need to allow it in /etc/security/limits.conf (see HOWTO)"
+fi
 
 if [ "$(id -u)" == "0" ]; then
-   echo "Remember you don't have to run electrum server as root. Consider using a non priviled user." 1>&2
+   echo "Warning: you are running electrum server as root. Consider using a non priviled user." 1>&2
    # exit 1
 fi
 
