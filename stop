@@ -1,5 +1,9 @@
 #!/bin/bash
 PID=`/usr/bin/python server.py getpid`
+if [[ $PID == *[!0-9]* ]]; then
+    echo "Server not running"
+    exit
+fi
 /usr/bin/python server.py stop
 echo "Waiting until process $PID terminates..."
 while ps -p $PID > /dev/null; do sleep 1; done
