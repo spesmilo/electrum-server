@@ -72,19 +72,18 @@ class BlockchainProcessor(Processor):
 
     def do_catch_up(self):
 
-        # this will unpause shared
         self.header = self.block2header(self.bitcoind('getblock', [self.storage.last_hash]))
         self.header['utxo_root'] = self.storage.get_root_hash().encode('hex')
-
         self.catch_up(sync=False)
         print_log("Blockchain is up to date.")
         self.memorypool_update()
         print_log("Memory pool initialized.")
 
-        self.shared.unpause()
-
         while not self.shared.stopped():
             self.main_iteration()
+            if self.shared.paused():
+                print_log("bitcoind is responding")
+                self.shared.unpause()
             time.sleep(10)
 
 
@@ -109,9 +108,6 @@ class BlockchainProcessor(Processor):
         while True:
             try:
                 respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
-                if self.shared.paused():
-                    print_log("bitcoind is responding")
-                    self.shared.unpause()
                 break
             except:
                 print_log("cannot reach bitcoind...")
