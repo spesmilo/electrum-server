@@ -185,8 +185,9 @@ if __name__ == '__main__':
 
     setup_network_params(config)
 
-    if stratum_tcp_ssl_port or stratum_http_ssl_port:
-        assert ssl_certfile and ssl_keyfile
+    if ssl_certfile is '' or ssl_keyfile is '':
+        stratum_tcp_ssl_port = None
+        stratum_http_ssl_port = None
 
     if len(args.command) >= 1:
         try:
