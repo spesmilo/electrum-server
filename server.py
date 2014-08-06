@@ -87,7 +87,6 @@ def create_config(filename=None):
     config.set('server', 'irc', 'no')
     config.set('server', 'irc_nick', '')
     config.set('server', 'coin', '')
-    config.set('server', 'datadir', '')
     config.set('server', 'use_poller', 'yes')
 
     config.add_section('leveldb')
