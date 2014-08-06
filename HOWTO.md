@@ -190,7 +190,7 @@ and running and requires less maintenance and diskspace than abe.
 The section in the electrum server configuration file (see step 10) looks like this:
 
      [leveldb]
-     path_fulltree = /path/to/your/database
+     path = /path/to/your/database
      # for each address, history will be pruned if it is longer than this limit
      pruning_limit = 100
 
