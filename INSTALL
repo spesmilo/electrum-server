@@ -3,12 +3,14 @@ short outline:
 __________________________________________________________
 1. Install and run bitcoind.
 
-You need to run bitcoind with the config option txindex=1
-If you have not previously done so, you may need to reindex the bitcoind blockchain
+You need to run bitcoind with the config option txindex=1. If you have
+not previously done so, you may need to reindex the bitcoind
+blockchain
 
-Note: you cannot use a ultra-pruning bitcoind (forthcoming in 0.9 or later).
-A full bitcoin node is required in order to know for each address 
-if it has been used. Pruning occurs only at the level of the Electrum database.
+Note: you cannot use a ultra-pruning bitcoind (forthcoming in 0.9 or
+later).  A full bitcoin node is required in order to know for each
+address if it has been used. Pruning occurs only at the level of the
+Electrum database.
 
 __________________________________________________________
 
@@ -20,7 +22,8 @@ __________________________________________________________
 
 3. Run the 'install' script (as root)
 
-It will create /etc/electrum.conf, and a user running the daemon
+It will create /etc/electrum.conf, and it will add a user for running
+the daemon
 
 If you do not have a database, it will propose you to download it from
 the Electrum foundry.
@@ -29,21 +32,26 @@ If you do not use the foundry, it is recommended to locate your
 database in shared memory:
 path = /run/shm/electrum_db
 
-
 ______________________________________________________________
 
-4. enjoy!
+4. Enjoy!
 
-use 'electrum-server' to start and stop the server
+Use 'electrum-server' to start and stop the server
 
-electrum-server start
-electrum-server stop
-electrum-server status
-electrum-server info
+  electrum-server <start|stop|status|info>
 
+_____________________________________________________________
+5. Add electrum-server to your SystemV services
 
+You may want to add electrum-server to your /etc/init.d script, so
+that it gets started and stopped automatically. You will need to use a
+symbolic link, because the script uses its own path to find other
+files:
 
-______________________
+  ln -s /usr/bin/electrum-server /etc/init.d/electrum
+  update-rc.d electrum defaults
+
+___________________________________________________________________
 Troubleshooting:
 
 * if your server or bitcoind is killed because is uses too much
