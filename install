@@ -42,8 +42,8 @@ fi
 if [ ! id -u $user >/dev/null 2>&1 ]; then
     echo "adding user $user"
     useradd $user
-    echo "electrum hard nofile 65536" >> /etc/security/limits.conf
-    echo "electrum soft nofile 65536" >> /etc/security/limits.conf
+    echo "$user hard nofile 65536" >> /etc/security/limits.conf
+    echo "$user soft nofile 65536" >> /etc/security/limits.conf
 fi
 
 

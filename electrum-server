@@ -31,7 +31,7 @@ case "$1" in
     $0 start
     ;;
   *)
-    echo "Usage: electrum-server {start|stop|restart|status}"
+    echo "Usage: electrum-server {start|stop|restart|status|info}"
     exit 1
     ;;
 esac
