@@ -17,6 +17,10 @@ function read_config()
     out=`grep -e ^$text $electrum_config |awk -F\= '{print $2}' | tail -n 1| tr -d ' '`
     echo $out
 }
+function write_config()
+{
+    sed -i -s "s#$1 =.*#$1 = $2#" $electrum_config
+}
 
 # create config file
 if [ ! -f $electrum_config ]; then
@@ -34,7 +38,7 @@ if ! [ "$user" ]; then
     else
 	user="electrum"
     fi 
-    sed -i -s "s#username =.*#username = $user#" $electrum_config
+    write_config "username" $user
 fi
 
 
@@ -47,14 +51,17 @@ if [ ! id -u $user >/dev/null 2>&1 ]; then
 fi
 
 
-
 # read path from config
 default_path="/var/electrum-server"
 path=$(read_config "path")
 if ! [ "$path" ]; then
-    echo "Setting path: $default_path"
-    path=$default_path
-    sed -i -s "s#path =.*#path = $default_path#" $electrum_config
+    read -p "Path for database (default: $default_path) " -r
+    if [ $REPLY ]; then
+	path=$REPLY
+    else
+	path=$default_path
+    fi 
+    write_config "path" $default_path
 fi
 
 
@@ -79,21 +86,21 @@ fi
 chown -R $user:$user $path
 
 
-rpcuser=$(read_config "user")
-if ! [ "$rpcuser" ]; then
+bitcoind_user=$(read_config "user")
+if ! [ "$bitcoind_user" ]; then
     read -p "rpcuser (from your bitcoin.conf file): " -r
-    sed -i -s "s#user =.*#user = $REPLY#" $electrum_config
+    write_config "user" $bitcoind_user
 fi
 
-rpcpassword=$(read_config "password")
-if ! [ "$rpcpassword" ]; then
+bitcoind_password=$(read_config "password")
+if ! [ "$bitcoind_password" ]; then
     read -p "rpcpassword (from your bitcoin.conf file): " -r
-    sed -i -s "s#password =.*#password = $REPLY#" $electrum_config
+    write_config "password" $REPLY#
 fi
 
 # finish
 echo "Configuration written to $electrum_config."
-echo "Please fill the missing values in this file"
+echo "Edit this file, and run 'electrum-server'"
 
 if [ ! -f /usr/bin/electrum-server ]; then
     ln -s $source_dir/electrum-server /usr/bin/electrum-server
