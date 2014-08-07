@@ -44,11 +44,9 @@ _____________________________________________________________
 5. Add electrum-server to your SystemV services
 
 You may want to add electrum-server to your /etc/init.d script, so
-that it gets started and stopped automatically. You will need to use a
-symbolic link, because the script uses its own path to find other
-files:
+that it gets started and stopped automatically. 
 
-  ln -s /usr/bin/electrum-server /etc/init.d/electrum
+  cp electrum-server /etc/init.d/electrum
   update-rc.d electrum defaults
 
 ___________________________________________________________________

@@ -1,8 +1,0 @@
-#!/bin/bash
-DIR=$(dirname "$(readlink -f $0)")
-if ! PID=`/usr/bin/python $DIR/server.py getpid`; then
-    echo "Server not running"
-    exit
-else
-    echo "Server running (pid $PID)"
-fi

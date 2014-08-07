@@ -14,8 +14,7 @@ electrum_config="/etc/electrum.conf"
 function read_config()
 {
     text=$1
-    out=`grep -e ^$text $electrum_config |awk -F\= '{print $2}' | tail -n 1| tr -d ' '`
-    echo $out
+    echo `grep -e ^$text $electrum_config |awk -F\= '{print $2}' | tail -n 1| tr -d ' '`
 }
 function write_config()
 {
@@ -98,10 +97,12 @@ if ! [ "$bitcoind_password" ]; then
     write_config "password" $REPLY#
 fi
 
-# finish
-echo "Configuration written to $electrum_config."
-echo "Edit this file, and run 'electrum-server'"
 
 if [ ! -f /usr/bin/electrum-server ]; then
-    ln -s $source_dir/electrum-server /usr/bin/electrum-server
+    cp $source_dir/electrum-server /usr/bin/electrum-server
 fi
+
+# finish
+echo "Configuration written to $electrum_config."
+echo "Please edit this file to finish the configuration."
+echo "Then, run 'electrum-server' to start the daemon"
