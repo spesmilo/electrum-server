@@ -18,16 +18,17 @@ https://plyvel.readthedocs.org/en/latest/
 
 __________________________________________________________
 
-3. Run the install script (as root)
+3. Run the 'install' script (as root)
 
 It will create /etc/electrum.conf, and a user running the daemon
 
-In order to speed up the initial catch_up phase, it is recommended to
-locate your database in shared memory:
-  path = /run/shm/electrum_db
+If you do not have a database, it will propose you to download it from
+the Electrum foundry.
 
+If you do not use the foundry, it is recommended to locate your
+database in shared memory:
+path = /run/shm/electrum_db
 
-it will create a symbolic link to electrum-server
 
 ______________________________________________________________
 

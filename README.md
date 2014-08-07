@@ -11,7 +11,7 @@ Features
     described by Alan Reiner (see the 'ultimate blockchain
     compression' thread in the Bitcointalk forum)
 
-  * Te server requires bitcoind, leveldb and plyvel
+  * The server requires bitcoind, leveldb and plyvel
 
   * The server code is open source. Anyone can run a server, removing
     single points of failure concerns.
@@ -24,15 +24,10 @@ Features
 Installation
 ------------
 
-  1. To install and run a server, see README.leveldb. For greater
+  1. To install and run a server, see INSTALL. For greater
      detail on the installation process, see HOWTO.md.
 
-  2. To start the server, use the 'start' script. If you do not have a
-     database, it will propose you o download it from the Electrum
-     foundry.
-
-  3. To stop the server, use the 'stop' script. It will shutdown the
-     database cleanly.
+  2. To start and stop the server, use the 'electrum-server' script
 
 
 
