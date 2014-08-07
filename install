@@ -1,0 +1,86 @@
+#!/bin/bash
+
+user="electrum"
+electrum_config="/etc/electrum.conf"
+default_path="/var/electrum-server"
+
+function read_config()
+{
+    text=$1
+    out=`grep -e ^$text $electrum_config |awk -F\= '{print $2}' | tail -n 1| tr -d ' '`
+    echo $out
+}
+
+
+# check root
+if [ ! "$(id -u)" == "0" ]; then
+    echo "must be root to run install script"
+    exit 1
+fi
+
+
+# create user
+if [ ! id -u $user >/dev/null 2>&1 ]; then
+    echo "adding user $user"
+    useradd $user
+    echo "electrum hard nofile 65536" >> /etc/security/limits.conf
+    echo "electrum soft nofile 65536" >> /etc/security/limits.conf
+fi
+
+
+source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}" )"; pwd)
+
+# create config file
+if [ ! -f $electrum_config ]; then
+    echo "Creating config file"
+    cp $source_dir"/electrum.conf.sample" $electrum_config
+fi
+
+
+# read path from config
+path=$(read_config "path")
+if ! [ "$path" ]; then
+    echo "Setting path: $default_path"
+    path=$default_path
+    sed -i -s "s#path =.*#path = $default_path#" $electrum_config
+fi
+
+
+# remove directory if it exists and is empty
+if [ -d $path ]; then
+    rmdir $path --ignore-fail-on-non-empty
+fi
+
+
+# download database
+if [ ! -d $path ]; then
+    echo "Database not found in $path."
+    read -p "Do you want to download it from the Electrum foundry to $path ? " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+	mkdir -p $path
+	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar.gz" | tar --extract --gunzip --strip-components 1 --directory $path --file -
+    fi
+fi
+
+# set owner
+chown -R $user:$user $path
+
+
+rpcuser=$(read_config "user")
+if ! [ "$rpcuser" ]; then
+    read -p "rpcuser (from your bitcoin.conf file): " -r
+    sed -i -s "s#user =.*#user = $REPLY#" $electrum_config
+fi
+
+rpcpassword=$(read_config "password")
+if ! [ "$rpcpassword" ]; then
+    read -p "rpcpassword (from your bitcoin.conf file): " -r
+    sed -i -s "s#password =.*#password = $REPLY#" $electrum_config
+fi
+
+# finish
+echo "Configuration written to $electrum_config."
+echo "Please fill the missing values in this file"
+
+ln -s $source_dir/electrum-server /usr/bin/electrum-server

@@ -13,11 +13,10 @@ banner_file = /etc/electrum.banner
 #irc_nick = <yournickname>
 #ssl_certfile = /path/to/electrum-server.crt
 #ssl_keyfile = /path/to/electrum-server.key
-# poll mode is a more efficient method for holding connections, will be a default in the future, test if you like
-#use_poller = no
 
 [leveldb]
-path = /path/to/your/database
+# path to your database
+path = 
 # for each address, history will be pruned if it is longer than this limit
 pruning_limit = 100
 
@@ -25,5 +24,5 @@ pruning_limit = 100
 host = localhost
 port = 8332
 # user and password from bitcoin.conf
-user = user
-password = password
+user = 
+password = 

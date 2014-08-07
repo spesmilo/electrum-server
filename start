@@ -1,5 +1,11 @@
 #!/bin/bash
 
+DIR=$(dirname "$(readlink -f $0)")
+
+if PID=`/usr/bin/python $DIR/server.py getpid`; then
+    echo "Server already running (pid $PID)"
+    exit
+fi
 
 if ! ulimit -n 65536; then
     echo "Warning: Could not set ulimit."
@@ -7,16 +13,10 @@ if ! ulimit -n 65536; then
 fi
 
 if [ "$(id -u)" == "0" ]; then
-   echo "Warning: you are running electrum server as root. Consider using a non priviled user." 1>&2
-   # exit 1
+   echo "Warning: you are running electrum server as root. Consider using a non privileged user." 1>&2
+   exit 1
 fi
 
-cd "$( dirname "${BASH_SOURCE[0]}" )"
-PID=`/usr/bin/python server.py getpid`
-if [[ $PID != *[!0-9]* ]]; then
-    echo "Server already running (pid $PID)"
-    exit
-fi
 
 electrum_config="/etc/electrum.conf"
 
@@ -25,28 +25,16 @@ if [ ! -f $electrum_config ]; then
     exit
 fi
 
-path=`grep -e ^path $electrum_config |awk -F\= '{print $2}' | tail -n 1`
-
+# read path from config
+path=`grep -e ^path $electrum_config |awk -F\= '{print $2}' | tail -n 1| tr -d ' '`
 if ! [ "$path" ]; then
     echo "Variable path not set in $electrum_config"
     exit
 fi
 
-rmdir $path --ignore-fail-on-non-empty
-
-if [ ! -d $path ]; then
-    echo "Database not found in $path."
-    read -p "Do you want to download it from the Electrum foundry to $path ? " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-	mkdir -p $path
-	wget -O - "http://foundry.electrum.org/leveldb-dump/electrum-fulltree-100-latest.tar.gz" | tar --extract --gunzip --strip-components 1 --directory $path --file -
-    fi
-fi
-
-if [ electrum.log ]; then
-    mv ~/electrum.log ~/electrum.log.1
+if [ -f $path/electrum.log ]; then
+    mv $path/electrum.log $path/electrum.log.1
 fi
 
 echo "Starting server as daemon"
-nohup /usr/bin/python -u server.py &> ~/electrum.log &
+nohup /usr/bin/python -u $DIR/server.py &> $path/electrum.log &

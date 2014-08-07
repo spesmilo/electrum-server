@@ -1,0 +1,25 @@
+#! /bin/bash
+
+DIR=$(dirname "$(readlink -f $0)")
+
+case "$1" in
+  start)
+        su electrum -c $DIR/start
+    ;;
+  stop)
+        su electrum -c $DIR/stop
+    ;;
+  status)
+        su electrum -c $DIR/status
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage: electrum-server {start|stop|restart|status}"
+    exit 1
+    ;;
+esac
+
+exit 0
