@@ -12,6 +12,9 @@ case "$1" in
   status)
         su electrum -c $DIR/status
     ;;
+  info)
+        su electrum -c "/usr/bin/python $DIR/server.py info"
+    ;;
   restart)
     $0 stop
     $0 start
