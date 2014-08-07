@@ -1,9 +1,16 @@
 #!/bin/bash
 
-user="electrum"
-electrum_config="/etc/electrum.conf"
-default_path="/var/electrum-server"
+# check root
+if [ ! "$(id -u)" == "0" ]; then
+    echo "must be root to run install script"
+    exit 1
+fi
 
+# source directory
+source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}" )"; pwd)
+
+
+electrum_config="/etc/electrum.conf"
 function read_config()
 {
     text=$1
@@ -11,11 +18,23 @@ function read_config()
     echo $out
 }
 
+# create config file
+if [ ! -f $electrum_config ]; then
+    echo "Creating config file"
+    cp $source_dir"/electrum.conf.sample" $electrum_config
+fi
 
-# check root
-if [ ! "$(id -u)" == "0" ]; then
-    echo "must be root to run install script"
-    exit 1
+
+# read username
+user=$(read_config "username")
+if ! [ "$user" ]; then
+    read -p "username for running daemon (default: electrum) " -r
+    if [ $REPLY ]; then
+	user=$REPLY
+    else
+	user="electrum"
+    fi 
+    sed -i -s "s#username =.*#username = $user#" $electrum_config
 fi
 
 
@@ -28,16 +47,9 @@ if [ ! id -u $user >/dev/null 2>&1 ]; then
 fi
 
 
-source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}" )"; pwd)
-
-# create config file
-if [ ! -f $electrum_config ]; then
-    echo "Creating config file"
-    cp $source_dir"/electrum.conf.sample" $electrum_config
-fi
-
 
 # read path from config
+default_path="/var/electrum-server"
 path=$(read_config "path")
 if ! [ "$path" ]; then
     echo "Setting path: $default_path"
@@ -83,4 +95,6 @@ fi
 echo "Configuration written to $electrum_config."
 echo "Please fill the missing values in this file"
 
-ln -s $source_dir/electrum-server /usr/bin/electrum-server
+if [ ! -f /usr/bin/electrum-server ]; then
+    ln -s $source_dir/electrum-server /usr/bin/electrum-server
+fi
