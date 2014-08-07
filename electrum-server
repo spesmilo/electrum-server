@@ -2,18 +2,29 @@
 
 DIR=$(dirname "$(readlink -f $0)")
 
+electrum_config="/etc/electrum.conf"
+function read_config()
+{
+    text=$1
+    out=`grep -e ^$text $electrum_config |awk -F\= '{print $2}' | tail -n 1| tr -d ' '`
+    echo $out
+}
+
+# read username
+user=$(read_config "username")
+
 case "$1" in
   start)
-        su electrum -c $DIR/start
+        su $user -c $DIR/start
     ;;
   stop)
-        su electrum -c $DIR/stop
+        su $user -c $DIR/stop
     ;;
   status)
-        su electrum -c $DIR/status
+        su $user -c $DIR/status
     ;;
   info)
-        su electrum -c "/usr/bin/python $DIR/server.py info"
+        su $user -c "/usr/bin/python $DIR/server.py info"
     ;;
   restart)
     $0 stop
