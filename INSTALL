@@ -1,0 +1,54 @@
+Please see HOWTO.md for more detailled information. The following is a 
+short outline:
+__________________________________________________________
+1. Install and run bitcoind.
+
+You need to run bitcoind with the config option txindex=1
+If you have not previously done so, you may need to reindex the bitcoind blockchain
+
+Note: you cannot use a ultra-pruning bitcoind (forthcoming in 0.9 or later).
+A full bitcoin node is required in order to know for each address 
+if it has been used. Pruning occurs only at the level of the Electrum database.
+
+__________________________________________________________
+
+2. Install plyvel.
+
+https://plyvel.readthedocs.org/en/latest/
+
+__________________________________________________________
+
+3. Run the install script (as root)
+
+It will create /etc/electrum.conf, and a user running the daemon
+
+In order to speed up the initial catch_up phase, it is recommended to
+locate your database in shared memory:
+  path = /run/shm/electrum_db
+
+
+it will create a symbolic link to electrum-server
+
+______________________________________________________________
+
+4. enjoy!
+
+use 'electrum-server' to start and stop the server
+
+electrum-server start
+electrum-server stop
+electrum-server status
+electrum-server info
+
+
+
+______________________
+Troubleshooting:
+
+* if your server or bitcoind is killed because is uses too much
+memory, configure bitcoind to limit the number of connections
+
+* if you see "Too many open files" errors, you may need to increase
+your user's File Descriptors limit. For this, see
+http://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
+
