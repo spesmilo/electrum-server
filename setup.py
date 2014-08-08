@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name="electrum-server",
     version="0.9",
-    scripts=['electrum_server.py'],
+    scripts=['electrum_server.py','electrum-server'],
     install_requires=['plyvel'],
     py_modules=[
         'src.utils',

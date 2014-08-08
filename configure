@@ -99,10 +99,6 @@ if ! [ "$bitcoind_password" ]; then
 fi
 
 
-if [ ! -f /usr/bin/electrum-server ]; then
-    cp $source_dir/electrum-server /usr/bin/electrum-server
-fi
-
 # finish
 echo "Configuration written to $electrum_config."
 echo "Please edit this file to finish the configuration."
