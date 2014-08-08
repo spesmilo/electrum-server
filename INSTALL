@@ -46,8 +46,8 @@ _____________________________________________________________
 You may want to add electrum-server to your /etc/init.d script, so
 that it gets started and stopped automatically. 
 
-  cp electrum-server /etc/init.d/electrum
-  update-rc.d electrum defaults
+  cp electrum-server /etc/init.d/electrum-server
+  update-rc.d electrum-server defaults
 
 ___________________________________________________________________
 Troubleshooting:
