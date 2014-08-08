@@ -39,9 +39,9 @@ the database from scratch. This process can take several days. To
 speed it up, it is recommended to locate your database in shared
 memory, in electrum.conf: path = /run/shm/electrum_db
 
-Note: The install script does not configure SSL and IRC. You will need
-to manually edit the configuration file in order to enable SSL on your
-server, and to be visible on IRC.
+Note: The 'configure' script does not configure SSL and IRC. You will
+need to manually edit the configuration file in order to enable SSL on
+your server, and to be visible on IRC.
 
 
 3. Install the python package
