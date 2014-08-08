@@ -2,6 +2,13 @@ The following is a quick installation guide. Please see HOWTO.md for more
 detailled information on how to configure your server.
 
 
+TLDR:
+# sudo configure
+# sudo python setup.py install
+# sudo electrum-server start
+# sudo electrum-server stop
+
+
 
 1. Install and run bitcoind.
 ----------------------------
@@ -16,16 +23,7 @@ address if it has been used. Pruning occurs only at the level of the
 Electrum database.
 
 
-2. Install plyvel.
-------------------
-
-# sudo pip install plyvel
-
-if this command does not work, see:
-https://plyvel.readthedocs.org/en/latest/
-
-
-3. Run the 'configure' script
+2. Run the 'configure' script
 ---------------------------
 You need to run the script as root:
 
@@ -46,7 +44,7 @@ to manually edit the configuration file in order to enable SSL on your
 server, and to be visible on IRC.
 
 
-4. Install the python package
+3. Install the python package
 -----------------------------
 
 # sudo python setup.py install
@@ -54,7 +52,7 @@ server, and to be visible on IRC.
 Note: You will need to redo this everytime you pull code from git.
 
 
-5. Using the server
+4. Using the server
 -------------------
 
 Use 'electrum-server' to start and stop the server:
@@ -64,7 +62,7 @@ Use 'electrum-server' to start and stop the server:
 The server will write a log file in its database path.
 
 
-6. Add electrum-server to your system's services
+5. Add electrum-server to your system's services
 ------------------------------------------------
 
 If your system supports it, you may add electrum-server to the
@@ -77,8 +75,8 @@ your machine is rebooted.
 
 
 
-Troubleshooting:
-----------------
+6. Troubleshooting:
+-------------------
 
  * if your server or bitcoind is killed because is uses too much
    memory, configure bitcoind to limit the number of connections

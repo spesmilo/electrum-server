@@ -4,6 +4,7 @@ setup(
     name="electrum-server",
     version="0.9",
     scripts=['electrum_server.py'],
+    install_requires=['plyvel'],
     py_modules=[
         'src.utils',
         'src.storage',

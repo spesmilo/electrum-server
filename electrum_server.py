@@ -23,13 +23,11 @@ import sys
 import time
 import threading
 import traceback
-
 import json
 import os
 
-import utils
 
-from src import storage, networks
+from src import storage, networks, utils
 from src.processor import Dispatcher, print_log
 from src.irc import ServerProcessor
 from src.blockchain_processor import BlockchainProcessor

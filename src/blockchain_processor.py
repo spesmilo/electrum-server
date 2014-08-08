@@ -10,10 +10,9 @@ import threading
 import traceback
 import urllib
 
-from backends.bitcoind import deserialize
+import deserialize
 from processor import Processor, print_log
 from utils import *
-
 from storage import Storage
 
 
