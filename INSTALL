@@ -1,10 +1,13 @@
-Please see HOWTO.md for more detailled information. The following is a 
-short outline:
-__________________________________________________________
-1. Install and run bitcoind.
+The following is a quick installation guide. Please see HOWTO.md for more
+detailled information on how to configure your server.
 
-You need to run bitcoind with the config option txindex=1. If you have
-not previously done so, you may need to reindex the bitcoind
+
+
+1. Install and run bitcoind.
+----------------------------
+
+You will need to run bitcoind with the config option txindex=1. If you
+have not previously done so, you may need to reindex the bitcoind
 blockchain
 
 Note: you cannot use a ultra-pruning bitcoind (forthcoming in 0.9 or
@@ -12,50 +15,69 @@ later).  A full bitcoin node is required in order to know for each
 address if it has been used. Pruning occurs only at the level of the
 Electrum database.
 
-__________________________________________________________
 
 2. Install plyvel.
+------------------
 
+# sudo pip install plyvel
+
+if this command does not work, see:
 https://plyvel.readthedocs.org/en/latest/
 
-__________________________________________________________
 
-3. Run the 'install' script (as root)
+3. Run the 'install' script
+---------------------------
 
-It will create /etc/electrum.conf, and it will add a user for running
-the daemon
+You need to run the install script as root:
 
-If you do not have a database, it will propose you to download it from
-the Electrum foundry.
+# sudo install
 
-If you do not use the foundry, it is recommended to locate your
-database in shared memory:
-path = /run/shm/electrum_db
+It will:
+ * install the python package, by calling setup.py
+ * create the configuration file in /etc/electrum.conf
+ * create a user that will run the daemon
+ * optionally, download a fresh database from the Electrum Foundry.
 
-______________________________________________________________
+If you choose not to use the Foundry, your server will have to build
+the database from scratch. This process can take several days. To
+speed it up, it is recommended to locate your database in shared
+memory, in electrum.conf: path = /run/shm/electrum_db
 
-4. Enjoy!
+Note: The install script does not configure SSL and IRC. You will need
+to manually edit the configuration file in order to enable SSL on your
+server, and to be visible on IRC.
 
-Use 'electrum-server' to start and stop the server
 
-  electrum-server <start|stop|status|info>
+4. Using the server
+-------------------
 
-_____________________________________________________________
-5. Add electrum-server to your SystemV services
+Use 'electrum-server' to start and stop the server:
 
-You may want to add electrum-server to your /etc/init.d script, so
-that it gets started and stopped automatically. 
+# electrum-server <start|stop|status|info>
 
-  cp electrum-server /etc/init.d/electrum-server
-  update-rc.d electrum-server defaults
+The server will write a log file in its database path.
 
-___________________________________________________________________
+
+5. Add electrum-server to your system's services
+------------------------------------------------
+
+If your system supports it, you may add electrum-server to the
+/etc/init.d directory. This will ensure that the server is started and
+stopped automatically, and that the database is closed safely whenever
+your machine is rebooted.
+
+# cp electrum-server /etc/init.d/electrum-server
+# update-rc.d electrum-server defaults
+
+
+
 Troubleshooting:
+----------------
 
-* if your server or bitcoind is killed because is uses too much
-memory, configure bitcoind to limit the number of connections
+ * if your server or bitcoind is killed because is uses too much
+   memory, configure bitcoind to limit the number of connections
 
-* if you see "Too many open files" errors, you may need to increase
-your user's File Descriptors limit. For this, see
+ * if you see "Too many open files" errors, you may need to increase
+   your user's File Descriptors limit. For this, see
 http://www.cyberciti.biz/faq/linux-increase-the-maximum-number-of-open-files/
 
