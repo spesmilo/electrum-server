@@ -6,6 +6,11 @@ if [ ! "$(id -u)" == "0" ]; then
     exit 1
 fi
 
+# run python install
+if [ ! hash electrum_server.py 2>/dev/null; then
+    python setup.py install
+fi
+
 # source directory
 source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}" )"; pwd)
 

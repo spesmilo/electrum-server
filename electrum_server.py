@@ -35,6 +35,10 @@ logging.basicConfig()
 if sys.maxsize <= 2**32:
     print "Warning: it looks like you are using a 32bit system. You may experience crashes caused by mmap"
 
+if os.getuid() == 0:
+    print "Do not run this program as root!"
+    print "Run the install script to create a non-privileged user."
+    sys.exit()
 
 def attempt_read_config(config, filename):
     try:
