@@ -6,12 +6,6 @@ if [ ! "$(id -u)" == "0" ]; then
     exit 1
 fi
 
-# run python install
-if [ ! hash electrum_server.py 2>/dev/null; then
-    echo "electrum_server.py not installed"
-    echo "please run 'python setup.py install'"
-    exit
-fi
 
 # source directory
 source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}" )"; pwd)
@@ -112,4 +106,5 @@ fi
 # finish
 echo "Configuration written to $electrum_config."
 echo "Please edit this file to finish the configuration."
+echo "If you have not done so, please run 'python setup.py install'"
 echo "Then, run 'electrum-server' to start the daemon"

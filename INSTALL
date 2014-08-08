@@ -25,13 +25,7 @@ if this command does not work, see:
 https://plyvel.readthedocs.org/en/latest/
 
 
-3. Install the python package
------------------------------
-
-# sudo python setup.py install
-
-
-4. Run the 'configure' script
+3. Run the 'configure' script
 ---------------------------
 You need to run the script as root:
 
@@ -50,6 +44,14 @@ memory, in electrum.conf: path = /run/shm/electrum_db
 Note: The install script does not configure SSL and IRC. You will need
 to manually edit the configuration file in order to enable SSL on your
 server, and to be visible on IRC.
+
+
+4. Install the python package
+-----------------------------
+
+# sudo python setup.py install
+
+Note: You will need to redo this everytime you pull code from git.
 
 
 5. Using the server

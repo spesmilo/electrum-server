@@ -4,8 +4,17 @@
 electrum_config="/etc/electrum.conf"
 if [ ! -f $electrum_config ]; then
     echo "$electrum_config does not exist"
-    exit
+    echo "please run 'configure'"
+    exit 1
 fi
+
+if ! hash electrum_server.py 2>/dev/null; then
+    echo "electrum_server.py is not installed"
+    echo "Please run 'python setup.py install'"
+    exit 1
+fi
+
+
 
 function read_config()
 {
