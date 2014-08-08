@@ -17,12 +17,12 @@ setup(
         'src.stratum_tcp',
         'src.stratum_http',
     ],
-    description="Lightweight Bitcoin Wallet",
+    description="Bitcoin Electrum Server",
     author="Thomas Voegtlin",
     author_email="thomasv1@gmx.de",
-    license="GNU GPLv3",
-    url="https://electrum.org",
-    long_description="""Lightweight Bitcoin Wallet"""
+    license="GNU Affero GPLv3",
+    url="https://github.com/spesmilo/electrum-server/",
+    long_description="""Server for the Electrum Lightweight Bitcoin Wallet"""
 )
 
 
