@@ -28,7 +28,11 @@ import json
 import os
 
 import utils
-from backends.bitcoind import storage, networks
+
+from src import storage, networks
+from src.processor import Dispatcher, print_log
+from src.irc import ServerProcessor
+from src.blockchain_processor import BlockchainProcessor
 
 logging.basicConfig()
 
@@ -211,18 +215,13 @@ if __name__ == '__main__':
         sys.exit(1)
 
 
-    from processor import Dispatcher, print_log
-    from backends.irc import ServerProcessor
-    from backends.bitcoind import BlockchainProcessor
-
     use_poller = config.getboolean('server', 'use_poller')
     if use_poller:
-        from transports.poller import TcpServer
+        from src.poller import TcpServer
     else:
-        from transports.stratum_tcp import TcpServer
-    from transports.stratum_http import HttpServer
+        from src.stratum_tcp import TcpServer
+    from src.stratum_http import HttpServer
 
-    print "\n\n\n\n\n"
     print_log("Starting Electrum server on", host)
     print_log("use_poller", use_poller)
 
