@@ -25,15 +25,19 @@ if this command does not work, see:
 https://plyvel.readthedocs.org/en/latest/
 
 
-3. Run the 'install' script
+3. Install the python package
+-----------------------------
+
+# sudo python setup.py install
+
+
+4. Run the 'configure' script
 ---------------------------
+You need to run the script as root:
 
-You need to run the install script as root:
-
-# sudo install
+# sudo configure
 
 It will:
- * install the python package, by calling setup.py
  * create the configuration file in /etc/electrum.conf
  * create a user that will run the daemon
  * optionally, download a fresh database from the Electrum Foundry.
@@ -48,7 +52,7 @@ to manually edit the configuration file in order to enable SSL on your
 server, and to be visible on IRC.
 
 
-4. Using the server
+5. Using the server
 -------------------
 
 Use 'electrum-server' to start and stop the server:
@@ -58,7 +62,7 @@ Use 'electrum-server' to start and stop the server:
 The server will write a log file in its database path.
 
 
-5. Add electrum-server to your system's services
+6. Add electrum-server to your system's services
 ------------------------------------------------
 
 If your system supports it, you may add electrum-server to the

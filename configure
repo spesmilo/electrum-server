@@ -8,7 +8,9 @@ fi
 
 # run python install
 if [ ! hash electrum_server.py 2>/dev/null; then
-    python setup.py install
+    echo "electrum_server.py not installed"
+    echo "please run 'python setup.py install'"
+    exit
 fi
 
 # source directory
