@@ -70,7 +70,7 @@ If your system supports it, you may add electrum-server to the
 stopped automatically, and that the database is closed safely whenever
 your machine is rebooted.
 
-# cp electrum-server /etc/init.d/electrum-server
+# ln -s `which electrum-server` /etc/init.d/electrum-server
 # update-rc.d electrum-server defaults
 
 
