@@ -1,9 +1,8 @@
-import version
 from setuptools import setup
 
 setup(
     name="electrum-server",
-    version=version.VERSION,
+    version="0.9",
     scripts=['electrum_server.py'],
     py_modules=[
         'src.utils',
