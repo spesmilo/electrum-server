@@ -1,9 +1,5 @@
 #! /bin/bash
 
-# get PID of server
-if ! PID=`electrum_server.py getpid`; then
-    PID=""
-fi
 
 electrum_config="/etc/electrum.conf"
 if [ ! -f $electrum_config ]; then
@@ -22,6 +18,10 @@ path=$(read_config "path")
 # read username
 user=$(read_config "username")
 
+# get PID of server
+if ! PID=`su $user -c "electrum_server.py getpid"`; then
+    PID=""
+fi
 
 case "$1" in
     start)
@@ -53,14 +53,14 @@ case "$1" in
 	fi
 	;;
     status)
-	if [ ! $PID ]; then
+	if [ ! "$PID" ]; then
 	    echo "Server not running"
 	else
 	    echo "Server running (pid $PID)"
 	fi
 	;;
     info)
-	if [ ! $PID ]; then
+	if [ ! "$PID" ]; then
 	    echo "Server not running"
 	else
             su $user -c "electrum_server.py info"
