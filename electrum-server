@@ -26,6 +26,13 @@ function read_config()
 path=$(read_config "path")
 # read username
 user=$(read_config "username")
+# log
+logfile=$(read_config "logfile")
+
+if ! [ -f $logfile ]; then
+    touch $logfile
+    chown $user:$user $logfile
+fi
 
 # get PID of server
 if ! PID=`su $user -c "electrum_server.py getpid"`; then
@@ -44,12 +51,8 @@ case "$1" in
 	    exit
 	fi
 
-	if [ -f $path/electrum.log ]; then
-	    mv $path/electrum.log $path/electrum.log.1
-	fi
-
 	echo "Starting server as daemon"
-        su $user -c "ulimit -n 65536; nohup electrum_server.py &> $path/electrum.log &"
+        su $user -c "ulimit -n 65536; nohup electrum_server.py &>> $logfile &"
 	;;
     stop)
 	if [ ! $PID ]; then

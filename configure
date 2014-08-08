@@ -64,6 +64,19 @@ if ! [ "$path" ]; then
     write_config "path" $default_path
 fi
 
+# read path from config
+default_logfile="/var/log/electrum.log"
+logfile=$(read_config "logfile")
+if ! [ "$logfile" ]; then
+    read -p "Path of logfile (default: $default_logfile) " -r
+    if [ $REPLY ]; then
+	logfile=$REPLY
+    else
+	logfile=$default_logfile
+    fi 
+    write_config "logfile" $default_logfile
+fi
+
 
 # remove directory if it exists and is empty
 if [ -d $path ]; then

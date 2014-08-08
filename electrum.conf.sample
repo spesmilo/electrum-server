@@ -18,6 +18,9 @@ banner_file = /etc/electrum.banner
 #ssl_certfile = /path/to/electrum-server.crt
 #ssl_keyfile = /path/to/electrum-server.key
 
+# log file
+logfile = /var/log/electrum.log
+
 [leveldb]
 # path to your database
 path = 
