@@ -3,11 +3,10 @@ import Queue as queue
 import socket
 import threading
 import time
-import traceback
 import sys
 
 from utils import random_string, timestr, print_log
-
+from utils import logger
 
 class Shared:
 
@@ -69,7 +68,7 @@ class Processor(threading.Thread):
             try:
                 self.process(request, session)
             except:
-                traceback.print_exc(file=sys.stdout)
+                logger.error("process error", exc_info=True)
 
         self.close()
 
@@ -132,7 +131,7 @@ class RequestDispatcher(threading.Thread):
             try:
                 self.do_dispatch(session, request)
             except:
-                traceback.print_exc(file=sys.stdout)
+                logger.error('dispatch',exc_info=True)
 
             if time.time() - lastgc > 60.0:
                 self.collect_garbage()

@@ -7,14 +7,13 @@ import random
 import sys
 import time
 import threading
-import traceback
 import urllib
 
 import deserialize
 from processor import Processor, print_log
 from utils import *
 from storage import Storage
-
+from utils import logger
 
 class BlockchainProcessor(Processor):
 
@@ -262,8 +261,7 @@ class BlockchainProcessor(Processor):
                 hist = self.storage.get_history(addr)
                 is_known = True
             except:
-                print_log("error get_history")
-                traceback.print_exc(file=sys.stdout)
+                logger.error("error get_history",exc_info=True)
                 raise
             if hist:
                 is_known = True
@@ -625,8 +623,7 @@ class BlockchainProcessor(Processor):
         try:
             respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
         except:
-            print_log("bitcoind error (getfullblock)")
-            traceback.print_exc(file=sys.stdout)
+            logger.error("bitcoind error (getfullblock)",exc_info=True)
             self.shared.stop()
 
         r = loads(respdata)

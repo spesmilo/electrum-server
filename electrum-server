@@ -52,7 +52,7 @@ case "$1" in
 	fi
 
 	echo "Starting server as daemon"
-        su $user -c "ulimit -n 65536; nohup electrum_server.py &>> $logfile &"
+        su $user -c "ulimit -n 65536; nohup electrum_server.py &"
 	;;
     stop)
 	if [ ! $PID ]; then

@@ -1,5 +1,10 @@
-import plyvel, ast, hashlib, traceback, os, sys
-from processor import print_log
+import plyvel
+import ast
+import hashlib
+import os
+import sys
+
+from processor import print_log, logger
 from utils import bc_address_to_hash_160, hash_160_to_pubkey_address, hex_to_int, int_to_hex, Hash
 
 global GENESIS_HASH
@@ -32,7 +37,7 @@ class Storage(object):
             self.db_hist = plyvel.DB(os.path.join(self.dbpath,'hist'), create_if_missing=True, compression=None)
             self.db_undo = plyvel.DB(os.path.join(self.dbpath,'undo'), create_if_missing=True, compression=None)
         except:
-            traceback.print_exc(file=sys.stdout)
+            logger.error('db init', exc_info=True)
             self.shared.stop()
 
         self.db_version = 3 # increase this when database needs to be updated
@@ -41,7 +46,6 @@ class Storage(object):
             print_log("Database version", self.db_version)
             print_log("Blockchain height", self.height)
         except:
-            #traceback.print_exc(file=sys.stdout)
             print_log('initializing database')
             self.height = 0
             self.last_hash = GENESIS_HASH

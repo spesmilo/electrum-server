@@ -2,12 +2,11 @@ import socket
 import sys
 import threading
 import time
-import traceback
 
 from processor import Processor
 from utils import Hash, print_log
 from version import VERSION
-
+from utils import logger
 
 class IrcThread(threading.Thread):
 
@@ -148,7 +147,7 @@ class IrcThread(threading.Thread):
                         t = time.time()
                         self.peers = {}
             except:
-                traceback.print_exc(file=sys.stdout)
+                logger.error('irc', exc_info=True)
                 time.sleep(1)
             finally:
                 s.close()

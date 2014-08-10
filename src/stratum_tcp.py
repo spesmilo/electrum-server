@@ -3,10 +3,10 @@ import Queue as queue
 import socket
 import threading
 import time
-import traceback, sys
+import sys
 
 from processor import Session, Dispatcher
-from utils import print_log
+from utils import print_log, logger
 
 
 class TcpSession(Session):
@@ -47,7 +47,6 @@ class TcpSession(Session):
             self._connection.shutdown(socket.SHUT_RDWR)
         except:
             # print_log("problem shutting down", self.address)
-            # traceback.print_exc(file=sys.stdout)
             pass
 
         self._connection.close()
@@ -185,7 +184,7 @@ class TcpServer(threading.Thread):
             try:
                 connection, address = sock.accept()
             except:
-                traceback.print_exc(file=sys.stdout)
+                logger.error('tcp accept', exc_info=True)
                 time.sleep(0.1)
                 continue
 

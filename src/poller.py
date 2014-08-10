@@ -4,10 +4,10 @@ import socket
 import select
 import threading
 import time
-import traceback, sys
+import sys
 
 from processor import Session, Dispatcher
-from utils import print_log
+from utils import print_log, logger
 
 
 READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
@@ -75,7 +75,6 @@ class TcpSession(Session):
             self._connection.shutdown(socket.SHUT_RDWR)
         except:
             # print_log("problem shutting down", self.address)
-            # traceback.print_exc(file=sys.stdout)
             pass
 
         self._connection.close()
@@ -84,7 +83,7 @@ class TcpSession(Session):
         try:
             msg = json.dumps(response) + '\n'
         except:
-            traceback.print_exc(file=sys.stdout)
+            logger.error('send_response', exc_info=True)
             return
 
         self.response_queue.put(msg)
@@ -92,7 +91,7 @@ class TcpSession(Session):
         try:
             self.poller.modify(self.raw_connection, READ_WRITE)
         except:
-            traceback.print_exc(file=sys.stdout)
+            logger.error('send_response', exc_info=True)
             return
 
 
@@ -177,8 +176,8 @@ class TcpServer(threading.Thread):
                 # unregister before we close s 
                 poller.unregister(fd)
             except:
-                print_log("unregister error", fd)
-                traceback.print_exc(file=sys.stdout)
+                #print_log("unregister error", fd)
+                logger.error('unregister error', exc_info=True)
 
             session = self.fd_to_session.pop(fd)
             # this will close the socket
@@ -235,7 +234,8 @@ class TcpServer(threading.Thread):
                         try:
                             session.check_do_handshake()
                         except:
-                            print_log( "handshake failure", address )
+                            logger.error('handshake failure', exc_info=True)
+                            #print_log( "handshake failure", address )
                             stop_session(connection.fileno())
 
                         continue
@@ -246,7 +246,8 @@ class TcpServer(threading.Thread):
                         if x.args[0] == ssl.SSL_ERROR_WANT_READ: 
                             pass
                         else:
-                            print_log("SSL error", x)
+                            logger.error('SSL recv error', exc_info=True)
+                            #print_log("SSL error", x)
                         continue 
                     except socket.error as x:
                         # print_log("recv err", x)

@@ -22,7 +22,6 @@ import socket
 import sys
 import time
 import threading
-import traceback
 import json
 import os
 
@@ -94,6 +93,7 @@ def create_config(filename=None):
     config.set('server', 'irc_nick', '')
     config.set('server', 'coin', '')
     config.set('server', 'use_poller', 'yes')
+    config.set('server', 'logfile', '/var/log/electrum.log')
 
     config.add_section('leveldb')
     config.set('leveldb', 'path', '/dev/shm/electrum_db')
@@ -178,6 +178,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config = create_config(args.conf)
+    logfile = config.get('server', 'logfile')
+    utils.init_logger(logfile)
     password = config.get('server', 'password')
     host = config.get('server', 'host')
     electrum_rpc_port = get_port(config, 'electrum_rpc_port')
