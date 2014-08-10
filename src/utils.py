@@ -232,7 +232,7 @@ logger = logging.getLogger('electrum')
 
 def init_logger(logfile):
     hdlr = logging.FileHandler(logfile)
-    formatter = logging.Formatter(timestr()+ ' %(levelname)s %(message)s')
+    formatter = logging.Formatter('%(asctime)s %(message)s', "[%d/%m/%Y-%H:%M:%S]")
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr) 
     logger.setLevel(logging.INFO)
