@@ -216,7 +216,7 @@ class Session:
     def info(self):
         if self.subscriptions:
             print_log("%4s" % self.name,
-                      "%20s" % self.address,
+                      "%21s" % self.address,
                       "%4d" % len(self.subscriptions),
                       self.version)
 
