@@ -212,23 +212,12 @@ class Session:
     def key(self):
         return self.name + self.address
 
-
     # Debugging method. Doesn't need to be threadsafe.
     def info(self):
-        for sub in self.subscriptions:
-            #print sub
-            method = sub[0]
-            if method == 'blockchain.address.subscribe':
-                addr = sub[1]
-                break
-        else:
-            addr = None
-
         if self.subscriptions:
             print_log("%4s" % self.name,
-                      "%15s" % self.address,
-                      "%35s" % addr,
-                      "%3d" % len(self.subscriptions),
+                      "%20s" % self.address,
+                      "%4d" % len(self.subscriptions),
                       self.version)
 
     def stop(self):
