@@ -228,10 +228,12 @@ def timestr():
 
 ### logger
 import logging
+import logging.handlers
+
 logger = logging.getLogger('electrum')
 
 def init_logger(logfile):
-    hdlr = logging.FileHandler(logfile)
+    hdlr = logging.handlers.WatchedFileHandler(logfile)
     formatter = logging.Formatter('%(asctime)s %(message)s', "[%d/%m/%Y-%H:%M:%S]")
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr) 
