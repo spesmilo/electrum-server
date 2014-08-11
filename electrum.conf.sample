@@ -17,9 +17,8 @@ banner_file = /etc/electrum.banner
 #irc_nick = <yournickname>
 #ssl_certfile = /path/to/electrum-server.crt
 #ssl_keyfile = /path/to/electrum-server.key
-
-# log file
 logfile = /var/log/electrum.log
+donation_address = 
 
 [leveldb]
 # path to your database

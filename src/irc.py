@@ -186,6 +186,9 @@ class ServerProcessor(Processor):
         if method == 'server.banner':
             result = self.config.get('server', 'banner').replace('\\n', '\n')
 
+        elif method == 'server.donation_address':
+            result = self.config.get('server', 'donation_address')
+
         elif method == 'server.peers.subscribe':
             result = self.get_peers()
 
