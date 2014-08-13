@@ -423,9 +423,17 @@ class BlockchainProcessor(Processor):
 
 
     def add_request(self, session, request):
-        # see if we can get if from cache. if not, add to queue
-        if self.process(session, request, cache_only=True) == -1:
+        # see if we can get if from cache. if not, add request to queue
+        message_id = request.get('id')
+        try:
+            result = self.process(session, request, cache_only=True)
+        except:
+            self.push_response(session, {'id': message_id, 'error': error})
+            
+        if result == -1:
             self.queue.put((session, request))
+        else:
+            self.push_response(session, {'id': message_id, 'result': result})
 
 
     def do_subscribe(self, method, params, session):
@@ -600,10 +608,7 @@ class BlockchainProcessor(Processor):
         if cache_only and result == -1:
             return -1
 
-        if error:
-            self.push_response(session, {'id': message_id, 'error': error})
-        elif result != '':
-            self.push_response(session, {'id': message_id, 'result': result})
+        return result
 
 
     def getfullblock(self, block_hash):

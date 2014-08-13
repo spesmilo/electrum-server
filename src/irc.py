@@ -196,7 +196,6 @@ class ServerProcessor(Processor):
             result = VERSION
 
         else:
-            print_log("unknown method", method)
+            raise BaseException("unknown method: %s"%repr(method))
 
-        if result != '':
-            self.push_response(session, {'id': request['id'], 'result': result})
+        return result

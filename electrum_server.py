@@ -94,6 +94,7 @@ def create_config(filename=None):
     config.set('server', 'coin', '')
     config.set('server', 'use_poller', 'yes')
     config.set('server', 'logfile', '/var/log/electrum.log')
+    config.set('server', 'donation_address', '')
 
     config.add_section('leveldb')
     config.set('leveldb', 'path', '/dev/shm/electrum_db')
