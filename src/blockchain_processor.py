@@ -427,9 +427,10 @@ class BlockchainProcessor(Processor):
         message_id = request.get('id')
         try:
             result = self.process(session, request, cache_only=True)
-        except:
-            self.push_response(session, {'id': message_id, 'error': error})
-            
+        except BaseException as e:
+            self.push_response(session, {'id': message_id, 'error': str(e)})
+            return 
+
         if result == -1:
             self.queue.put((session, request))
         else:
@@ -492,86 +493,50 @@ class BlockchainProcessor(Processor):
             result = self.header
 
         elif method == 'blockchain.address.subscribe':
-            try:
-                address = str(params[0])
-                result = self.get_status(address, cache_only)
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print_log("error:", error)
+            address = str(params[0])
+            result = self.get_status(address, cache_only)
 
         elif method == 'blockchain.address.get_history':
-            try:
-                address = str(params[0])
-                result = self.get_history(address, cache_only)
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print_log("error:", error)
+            address = str(params[0])
+            result = self.get_history(address, cache_only)
 
         elif method == 'blockchain.address.get_mempool':
-            try:
-                address = str(params[0])
-                result = self.get_unconfirmed_history(address, cache_only)
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print_log("error:", error)
+            address = str(params[0])
+            result = self.get_unconfirmed_history(address, cache_only)
 
         elif method == 'blockchain.address.get_balance':
-            try:
-                address = str(params[0])
-                confirmed = self.storage.get_balance(address)
-                unconfirmed = self.get_unconfirmed_value(address)
-                result = { 'confirmed':confirmed, 'unconfirmed':unconfirmed }
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print_log("error:", error)
+            address = str(params[0])
+            confirmed = self.storage.get_balance(address)
+            unconfirmed = self.get_unconfirmed_value(address)
+            result = { 'confirmed':confirmed, 'unconfirmed':unconfirmed }
 
         elif method == 'blockchain.address.get_proof':
-            try:
-                address = str(params[0])
-                result = self.storage.get_proof(address)
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print_log("error:", error)
+            address = str(params[0])
+            result = self.storage.get_proof(address)
 
         elif method == 'blockchain.address.listunspent':
-            try:
-                address = str(params[0])
-                result = self.storage.listunspent(address)
-            except BaseException, e:
-                error = str(e) + ': ' + address
-                print_log("error:", error)
+            address = str(params[0])
+            result = self.storage.listunspent(address)
 
         elif method == 'blockchain.utxo.get_address':
-            try:
-                txid = str(params[0])
-                pos = int(params[1])
-                txi = (txid + int_to_hex(pos, 4)).decode('hex')
-                result = self.storage.get_address(txi)
-            except BaseException, e:
-                error = str(e)
-                print_log("error:", error, params)
+            txid = str(params[0])
+            pos = int(params[1])
+            txi = (txid + int_to_hex(pos, 4)).decode('hex')
+            result = self.storage.get_address(txi)
 
         elif method == 'blockchain.block.get_header':
             if cache_only:
                 result = -1
             else:
-                try:
-                    height = int(params[0])
-                    result = self.get_header(height)
-                except BaseException, e:
-                    error = str(e) + ': %d' % height
-                    print_log("error:", error)
+                height = int(params[0])
+                result = self.get_header(height)
 
         elif method == 'blockchain.block.get_chunk':
             if cache_only:
                 result = -1
             else:
-                try:
-                    index = int(params[0])
-                    result = self.get_chunk(index)
-                except BaseException, e:
-                    error = str(e) + ': %d' % index
-                    print_log("error:", error)
+                index = int(params[0])
+                result = self.get_chunk(index)
 
         elif method == 'blockchain.transaction.broadcast':
             try:
@@ -586,24 +551,16 @@ class BlockchainProcessor(Processor):
             if cache_only:
                 result = -1
             else:
-                try:
-                    tx_hash = params[0]
-                    tx_height = params[1]
-                    result = self.get_merkle(tx_hash, tx_height)
-                except BaseException, e:
-                    error = str(e) + ': ' + repr(params)
-                    print_log("get_merkle error:", error)
+                tx_hash = params[0]
+                tx_height = params[1]
+                result = self.get_merkle(tx_hash, tx_height)
 
         elif method == 'blockchain.transaction.get':
-            try:
-                tx_hash = params[0]
-                result = self.bitcoind('getrawtransaction', [tx_hash, 0])
-            except BaseException, e:
-                error = str(e) + ': ' + repr(params)
-                print_log("tx get error:", error)
+            tx_hash = params[0]
+            result = self.bitcoind('getrawtransaction', [tx_hash, 0])
 
         else:
-            error = "unknown method:%s" % method
+            raise BaseException("unknown method:%s" % method)
 
         if cache_only and result == -1:
             return -1

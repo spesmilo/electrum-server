@@ -69,9 +69,11 @@ class Processor(threading.Thread):
             try:
                 result = self.process(session, request)
                 self.push_response(session, {'id': msg_id, 'result': result})
+            except BaseException, e:
+                self.push_response(session, {'id': msg_id, 'error':str(e)})
             except:
                 logger.error("process error", exc_info=True)
-                self.push_response(session, {'id': msg_id, 'error':'error'})
+                self.push_response(session, {'id': msg_id, 'error':'unknown error'})
 
         self.close()
 
