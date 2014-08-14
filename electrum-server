@@ -8,8 +8,8 @@ if [ ! -f $electrum_config ]; then
     exit 1
 fi
 
-if ! hash electrum_server.py 2>/dev/null; then
-    echo "electrum_server.py is not installed"
+if ! hash run_electrum_server 2>/dev/null; then
+    echo "run_electrum_server is not installed"
     echo "Please run 'python setup.py install'"
     exit 1
 fi
@@ -52,13 +52,13 @@ case "$1" in
 	fi
 
 	echo "Starting server as daemon"
-        su $user -c "ulimit -n 65536; nohup electrum_server.py &"
+        su $user -c "ulimit -n 65536; nohup run_electrum_server &"
 	;;
     stop)
 	if [ ! $PID ]; then
 	    echo "Server not running"
 	else
-            su $user -c "electrum_server.py stop"
+            su $user -c "run_electrum_server stop"
 	    echo "Waiting until process $PID terminates..."
 	    while ps -p $PID > /dev/null; do sleep 1; done
 	    echo "Done."
@@ -75,7 +75,7 @@ case "$1" in
 	if [ ! "$PID" ]; then
 	    echo "Server not running"
 	else
-            su $user -c "electrum_server.py info"
+            su $user -c "run_electrum_server info"
 	fi
 	;;
     restart)

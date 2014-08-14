@@ -25,11 +25,13 @@ import threading
 import json
 import os
 
+from electrumserver import storage, networks, utils
+from electrumserver.processor import Dispatcher, print_log
+from electrumserver.irc import ServerProcessor
+from electrumserver.blockchain_processor import BlockchainProcessor
+from electrumserver.stratum_tcp import TcpServer
+from electrumserver.stratum_http import HttpServer
 
-from src import storage, networks, utils
-from src.processor import Dispatcher, print_log
-from src.irc import ServerProcessor
-from src.blockchain_processor import BlockchainProcessor
 
 logging.basicConfig()
 
@@ -214,8 +216,6 @@ if __name__ == '__main__':
         print "server already running"
         sys.exit(1)
 
-    from src.stratum_tcp import TcpServer
-    from src.stratum_http import HttpServer
 
     print_log("Starting Electrum server on", host)
 
