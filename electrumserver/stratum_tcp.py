@@ -82,16 +82,16 @@ class TcpSession(Session):
     def send_response(self, response):
         try:
             msg = json.dumps(response) + '\n'
-        except:
-            logger.error('send_response', exc_info=True)
+        except BaseException as e:
+            logger.error('send_response:' + str(e))
             return
 
         self.response_queue.put(msg)
 
         try:
             self.poller.modify(self.raw_connection, READ_WRITE)
-        except:
-            logger.error('send_response', exc_info=True)
+        except BaseException as e:
+            logger.error('send_response:' + str(e))
             return
 
 
@@ -175,9 +175,8 @@ class TcpServer(threading.Thread):
             try:
                 # unregister before we close s 
                 poller.unregister(fd)
-            except:
-                #print_log("unregister error", fd)
-                logger.error('unregister error', exc_info=True)
+            except BaseException as e:
+                logger.error('unregister error:' + str(e))
 
             session = self.fd_to_session.pop(fd)
             # this will close the socket
@@ -191,7 +190,7 @@ class TcpServer(threading.Thread):
             if self.shared.paused():
                 sessions = self.fd_to_session.keys()
                 if sessions:
-                    print_log("closing %d sessions"%len(sessions))
+                    logger.info("closing %d sessions"%len(sessions))
                 for fd in sessions:
                     stop_session(fd)
                 time.sleep(1)
@@ -223,7 +222,7 @@ class TcpServer(threading.Thread):
                             session = TcpSession(self.dispatcher, poller, connection, address, 
                                                  use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
                         except BaseException as e:
-                            print_log("cannot start TCP session", str(e), address)
+                            logger.error("cannot start TCP session" + str(e) + ' ' + repr(address))
                             connection.close()
                             continue
 
@@ -233,9 +232,8 @@ class TcpServer(threading.Thread):
                         poller.register(connection, READ_ONLY)
                         try:
                             session.check_do_handshake()
-                        except:
-                            logger.error('handshake failure', exc_info=True)
-                            #print_log( "handshake failure", address )
+                        except BaseException as e:
+                            logger.error('handshake failure:' + str(e) + ' ' + repr(address))
                             stop_session(connection.fileno())
 
                         continue
@@ -246,11 +244,10 @@ class TcpServer(threading.Thread):
                         if x.args[0] == ssl.SSL_ERROR_WANT_READ: 
                             pass
                         else:
-                            logger.error('SSL recv error', exc_info=True)
-                            #print_log("SSL error", x)
+                            logger.error('SSL recv error:'+ repr(x))
                         continue 
                     except socket.error as x:
-                        # print_log("recv err", x)
+                        logger.error('recv error:'+ repr(x))
                         stop_session(fd)
                         continue
 
@@ -292,7 +289,7 @@ class TcpServer(threading.Thread):
                     try:
                         sent = s.send(next_msg)
                     except socket.error as x:
-                        # print_log("recv err", x)
+                        logger.error("recv error:" + str(x))
                         stop_session(fd)
                         continue
                         
