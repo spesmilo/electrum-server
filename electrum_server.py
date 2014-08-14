@@ -92,7 +92,6 @@ def create_config(filename=None):
     config.set('server', 'irc', 'no')
     config.set('server', 'irc_nick', '')
     config.set('server', 'coin', '')
-    config.set('server', 'use_poller', 'yes')
     config.set('server', 'logfile', '/var/log/electrum.log')
     config.set('server', 'donation_address', '')
 
@@ -215,16 +214,10 @@ if __name__ == '__main__':
         print "server already running"
         sys.exit(1)
 
-
-    use_poller = config.getboolean('server', 'use_poller')
-    if use_poller:
-        from src.poller import TcpServer
-    else:
-        from src.stratum_tcp import TcpServer
+    from src.stratum_tcp import TcpServer
     from src.stratum_http import HttpServer
 
     print_log("Starting Electrum server on", host)
-    print_log("use_poller", use_poller)
 
     # Create hub
     dispatcher = Dispatcher(config)
