@@ -9,6 +9,9 @@ TLDR:
 # sudo electrum-server stop
 
 
+Note: If you want to run the server without installing it on your
+system, just run 'run_electrum_server"
+
 
 1. Install and run bitcoind.
 ----------------------------
