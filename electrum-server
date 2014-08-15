@@ -35,7 +35,7 @@ if ! [ -f $logfile ]; then
 fi
 
 # get PID of server
-if ! PID=`su $user -c "electrum_server.py getpid"`; then
+if ! PID=`su $user -c "run_electrum_server getpid"`; then
     PID=""
 fi
 
