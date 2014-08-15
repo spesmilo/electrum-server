@@ -247,7 +247,8 @@ class TcpServer(threading.Thread):
                             logger.error('SSL recv error:'+ repr(x))
                         continue 
                     except socket.error as x:
-                        logger.error('recv error:'+ repr(x))
+                        if x.args[0] != 104:
+                            logger.error('recv error: ' + repr(x))
                         stop_session(fd)
                         continue
 
