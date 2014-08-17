@@ -35,9 +35,15 @@ if ! [ -f $logfile ]; then
 fi
 
 # get PID of server
-if ! PID=`su $user -c "run_electrum_server getpid"`; then
-    PID=""
-fi
+if [ `id -u` = 0 ] ; then
+    if ! PID=`su $user -c "run_electrum_server getpid"`; then
+	PID=""
+    fi
+else
+    if ! PID=`run_electrum_server getpid`; then
+	PID=""
+    fi
+fi;
 
 case "$1" in
     start)
@@ -52,17 +58,27 @@ case "$1" in
 	fi
 
 	echo "Starting server as daemon"
-        su $user -c "ulimit -n 65536; nohup run_electrum_server &"
+	cmd="ulimit -n 65536; nohup run_electrum_server &"
+	if [ `id -u` = 0 ] ; then
+            su $user -c "$cmd"
+	else
+	    $cmd
+	fi
 	;;
     stop)
 	if [ ! $PID ]; then
 	    echo "Server not running"
-	else
-            su $user -c "run_electrum_server stop"
-	    echo "Waiting until process $PID terminates..."
-	    while ps -p $PID > /dev/null; do sleep 1; done
-	    echo "Done."
+	    exit
 	fi
+        cmd="run_electrum_server stop"
+	if [ `id -u` = 0 ] ; then
+            su $user -c "$cmd"
+	else
+	    $cmd
+	fi
+	echo "Waiting until process $PID terminates..."
+	while ps -p $PID > /dev/null; do sleep 1; done
+	echo "Done."
 	;;
     status)
 	if [ ! "$PID" ]; then
@@ -74,8 +90,14 @@ case "$1" in
     info)
 	if [ ! "$PID" ]; then
 	    echo "Server not running"
+	    exit
+	fi
+        cmd="run_electrum_server info"
+	if [ `id -u` = 0 ] ; then
+	    echo "zz"
+            su $user -c "$cmd"
 	else
-            su $user -c "run_electrum_server info"
+	    $cmd
 	fi
 	;;
     restart)
