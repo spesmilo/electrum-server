@@ -302,17 +302,15 @@ Two more things for you to consider:
 
 The magic moment has come: you can now start your Electrum server:
 
-    $ cd ~/electrum-server
-    $ ./start
+    $ electrum-server start
 
 You should see this in the log file:
 
     starting Electrum server
 
-If you want to stop Electrum server, use the 'stop' script:
+If you want to stop Electrum server, use the 'stop' command:
 
-    $ cd ~/electrum-server
-    $ ./stop
+    $ electrum-server stop
 
 
 ### Step 13. Test the Electrum server
