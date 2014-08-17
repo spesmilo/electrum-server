@@ -38,12 +38,9 @@ class IrcThread(threading.Thread):
             self.host = self.report_host
         if not self.nick:
             self.nick = Hash(self.host)[:5].encode("hex")
-        self.prepend = 'E_'
-        if config.get('server', 'coin') == 'litecoin':
-            self.prepend = 'EL_'
         self.pruning = True
         self.pruning_limit = config.get('leveldb', 'pruning_limit')
-        self.nick = self.prepend + self.nick
+        self.nick = 'E_' + self.nick
         self.password = None
 
 
@@ -105,7 +102,8 @@ class IrcThread(threading.Thread):
                     except socket.timeout, e:
                         if out_msg:
                             m = out_msg.pop(0)
-                            s.send(m)
+                            #print_log("-->", m)
+                            s.send(m + '\n')
                         continue
                     except:
                         print_log( "irc: socket error" )
@@ -124,7 +122,7 @@ class IrcThread(threading.Thread):
                         # print_log("<--", line)
                         line = line.split()
                         if line[0] == 'PING':
-                            out_msg.append('PONG ' + line[1] + '\n')
+                            out_msg.append('PONG ' + line[1])
 
                         elif line[1] == 'JOIN' and line[2] == '#electrum':
                             m = re.match(":(E_.*)!",line[0])
@@ -138,8 +136,10 @@ class IrcThread(threading.Thread):
 
                         elif line[1] == '353':  # answer to /names
                             for item in line[2:]:
-                                if item.startswith(self.prepend):
-                                    out_msg.append('WHO %s\n' % item)
+                                if item.startswith("E_"):
+                                    out_msg.append('WHO %s' % item)
+                                elif item.startswith(":E_"):
+                                    out_msg.append('WHO %s' % item[1:])
 
                         elif line[1] == '352':  # answer to /who
                             try:
