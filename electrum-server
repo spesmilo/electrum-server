@@ -94,7 +94,6 @@ case "$1" in
 	fi
         cmd="run_electrum_server info"
 	if [ `id -u` = 0 ] ; then
-	    echo "zz"
             su $user -c "$cmd"
 	else
 	    $cmd
