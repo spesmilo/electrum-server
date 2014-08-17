@@ -246,12 +246,13 @@ class Session:
 
 
     def subscribe_to_service(self, method, params):
+        if self.stopped():
+            return
+        # append to self.subscriptions only if this does not raise
+        self.bp.do_subscribe(method, params, self)
         with self.lock:
-            if self._stopped:
-                return
             if (method, params) not in self.subscriptions:
                 self.subscriptions.append((method,params))
-        self.bp.do_subscribe(method, params, self)
 
 
     def stop_subscriptions(self):
