@@ -426,7 +426,7 @@ class BlockchainProcessor(Processor):
         # see if we can get if from cache. if not, add request to queue
         message_id = request.get('id')
         try:
-            result = self.process(session, request, cache_only=True)
+            result = self.process(request, cache_only=True)
         except BaseException as e:
             self.push_response(session, {'id': message_id, 'error': str(e)})
             return 
@@ -478,7 +478,7 @@ class BlockchainProcessor(Processor):
                     self.watched_addresses.pop(addr)
 
 
-    def process(self, session, request, cache_only=False):
+    def process(self, request, cache_only=False):
         
         message_id = request['id']
         method = request['method']

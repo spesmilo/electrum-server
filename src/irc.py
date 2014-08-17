@@ -1,18 +1,18 @@
 import socket
-import sys
-import threading
 import time
+import re
+import threading
 
-from processor import Processor
+from utils import logger
 from utils import Hash, print_log
 from version import VERSION
-from utils import logger
+
+out_msg = []
 
 class IrcThread(threading.Thread):
 
     def __init__(self, processor, config):
         threading.Thread.__init__(self)
-
         self.processor = processor
         self.daemon = True
         self.stratum_tcp_port = config.get('server', 'stratum_tcp_port')
@@ -23,7 +23,6 @@ class IrcThread(threading.Thread):
         self.report_stratum_http_port = config.get('server', 'report_stratum_http_port')
         self.report_stratum_tcp_ssl_port = config.get('server', 'report_stratum_tcp_ssl_port')
         self.report_stratum_http_ssl_port = config.get('server', 'report_stratum_http_ssl_port')
-        self.peers = {}
         self.host = config.get('server', 'host')
         self.report_host = config.get('server', 'report_host')
         self.nick = config.get('server', 'irc_nick')
@@ -45,9 +44,8 @@ class IrcThread(threading.Thread):
         self.pruning = True
         self.pruning_limit = config.get('leveldb', 'pruning_limit')
         self.nick = self.prepend + self.nick
+        self.password = None
 
-    def get_peers(self):
-        return self.peers.values()
 
     def getname(self):
         s = 'v' + VERSION + ' '
@@ -67,6 +65,10 @@ class IrcThread(threading.Thread):
         s += add_port('s',self.stratum_tcp_ssl_port)
         s += add_port('g',self.stratum_http_ssl_port)
         return s
+
+    def start(self, queue):
+        self.queue = queue
+        threading.Thread.start(self)
 
     def run(self):
         while self.processor.shared.paused():
@@ -92,6 +94,8 @@ class IrcThread(threading.Thread):
             try:
                 s.send('USER electrum 0 * :' + self.host + ' ' + ircname + '\n')
                 s.send('NICK ' + self.nick + '\n')
+                if self.password:
+                    s.send('NICKSERV IDENTIFY ' + self.password + '\n')
                 s.send('JOIN #electrum\n')
                 t = 0
 
@@ -121,10 +125,22 @@ class IrcThread(threading.Thread):
                         line = line.split()
                         if line[0] == 'PING':
                             out_msg.append('PONG ' + line[1] + '\n')
+
+                        elif line[1] == 'JOIN' and line[2] == '#electrum':
+                            m = re.match(":(E_.*)!",line[0])
+                            if m:
+                                out_msg.append('WHO %s' % m.group(1))
+
+                        elif line[1] == 'QUIT':
+                            m = re.match(":(E_.*)!",line[0])
+                            if m:
+                                self.queue.put(('quit', [m.group(1)]))
+
                         elif line[1] == '353':  # answer to /names
                             for item in line[2:]:
                                 if item.startswith(self.prepend):
                                     out_msg.append('WHO %s\n' % item)
+
                         elif line[1] == '352':  # answer to /who
                             try:
                                 ip = socket.gethostbyname(line[5])
@@ -134,18 +150,19 @@ class IrcThread(threading.Thread):
                             name = line[7]
                             host = line[10]
                             ports = line[11:]
-                            self.peers[name] = (ip, host, ports)
+                            self.queue.put(('join', [name, ip, host, ports]))
+
                         elif line[1] == 'KICK':
                             try:
                                 print_log("KICK", line[3] + line[4])
                             except:
                                 print_log("KICK", "error")
 
-                    if time.time() - t > 5*60:
-                        #self.processor.push_response({'method': 'server.peers', 'params': [self.get_peers()]})
-                        s.send('NAMES #electrum\n')
-                        t = time.time()
-                        self.peers = {}
+                    #if time.time() - t > 5*60:
+                    #    #self.processor.push_response({'method': 'server.peers', 'params': [self.get_peers()]})
+                    #    s.send('NAMES #electrum\n')
+                    #    t = time.time()
+                    #    self.peers = {}
             except:
                 logger.error('irc', exc_info=True)
                 time.sleep(1)
@@ -155,47 +172,4 @@ class IrcThread(threading.Thread):
         print_log("quitting IRC")
 
 
-class ServerProcessor(Processor):
 
-    def __init__(self, config):
-        Processor.__init__(self)
-        self.daemon = True
-        self.config = config
-
-        if config.get('server', 'irc') == 'yes':
-            self.irc = IrcThread(self, config)
-        else:
-            self.irc = None
-
-    def get_peers(self):
-        if self.irc:
-            return self.irc.get_peers()
-        else:
-            return []
-
-    def run(self):
-        if self.irc:
-            self.irc.start()
-        Processor.run(self)
-
-    def process(self, session, request):
-        method = request['method']
-        params = request['params']
-        result = None
-
-        if method == 'server.banner':
-            result = self.config.get('server', 'banner').replace('\\n', '\n')
-
-        elif method == 'server.donation_address':
-            result = self.config.get('server', 'donation_address')
-
-        elif method == 'server.peers.subscribe':
-            result = self.get_peers()
-
-        elif method == 'server.version':
-            result = VERSION
-
-        else:
-            raise BaseException("unknown method: %s"%repr(method))
-
-        return result

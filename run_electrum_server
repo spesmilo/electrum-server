@@ -27,7 +27,7 @@ import os
 
 from electrumserver import storage, networks, utils
 from electrumserver.processor import Dispatcher, print_log
-from electrumserver.irc import ServerProcessor
+from electrumserver.server_processor import ServerProcessor
 from electrumserver.blockchain_processor import BlockchainProcessor
 from electrumserver.stratum_tcp import TcpServer
 from electrumserver.stratum_http import HttpServer
@@ -236,7 +236,7 @@ if __name__ == '__main__':
     chain_proc = BlockchainProcessor(config, shared)
     dispatcher.register('blockchain', chain_proc)
 
-    server_proc = ServerProcessor(config)
+    server_proc = ServerProcessor(config, shared)
     dispatcher.register('server', server_proc)
 
     transports = []

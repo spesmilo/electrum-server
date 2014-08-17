@@ -5,6 +5,9 @@ setup(
     version="0.9",
     scripts=['run_electrum_server','electrum-server'],
     install_requires=['plyvel','jsonrpclib'],
+    package_dir={
+        'electrumserver':'src'
+        },
     py_modules=[
         'electrumserver.__init__',
         'electrumserver.utils',
@@ -12,6 +15,7 @@ setup(
         'electrumserver.deserialize',
         'electrumserver.networks',
         'electrumserver.blockchain_processor',
+        'electrumserver.server_processor',
         'electrumserver.processor',
         'electrumserver.version',
         'electrumserver.irc',

@@ -46,7 +46,7 @@ class Processor(threading.Thread):
         self.dispatcher = None
         self.queue = queue.Queue()
 
-    def process(self, session, request):
+    def process(self, request):
         pass
 
     def add_request(self, session, request):
@@ -67,7 +67,7 @@ class Processor(threading.Thread):
             except:
                 continue
             try:
-                result = self.process(session, request)
+                result = self.process(request)
                 self.push_response(session, {'id': msg_id, 'result': result})
             except BaseException, e:
                 self.push_response(session, {'id': msg_id, 'error':str(e)})
