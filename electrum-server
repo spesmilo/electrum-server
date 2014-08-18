@@ -26,9 +26,9 @@ function read_config()
 path=$(read_config "path")
 # read username
 user=$(read_config "username")
+
 # log
 logfile=$(read_config "logfile")
-
 if ! [ -f $logfile ]; then
     touch $logfile
     chown $user:$user $logfile

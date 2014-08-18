@@ -99,6 +99,14 @@ fi
 chown -R $user:$user $path
 
 
+# create log file
+logfile=$(read_config "logfile")
+if ! [ -f $logfile ]; then
+    touch $logfile
+    chown $user:$user $logfile
+fi
+
+
 bitcoind_user=$(read_config "user")
 if ! [ "$bitcoind_user" ]; then
     read -p "rpcuser (from your bitcoin.conf file): " -r

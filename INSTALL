@@ -5,8 +5,8 @@ detailled information on how to configure your server.
 TLDR:
 # sudo configure
 # sudo python setup.py install
-# sudo electrum-server start
-# sudo electrum-server stop
+# electrum-server start
+# electrum-server stop
 
 
 Note: If you want to run the server without installing it on your
