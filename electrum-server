@@ -86,7 +86,7 @@ case "$1" in
 	    echo "Server running (pid $PID)"
 	fi
 	;;
-    info|getpeers|getnumpeers)
+    info|getpeers|numpeers|numaddresses)
 	if [ ! "$PID" ]; then
 	    echo "Server not running"
 	    exit
@@ -103,7 +103,7 @@ case "$1" in
 	$0 start
 	;;
     *)
-	echo "Usage: electrum-server {start|stop|restart|status|info|getpeers|getnumpeers}"
+	echo "Usage: electrum-server {start|stop|restart|status|info|getpeers|numpeers|numaddresses}"
 	exit 1
 	;;
 esac

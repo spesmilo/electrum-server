@@ -158,8 +158,11 @@ def cmd_info():
 def cmd_getpeers():
     return server_proc.peers.keys()
 
-def cmd_getnumpeers():
+def cmd_numpeers():
     return len(server_proc.peers)
+
+def cmd_numaddresses():
+    return len(chain_proc.watched_addresses)
 
 
 def cmd_debug(s):
@@ -275,7 +278,8 @@ if __name__ == '__main__':
     server.register_function(shared.stop, 'stop')
     server.register_function(cmd_info, 'info')
     server.register_function(cmd_getpeers, 'getpeers')
-    server.register_function(cmd_getnumpeers, 'getnumpeers')
+    server.register_function(cmd_numpeers, 'numpeers')
+    server.register_function(cmd_numaddresses, 'numaddresses')
     server.register_function(cmd_debug, 'debug')
     server.register_function(cmd_banner_update, 'banner_update')
     server.socket.settimeout(1)
