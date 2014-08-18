@@ -24,6 +24,12 @@ import time
 import threading
 import json
 import os
+import imp
+
+
+if os.path.dirname(os.path.realpath(__file__)) == os.getcwd():
+    imp.load_module('electrumserver', *imp.find_module('src'))
+  
 
 from electrumserver import storage, networks, utils
 from electrumserver.processor import Dispatcher, print_log
