@@ -153,6 +153,9 @@ class IrcThread(threading.Thread):
                             self.queue.put(('join', [name, ip, host, ports]))
 
                         elif line[1] == 'KICK':
+                            m = re.match(":(E_.*)!",line[3])
+                            if m:
+                                self.queue.put(('quit', [m.group(1)]))
                             try:
                                 print_log("KICK", line[3] + line[4])
                             except:
