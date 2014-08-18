@@ -86,12 +86,12 @@ case "$1" in
 	    echo "Server running (pid $PID)"
 	fi
 	;;
-    info)
+    info|getpeers|getnumpeers)
 	if [ ! "$PID" ]; then
 	    echo "Server not running"
 	    exit
 	fi
-        cmd="run_electrum_server info"
+        cmd="run_electrum_server $1"
 	if [ `id -u` = 0 ] ; then
             su $user -c "$cmd"
 	else
