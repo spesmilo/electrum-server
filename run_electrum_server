@@ -129,7 +129,6 @@ def run_rpc_command(params, electrum_rpc_port):
     server = xmlrpclib.ServerProxy('http://localhost:%d' % electrum_rpc_port)
     func = getattr(server, cmd)
     r = func(*params[1:])
-
     if cmd == 'info':
         now = time.time()
         print 'type           address         sub  version  time'
@@ -141,7 +140,8 @@ def run_rpc_command(params, electrum_rpc_port):
                                                    (now - item.get('time')),
                                                    )
     else:
-        print r
+        import pprint
+        pprint.pprint(r)
 
 def cmd_banner_update():
     load_banner(dispatcher.shared.config)
@@ -154,6 +154,13 @@ def cmd_info():
                           "version": s.version,
                           "subscriptions": len(s.subscriptions)},
                dispatcher.request_dispatcher.get_sessions())
+
+def cmd_getpeers():
+    return server_proc.peers.keys()
+
+def cmd_getnumpeers():
+    return len(server_proc.peers)
+
 
 def cmd_debug(s):
     if s:
@@ -267,6 +274,8 @@ if __name__ == '__main__':
     server.register_function(lambda: os.getpid(), 'getpid')
     server.register_function(shared.stop, 'stop')
     server.register_function(cmd_info, 'info')
+    server.register_function(cmd_getpeers, 'getpeers')
+    server.register_function(cmd_getnumpeers, 'getnumpeers')
     server.register_function(cmd_debug, 'debug')
     server.register_function(cmd_banner_update, 'banner_update')
     server.socket.settimeout(1)
