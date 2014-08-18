@@ -27,13 +27,6 @@ path=$(read_config "path")
 # read username
 user=$(read_config "username")
 
-# log
-logfile=$(read_config "logfile")
-if ! [ -f $logfile ]; then
-    touch $logfile
-    chown $user:$user $logfile
-fi
-
 # get PID of server
 if [ `id -u` = 0 ] ; then
     if ! PID=`su $user -c "run_electrum_server getpid"`; then
@@ -55,6 +48,12 @@ case "$1" in
 	if ! [ "$path" ]; then
 	    echo "Variable path not set in $electrum_config"
 	    exit
+	fi
+
+	logfile=$(read_config "logfile")
+	if ! [ -f $logfile ]; then
+	    touch $logfile
+	    chown $user:$user $logfile
 	fi
 
 	echo "Starting server as daemon"
