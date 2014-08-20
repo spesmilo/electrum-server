@@ -146,7 +146,7 @@ You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
 
-### Step 5. Install Electrum dependencies
+### Step 4. Install Electrum dependencies
 
 Electrum server depends on various standard Python libraries. These will be
 already installed on your distribution, or can be installed with your
@@ -156,7 +156,7 @@ need to install "by hand": `JSONRPClib`.
     $ sudo apt-get install python-setuptools python-openssl
     $ sudo easy_install jsonrpclib
 
-### Step 6. Install leveldb and plyvel
+### Step 5. Install leveldb and plyvel
 
     $ sudo apt-get install python-leveldb libleveldb-dev
     $ sudo easy_install plyvel
@@ -166,7 +166,7 @@ doesn't have the python-leveldb package or if plyvel installation fails.
 
 leveldb should be at least version 1.9.0. Earlier version are believed to be buggy.
 
-### Step 7. Download and install Electrum Server
+### Step 6. Download and install Electrum Server
 
 We will download the latest git snapshot for Electrum to configure and install it:
 
