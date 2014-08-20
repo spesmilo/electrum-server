@@ -77,7 +77,7 @@ code files to the `~/src` directory.
 
     $ sudo adduser bitcoin --disabled-password
     $ sudo apt-get install git
-    # su - bitcoin
+    $ sudo su - bitcoin
     $ mkdir ~/bin ~/src
     $ echo $PATH
 
@@ -85,16 +85,9 @@ If you don't see `/home/bitcoin/bin` in the output, you should add this line
 to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
     PATH="$HOME/bin:$PATH"
+    $ exit
 
-### Step 2. Download and install Electrum
-
-We will download the latest git snapshot for Electrum and 'install' it in
-our ~/bin directory:
-
-    $ mkdir -p ~/electrum-server
-    $ git clone https://github.com/spesmilo/electrum-server.git
-
-### Step 3. Download bitcoind
+### Step 2. Download bitcoind
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
@@ -103,8 +96,8 @@ We currently recommend bitcoind 0.9.2 stable.
 If your package manager does not supply a recent bitcoind or you prefer to compile it yourself,
 here are some pointers for Ubuntu:
 
-    # apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
-    # su - bitcoin
+    $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
+    $ sudo su - bitcoin
     $ cd ~/src && wget https://bitcoin.org/bin/0.9.2/bitcoin-0.9.2-linux.tar.gz
     $ sha256sum bitcoin-0.9.2-linux.tar.gz | grep 58a77aeb4c81b54d3903d85abce4f0fb580694a3611a415c5fe69a27dea5935b
     $ tar xfz bitcoin-0.9.2-linux.tar.gz
@@ -116,7 +109,7 @@ here are some pointers for Ubuntu:
     $ strip ~/src/bitcoin-0.9.2-linux/src/bitcoin-0.9.2/src/bitcoind
     $ cp -a ~/src/bitcoin-0.9.2-linux/src/bitcoin-0.9.2/src/bitcoind ~/bin/bitcoind
 
-### Step 4. Configure and start bitcoind
+### Step 3. Configure and start bitcoind
 
 In order to allow Electrum to "talk" to `bitcoind`, we need to set up an RPC
 username and password for `bitcoind`. We will then start `bitcoind` and
@@ -173,6 +166,18 @@ doesn't have the python-leveldb package or if plyvel installation fails.
 
 leveldb should be at least version 1.9.0. Earlier version are believed to be buggy.
 
+### Step 7. Download and install Electrum Server
+
+We will download the latest git snapshot for Electrum to configure and install it:
+
+    $ cd ~
+    $ git clone https://github.com/spesmilo/electrum-server.git
+    $ cd electrum-server
+    $ sudo configure
+    $ sudo python setup.py install
+
+See the INSTALL file for more information about the configure and install commands. 
+
 ### Step 7. Select your limit
 
 Electrum server uses leveldb to store transactions. You can choose
@@ -196,11 +201,13 @@ The section in the electrum server configuration file (see step 10) looks like t
 
 ### Step 8. Import blockchain into the database or download it
 
-It's recommended to fetch a pre-processed leveldb from the net.
+It's recommended to fetch a pre-processed leveldb from the net. 
+The "configure" script above will offer you to download a database with pruning limit 100.
 
-You can fetch recent copies of electrum leveldb databases and further instructions 
-from the Electrum full archival server foundry at:
-http://foundry.electrum.org/ 
+You can fetch recent copies of electrum leveldb databases with differnt pruning limits 
+and further instructions from the Electrum full archival server foundry at:
+http://foundry.electrum.org/
+
 
 Alternatively, if you have the time and nerve, you can import the blockchain yourself.
 
@@ -269,27 +276,24 @@ Electrum reads a config file (/etc/electrum.conf) when starting up. This
 file includes the database setup, bitcoind RPC setup, and a few other
 options.
 
-    $ sudo cp ~/src/electrum/server/electrum.conf.sample /etc/electrum.conf
-    $ sudo $EDITOR /etc/electrum.conf
+The "configure" script listed above will create a config file at /etc/electrum.conf
+which you can edit to modify the settings.
 
-Go through the sample config options and set them to your liking.
+Go through the config options and set them to your liking.
 If you intend to run the server publicly have a look at README-IRC.md
 
 ### Step 11. Tweak your system for running electrum
 
 Electrum server currently needs quite a few file handles to use leveldb. It also requires
 file handles for each connection made to the server. It's good practice to increase the
-open files limit to 16k. This is most easily achived by sticking the value in .bashrc of the
-root user who usually passes this value to all unprivileged user sessions too.
+open files limit to 64k. 
 
-    $ sudo sed -i '$a ulimit -n 16384' /root/.bashrc
+The "configure" script will take care of this and ask you to create a user for running electrum-server.
+If you're using user bitcoin to run electrum and have added it manually like shown in this HOWTO run 
+the following code to add the limits to your /etc/security/limits.conf:
 
-Also make sure the bitcoin user can actually increase the ulimit by allowing it accordingly in
-/etc/security/limits.conf
-
-While most bugs are fixed in this regard, electrum server may leak some memory and it's good practice 
-to restart the server once in a while from cron (preferred) or to at least monitor 
-it for crashes and then restart the server. Monthly restarts should be fine for most setups.
+     echo "bitcoin hard nofile 65536" >> /etc/security/limits.conf
+     echo "bitcoin soft nofile 65536" >> /etc/security/limits.conf
 
 Two more things for you to consider:
 
@@ -300,9 +304,12 @@ Two more things for you to consider:
 
 ### Step 12. (Finally!) Run Electrum server
 
-The magic moment has come: you can now start your Electrum server:
+The magic moment has come: you can now start your Electrum server as root (it will su to your unprivileged user):
 
-    $ electrum-server start
+    # electrum-server start
+
+Note: If you want to run the server without installing it on your system, just run 'run_electrum_server" as the
+unprivileged user.
 
 You should see this in the log file:
 
@@ -310,8 +317,15 @@ You should see this in the log file:
 
 If you want to stop Electrum server, use the 'stop' command:
 
-    $ electrum-server stop
+    # electrum-server stop
 
+
+If your system supports it, you may add electrum-server to the /etc/init.d directory. 
+This will ensure that the server is started and stopped automatically, and that the database is closed 
+safely whenever your machine is rebooted.
+
+    # ln -s `which electrum-server` /etc/init.d/electrum-server
+    # update-rc.d electrum-server defaults
 
 ### Step 13. Test the Electrum server
 
