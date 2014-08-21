@@ -31,6 +31,7 @@ class BlockchainProcessor(Processor):
         self.watched_addresses = {}
 
         self.history_cache = {}
+        self.max_cache_size = 10*1024*1024
         self.chunk_cache = {}
         self.cache_lock = threading.Lock()
         self.headers_data = ''
@@ -279,6 +280,9 @@ class BlockchainProcessor(Processor):
             hist = ['*']
 
         with self.cache_lock:
+            if sys.getsizeof(self.history_cache) > self.max_cache_size:
+                logger.info("clearing cache")
+                self.history_cache = {}
             self.history_cache[addr] = hist
         return hist
 
