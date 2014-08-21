@@ -78,7 +78,7 @@ class IrcThread(threading.Thread):
             try:
                 s = socket.socket()
                 s.connect(('irc.freenode.net', 6667))
-                s.settimeout(0.3)
+                s.settimeout(1)
             except:
                 s.close()
                 print_log("IRC: reconnect in 10 s")
@@ -94,23 +94,26 @@ class IrcThread(threading.Thread):
                 if self.password:
                     s.send('NICKSERV IDENTIFY ' + self.password + '\n')
                 s.send('JOIN #electrum\n')
-                t = 0
 
+                t = time.time()
                 while not self.processor.shared.stopped():
                     try:
                         data = s.recv(2048)
                     except socket.timeout, e:
+                        if time.time() - t > 120:
+                            out_msg.append('PING')
                         if out_msg:
                             m = out_msg.pop(0)
                             #print_log("-->", m)
                             s.send(m + '\n')
                         continue
                     except:
-                        print_log( "irc: socket error" )
+                        print_log("irc: socket error")
                         time.sleep(1)
                         break
 
                     self.message += data
+                    t = time.time()
 
                     while self.message.find('\n') != -1:
                         pos = self.message.find('\n')
