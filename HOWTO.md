@@ -234,6 +234,8 @@ Databases have grown to roughly 8 GB in April 2014, give or take a gigabyte betw
 
 ### Step 9. Create a self-signed SSL cert
 
+[Note: SSL certificates signed by a CA are supported by 2.0 clients.]
+
 To run SSL / HTTPS you need to generate a self-signed certificateusing openssl. 
 You could just comment out the SSL / HTTPS ports in the config and run 
 without, but this is not recommended.
