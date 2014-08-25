@@ -9,7 +9,7 @@ from processor import Processor
 from utils import Hash, print_log
 from version import VERSION
 from utils import logger
-from irc import IrcThread
+from ircthread import IrcThread
 
 
 
