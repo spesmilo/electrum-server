@@ -60,7 +60,7 @@ Note: You will need to redo this everytime you pull code from git.
 
 Use 'electrum-server' to start and stop the server:
 
-# electrum-server <start|stop|status|info>
+# electrum-server <start|stop|status|getinfo>
 
 The server will write a log file in its database path.
 
