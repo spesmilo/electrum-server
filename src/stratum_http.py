@@ -39,7 +39,6 @@ import types
 import jsonrpclib
 from jsonrpclib import Fault
 from jsonrpclib.jsonrpc import USE_UNIX_SOCKETS
-from OpenSSL import SSL
 
 try:
     import fcntl
@@ -254,6 +253,7 @@ class SSLRequestHandler(StratumJSONRPCRequestHandler):
 
 class SSLTCPServer(SocketServer.TCPServer):
     def __init__(self, server_address, certfile, keyfile, RequestHandlerClass, bind_and_activate=True):
+        from OpenSSL import SSL
         SocketServer.BaseServer.__init__(self, server_address, RequestHandlerClass)
         ctx = SSL.Context(SSL.SSLv23_METHOD)
         ctx.use_privatekey_file(keyfile)
