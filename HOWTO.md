@@ -146,27 +146,7 @@ You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
 
-### Step 4. Install Electrum dependencies
-
-Electrum server depends on various standard Python libraries. These will be
-already installed on your distribution, or can be installed with your
-package manager. Electrum also depends on two Python libraries which we will
-need to install "by hand": `JSONRPClib`.
-
-    $ sudo apt-get install python-setuptools python-openssl
-    $ sudo easy_install jsonrpclib
-
-### Step 5. Install leveldb and plyvel
-
-    $ sudo apt-get install python-leveldb libleveldb-dev
-    $ sudo easy_install plyvel
- 
-See the steps in README.leveldb for further details, especially if your system
-doesn't have the python-leveldb package or if plyvel installation fails.
-
-leveldb should be at least version 1.9.0. Earlier version are believed to be buggy.
-
-### Step 6. Download and install Electrum Server
+### Step 4. Download and install Electrum Server
 
 We will download the latest git snapshot for Electrum to configure and install it:
 
@@ -178,7 +158,21 @@ We will download the latest git snapshot for Electrum to configure and install i
 
 See the INSTALL file for more information about the configure and install commands. 
 
-### Step 7. Select your limit
+### Optional Step 5: Install Electrum dependencies manually
+
+Electrum server depends on various standard Python libraries and leveldb. These will usually be
+installed by caling "python setup.py install" above. They can be also be installed with your
+package manager if you don't want to use the install routine
+
+    $ sudo apt-get install python-setuptools python-openssl python-leveldb libleveldb-dev 
+    $ sudo easy_install jsonrpclib irc plyvel
+
+Regarding leveldb see the steps in README.leveldb for further details, especially if your system
+doesn't have the python-leveldb package or if plyvel installation fails.
+
+leveldb should be at least version 1.9.0. Earlier version are believed to be buggy.
+
+### Step 6. Select your limit
 
 Electrum server uses leveldb to store transactions. You can choose
 how many spent transactions per address you want to store on the server.
@@ -199,7 +193,7 @@ The section in the electrum server configuration file (see step 10) looks like t
      # for each address, history will be pruned if it is longer than this limit
      pruning_limit = 100
 
-### Step 8. Import blockchain into the database or download it
+### Step 7. Import blockchain into the database or download it
 
 It's recommended to fetch a pre-processed leveldb from the net. 
 The "configure" script above will offer you to download a database with pruning limit 100.
@@ -232,7 +226,7 @@ Databases have grown to roughly 8 GB in April 2014, give or take a gigabyte betw
 ~50% larger at times when it's writing a lot, especially when indexing from the beginning.
 
 
-### Step 9. Create a self-signed SSL cert
+### Step 8. Create a self-signed SSL cert
 
 [Note: SSL certificates signed by a CA are supported by 2.0 clients.]
 
@@ -272,7 +266,7 @@ your server with a different server name and a new certificate.
 Therefore it's a good idea to make an offline backup copy of your certificate and key
 in case you need to restore it.
 
-### Step 10. Configure Electrum server
+### Step 9. Configure Electrum server
 
 Electrum reads a config file (/etc/electrum.conf) when starting up. This
 file includes the database setup, bitcoind RPC setup, and a few other
@@ -284,7 +278,7 @@ which you can edit to modify the settings.
 Go through the config options and set them to your liking.
 If you intend to run the server publicly have a look at README-IRC.md
 
-### Step 11. Tweak your system for running electrum
+### Step 10. Tweak your system for running electrum
 
 Electrum server currently needs quite a few file handles to use leveldb. It also requires
 file handles for each connection made to the server. It's good practice to increase the
@@ -304,7 +298,7 @@ Two more things for you to consider:
 2. Consider restarting bitcoind (together with electrum-server) on a weekly basis to clear out unconfirmed
    transactions from the local the memory pool which did not propagate over the network.
 
-### Step 12. (Finally!) Run Electrum server
+### Step 11. (Finally!) Run Electrum server
 
 The magic moment has come: you can now start your Electrum server as root (it will su to your unprivileged user):
 
@@ -329,7 +323,7 @@ safely whenever your machine is rebooted.
     # ln -s `which electrum-server` /etc/init.d/electrum-server
     # update-rc.d electrum-server defaults
 
-### Step 13. Test the Electrum server
+### Step 12. Test the Electrum server
 
 We will assume you have a working Electrum client, a wallet, and some
 transactions history. You should start the client and click on the green
@@ -342,7 +336,7 @@ addresses and transactions history. You can see the number of blocks and
 response time in the Server selection window. You should send/receive some
 bitcoins to confirm that everything is working properly.
 
-### Step 14. Join us on IRC, subscribe to the server thread
+### Step 13. Join us on IRC, subscribe to the server thread
 
 Say hi to the dev crew, other server operators, and fans on 
 irc.freenode.net #electrum and we'll try to congratulate you
