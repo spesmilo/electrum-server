@@ -128,6 +128,7 @@ class IrcThread(threading.Thread):
             c.add_global_handler("whoreply", self.on_who)
             c.add_global_handler("namreply", self.on_name)
             c.add_global_handler("disconnect", self.on_disconnect)
+            c.set_keepalive(60)
 
             self.connection = c
             try:
