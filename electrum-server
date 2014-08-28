@@ -57,7 +57,7 @@ case "$1" in
 	fi
 
 	echo "Starting server as daemon"
-	cmd="ulimit -n 65536; nohup run_electrum_server &"
+	cmd="ulimit -n 65536; nohup run_electrum_server > /dev/null &"
 	if [ `id -u` = 0 ] ; then
             su $user -c "$cmd"
 	else
