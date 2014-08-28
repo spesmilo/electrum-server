@@ -179,12 +179,8 @@ def cmd_peers():
 def cmd_numpeers():
     return len(server_proc.peers)
 
-
 def cmd_debug(s):
     if s:
-        from guppy import hpy
-        h = hpy()
-        bp = dispatcher.request_dispatcher.processors['blockchain']
         try:
             result = str(eval(s))
         except:
