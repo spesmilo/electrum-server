@@ -54,10 +54,10 @@ class BlockchainProcessor(Processor):
         self.dblock = threading.Lock()
 
         self.bitcoind_url = 'http://%s:%s@%s:%s/' % (
-            config.get('bitcoind', 'user'),
-            config.get('bitcoind', 'password'),
-            config.get('bitcoind', 'host'),
-            config.get('bitcoind', 'port'))
+            config.get('bitcoind', 'bitcoind_user'),
+            config.get('bitcoind', 'bitcoind_password'),
+            config.get('bitcoind', 'bitcoind_host'),
+            config.get('bitcoind', 'bitcoind_port'))
 
         self.sent_height = 0
         self.sent_header = None

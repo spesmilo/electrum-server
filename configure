@@ -107,16 +107,16 @@ if ! [ -f $logfile ]; then
 fi
 
 
-bitcoind_user=$(read_config "user")
+bitcoind_user=$(read_config "bitcoind_user")
 if ! [ "$bitcoind_user" ]; then
     read -p "rpcuser (from your bitcoin.conf file): " -r
-    write_config "user" $bitcoind_user
+    write_config "bitcoind_user" $REPLY
 fi
 
-bitcoind_password=$(read_config "password")
+bitcoind_password=$(read_config "bitcoind_password")
 if ! [ "$bitcoind_password" ]; then
     read -p "rpcpassword (from your bitcoin.conf file): " -r
-    write_config "password" $REPLY#
+    write_config "bitcoind_password" $REPLY
 fi
 
 

@@ -27,8 +27,8 @@ path =
 pruning_limit = 100
 
 [bitcoind]
-host = localhost
-port = 8332
+bitcoind_host = localhost
+bitcoind_port = 8332
 # user and password from bitcoin.conf
-user = 
-password = 
+bitcoind_user = 
+bitcoind_password = 
