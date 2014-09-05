@@ -563,6 +563,10 @@ class BlockchainProcessor(Processor):
             tx_hash = params[0]
             result = self.bitcoind('getrawtransaction', [tx_hash, 0])
 
+        elif method == 'blockchain.estimatefee':
+            num = int(params[0])
+            result = self.bitcoind('estimatefee', [num])
+
         else:
             raise BaseException("unknown method:%s" % method)
 
