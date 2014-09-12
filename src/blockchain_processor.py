@@ -258,26 +258,12 @@ class BlockchainProcessor(Processor):
             return -1
 
         with self.dblock:
-            try:
-                hist = self.storage.get_history(addr)
-                is_known = True
-            except:
-                logger.error("error get_history",exc_info=True)
-                raise
-            if hist:
-                is_known = True
-            else:
-                hist = []
-                is_known = False
+            hist = self.storage.get_history(addr)
 
         # add memory pool
         with self.mempool_lock:
             for txid, delta in self.mempool_hist.get(addr, []):
                 hist.append({'tx_hash':txid, 'height':0})
-
-        # add something to distinguish between unused and empty addresses
-        if hist == [] and is_known:
-            hist = ['*']
 
         with self.cache_lock:
             if len(self.history_cache) > self.max_cache_size:
