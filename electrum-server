@@ -61,7 +61,7 @@ case "$1" in
 	if [ `id -u` = 0 ] ; then
             su $user -c "$cmd"
 	else
-	    $cmd
+	    eval $cmd
 	fi
 	;;
     stop)
