@@ -160,16 +160,34 @@ class TcpServer(threading.Thread):
 
     def run(self):
 
-        print_log( ("SSL" if self.use_ssl else "TCP") + " server started on port %d"%self.port)
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.setblocking(0)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind((self.host, self.port))
-        server.listen(5)
-        server_fd = server.fileno()
+        for res in socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM):
+            af, socktype, proto, cannonname, sa = res
+            try:
+                sock = socket.socket(af, socktype, proto)
+                sock.setblocking(0)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            except socket.error:
+                sock = None
+                continue
+            try:
+                sock.bind(sa)
+                sock.listen(5)
+            except socket.error:
+                sock.close()
+                sock = None
+                continue
+            break
+        host = sa[0]
+        if af == socket.AF_INET6:
+            host = "[%s]" % host
+        if sock is None:
+            print_log( "could not open " + ("SSL" if self.use_ssl else "TCP") + " socket on %s:%d" % (host, self.port))
+            return
+        print_log( ("SSL" if self.use_ssl else "TCP") + " server started on %s:%d" % (host, self.port))
 
+        sock_fd = sock.fileno()
         poller = select.poll()
-        poller.register(server)
+        poller.register(sock)
 
         def stop_session(fd):
             try:
@@ -204,7 +222,7 @@ class TcpServer(threading.Thread):
 
             for fd, flag in events:
 
-                if fd != server_fd:
+                if fd != sock_fd:
                     session = self.fd_to_session[fd]
                     s = session._connection
                     try:
@@ -216,8 +234,8 @@ class TcpServer(threading.Thread):
                 # handle inputs
                 if flag & (select.POLLIN | select.POLLPRI):
 
-                    if fd == server_fd:
-                        connection, address = server.accept()
+                    if fd == sock_fd:
+                        connection, address = sock.accept()
                         try:
                             session = TcpSession(self.dispatcher, poller, connection, address, 
                                                  use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
