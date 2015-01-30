@@ -91,23 +91,21 @@ to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.9.3 stable.
+We currently recommend bitcoind 0.10.0rc3 because it has no issues with newer openssl versions.
 
 If your package manager does not supply a recent bitcoind or you prefer to compile it yourself,
 here are some pointers for Ubuntu:
 
     $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
     $ sudo su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/0.9.3/bitcoin-0.9.3-linux.tar.gz
-    $ sha256sum bitcoin-0.9.3-linux.tar.gz | grep c425783b6cbab9b801ad6a1dcc9235828b98e5dee6675112741f8b210e4f65cd
-    $ tar xfz bitcoin-0.9.3-linux.tar.gz
-    $ cd bitcoin-0.9.3-linux/src
-    $ tar xfz bitcoin-0.9.3.tar.gz
-    $ cd bitcoin-0.9.3
+    $ cd ~/src && wget https://bitcoin.org/bin/0.10.0/test/bitcoin-0.10.0rc3.tar.gz
+    $ sha256sum bitcoin-0.10.0rc3.tar.gz | grep 31018641f7e1c1896742934945c350127f97f36f777986057cddb17a5e20690e
+    $ tar xfz bitcoin-0.10.0rc3.tar.gz
+    $ cd bitcoin-0.10.0-linux
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
-    $ strip ~/src/bitcoin-0.9.3-linux/src/bitcoin-0.9.3/src/bitcoind
-    $ cp -a ~/src/bitcoin-0.9.3-linux/src/bitcoin-0.9.3/src/bitcoind ~/bin/bitcoind
+    $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
+    $ cp -a src/bitcoind src/bitcoin-cli src/bitcoin-tx ~/bin
 
 ### Step 3. Configure and start bitcoind
 
@@ -138,10 +136,10 @@ If you have a fresh copy of bitcoind start `bitcoind`:
 Allow some time to pass for `bitcoind` to connect to the network and start
 downloading blocks. You can check its progress by running:
 
-    $ bitcoind getinfo
+    $ bitcoin-cli getblockchaininfo
 
 Before starting the electrum server your bitcoind should have processed all 
-blockes and caught up to the current height of the network.
+blocks and caught up to the current height of the network (not just the headers).
 You should also set up your system to automatically start bitcoind at boot
 time, running as the 'bitcoin' user. Check your system documentation to
 find out the best way to do this.
