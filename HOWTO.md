@@ -101,7 +101,7 @@ here are some pointers for Ubuntu:
     $ cd ~/src && wget https://bitcoin.org/bin/0.10.0/test/bitcoin-0.10.0rc3.tar.gz
     $ sha256sum bitcoin-0.10.0rc3.tar.gz | grep 31018641f7e1c1896742934945c350127f97f36f777986057cddb17a5e20690e
     $ tar xfz bitcoin-0.10.0rc3.tar.gz
-    $ cd bitcoin-0.10.0-linux
+    $ cd bitcoin-0.10.0
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
@@ -129,7 +129,7 @@ set txindex=1 you need to reindex the blockchain by running
 
     $ bitcoind -reindex
 
-If you have a fresh copy of bitcoind start `bitcoind`:
+If you already have a freshly indexed copy of the blockchain with txindex start `bitcoind`:
 
     $ bitcoind
 
