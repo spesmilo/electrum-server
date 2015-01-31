@@ -4,7 +4,7 @@ setup(
     name="electrum-server",
     version="0.9",
     scripts=['run_electrum_server','electrum-server'],
-    install_requires=['plyvel','jsonrpclib', 'irc'],
+    install_requires=['plyvel','jsonrpclib', 'irc>=11'],
     package_dir={
         'electrumserver':'src'
         },
