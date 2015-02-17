@@ -101,25 +101,30 @@ class BlockchainProcessor(Processor):
             s += k+':'+"%.2f"%v+' '
         print_log(s)
 
+    def wait_on_bitcoind(self):
+        self.shared.pause()
+        time.sleep(10)
+        if self.shared.stopped():
+            # this will end the thread
+            raise
 
     def bitcoind(self, method, params=[]):
         postdata = dumps({"method": method, 'params': params, 'id': 'jsonrpc'})
         while True:
             try:
                 respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
-                break
             except:
                 print_log("cannot reach bitcoind...")
-                self.shared.pause()
-                time.sleep(10)
-                if self.shared.stopped():
-                    # this will end the thread
-                    raise
-                continue
-
-        r = loads(respdata)
-        if r['error'] is not None:
-            raise BaseException(r['error'])
+                self.wait_on_bitcoind()
+            else:
+                r = loads(respdata)
+                if r['error'] is not None:
+                    if r['error'].get('code') == -28:
+                        print_log("bitcoind still warming up...")
+                        self.wait_on_bitcoind()
+                        continue
+                    raise BaseException(r['error'])
+                break
         return r.get('result')
 
 
