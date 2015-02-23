@@ -3,8 +3,8 @@ detailled information on how to configure your server.
 
 
 TLDR:
-# sudo configure
-# sudo python setup.py install
+# sudo ./configure
+# sudo python ./setup.py install
 # electrum-server start
 # electrum-server stop
 
@@ -30,7 +30,7 @@ Electrum database.
 ---------------------------
 You need to run the script as root:
 
-# sudo configure
+# sudo ./configure
 
 It will:
  * create the configuration file in /etc/electrum.conf
