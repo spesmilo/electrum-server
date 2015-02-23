@@ -103,8 +103,8 @@ chown -R $user:$user $path
 logfile=$(read_config "logfile")
 if ! [ -f $logfile ]; then
     touch $logfile
-    chown $user:$user $logfile
 fi
+chown $user:$user $logfile
 
 
 bitcoind_user=$(read_config "bitcoind_user")
