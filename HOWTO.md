@@ -50,7 +50,7 @@ issue so you can continue following this howto.
 **Software.** A recent Linux 64-bit distribution with the following software
 installed: `python`, `easy_install`, `git`, standard C/C++
 build chain. You will need root access in order to install other software or
-Python libraries. 
+Python libraries. Python 2.7 is the minimum supported version.
 
 **Hardware.** The lightest setup is a pruning server with diskspace 
 requirements of about 10 GB for the electrum database. However note that 
