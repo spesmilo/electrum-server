@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 from itertools import imap
 import threading
 import time
@@ -216,10 +217,10 @@ def DecodeBase58Check(psz):
 
 
 ########### end pywallet functions #######################
+import os
 
 def random_string(length):
-    with open("/dev/urandom", 'rb') as f:
-        return b58encode( f.read(length) )
+    return b58encode(os.urandom(length))
 
 def timestr():
     return time.strftime("[%d/%m/%Y-%H:%M:%S]")
@@ -245,6 +246,3 @@ def print_log(*args):
 
 def print_warning(message):
     logger.warning(message)
-
-
-
