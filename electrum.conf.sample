@@ -10,7 +10,6 @@ stratum_tcp_port = 50001
 #report_host = 
 #report_stratum_tcp_port = 50001
 #report_stratum_tcp_ssl_port = 50002
-password = secret
 banner = Welcome to Electrum!
 banner_file = /etc/electrum.banner
 #irc = no
