@@ -215,7 +215,7 @@ class Session:
 
 
     def key(self):
-        return self.name + self.address
+        return self.address
 
     # Debugging method. Doesn't need to be threadsafe.
     def info(self):
