@@ -93,7 +93,7 @@ class IrcThread(threading.Thread):
         try:
             ip = socket.gethostbyname(line[1])
         except:
-            logger.error("gethostbyname error" + line[1])
+            logger.error("gethostbyname error " + line[1])
             return
         nick = event.arguments[4]
         host = line[1]
