@@ -18,10 +18,9 @@ import ssl
 
 class TcpSession(Session):
 
-    def __init__(self, dispatcher, poller, connection, address, use_ssl, ssl_certfile, ssl_keyfile):
+    def __init__(self, dispatcher, connection, address, use_ssl, ssl_certfile, ssl_keyfile):
         Session.__init__(self, dispatcher)
         self.use_ssl = use_ssl
-        self.poller = poller
         self.raw_connection = connection
         if use_ssl:
             import ssl
@@ -45,7 +44,7 @@ class TcpSession(Session):
         self.handshake = not self.use_ssl
 
 
-    def check_do_handshake(self):
+    def check_do_handshake(self, poller):
         if self.handshake:
             return
         try:
@@ -54,15 +53,12 @@ class TcpSession(Session):
             if err.args[0] == ssl.SSL_ERROR_WANT_READ:
                 return
             elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
-                self.poller.modify(self.raw_connection, READ_WRITE)
+                poller.modify(self.raw_connection, READ_WRITE)
                 return
             else:
                 raise
-
-        self.poller.modify(self.raw_connection, READ_ONLY)
+        poller.modify(self.raw_connection, READ_ONLY)
         self.handshake = True
-
-
 
     def connection(self):
         if self.stopped():
@@ -85,26 +81,14 @@ class TcpSession(Session):
         except BaseException as e:
             logger.error('send_response:' + str(e))
             return
-
         self.response_queue.put(msg)
 
-        try:
-            self.poller.modify(self.raw_connection, READ_WRITE)
-        except BaseException as e:
-            logger.error('send_response:' + str(e))
-            return
-
-
-
     def parse_message(self):
-
         message = self.message
         self.time = time.time()
-
         raw_buffer = message.find('\n')
         if raw_buffer == -1:
             return False
-
         raw_command = message[0:raw_buffer].strip()
         self.message = message[raw_buffer + 1:]
         return raw_command
@@ -218,6 +202,11 @@ class TcpServer(threading.Thread):
                 events = redo
                 redo = []
             else:
+                # check sessions that need to write
+                for session in self.fd_to_session.values():
+                    if not session.response_queue.empty():
+                        poller.modify(session.raw_connection, READ_WRITE)
+
                 events = poller.poll(TIMEOUT)
 
             for fd, flag in events:
@@ -226,7 +215,7 @@ class TcpServer(threading.Thread):
                     session = self.fd_to_session[fd]
                     s = session._connection
                     try:
-                        session.check_do_handshake()
+                        session.check_do_handshake(poller)
                     except:
                         stop_session(fd)
                         continue
@@ -237,7 +226,7 @@ class TcpServer(threading.Thread):
                     if fd == sock_fd:
                         connection, address = sock.accept()
                         try:
-                            session = TcpSession(self.dispatcher, poller, connection, address, 
+                            session = TcpSession(self.dispatcher, connection, address, 
                                                  use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
                         except BaseException as e:
                             logger.error("cannot start TCP session" + str(e) + ' ' + repr(address))
@@ -249,7 +238,7 @@ class TcpServer(threading.Thread):
                         self.fd_to_session[ connection.fileno() ] = session
                         poller.register(connection, READ_ONLY)
                         try:
-                            session.check_do_handshake()
+                            session.check_do_handshake(poller)
                         except BaseException as e:
                             logger.error('handshake failure:' + str(e) + ' ' + repr(address))
                             stop_session(connection.fileno())
@@ -260,6 +249,8 @@ class TcpServer(threading.Thread):
                         data = s.recv(self.buffer_size)
                     except ssl.SSLError as x:
                         if x.args[0] == ssl.SSL_ERROR_WANT_READ: 
+                            pass
+                        elif x.args[0] == ssl.SSL_ERROR_SSL: 
                             pass
                         else:
                             logger.error('SSL recv error:'+ repr(x))
@@ -292,7 +283,6 @@ class TcpServer(threading.Thread):
                     print_log('client hung up', address)
                     stop_session(fd)
 
-
                 elif flag & select.POLLOUT:
                     # Socket is ready to send data, if there is any to send.
                     if session.retry_msg:
@@ -304,21 +294,18 @@ class TcpServer(threading.Thread):
                             # No messages waiting so stop checking for writability.
                             poller.modify(s, READ_ONLY)
                             continue
-
                     try:
                         sent = s.send(next_msg)
                     except socket.error as x:
-                        logger.error("recv error:" + str(x))
+                        logger.error("send error:" + str(x))
                         stop_session(fd)
                         continue
                         
                     session.retry_msg = next_msg[sent:]
 
-
                 elif flag & select.POLLERR:
                     print_log('handling exceptional condition for', session.address)
                     stop_session(fd)
-
 
                 elif flag & select.POLLNVAL:
                     print_log('invalid request', session.address)
