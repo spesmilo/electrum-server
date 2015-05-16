@@ -101,6 +101,7 @@ def create_config(filename=None):
     config.set('server', 'coin', '')
     config.set('server', 'logfile', '/var/log/electrum.log')
     config.set('server', 'donation_address', '')
+    config.set('server', 'max_subscriptions', '10000')
 
     config.add_section('leveldb')
     config.set('leveldb', 'path', '/dev/shm/electrum_db')

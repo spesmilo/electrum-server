@@ -198,10 +198,15 @@ class TcpServer(threading.Thread):
                 events = redo
                 redo = []
             else:
-                # check sessions that need to write
-                for session in self.fd_to_session.values():
+                now = time.time()
+                for fd, session in self.fd_to_session.items():
+                    # check sessions that need to write
                     if not session.response_queue.empty():
                         poller.modify(session.raw_connection, READ_WRITE)
+                    # collect garbage
+                    if now - session.time > session.timeout:
+                        stop_session(fd)
+
                 events = poller.poll(TIMEOUT)
 
             for fd, flag in events:
