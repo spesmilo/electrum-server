@@ -42,6 +42,7 @@ class TcpSession(Session):
         self.message = ''
         self.retry_msg = ''
         self.handshake = not self.use_ssl
+        self.need_write = True
 
     def connection(self):
         if self.stopped():
@@ -63,6 +64,8 @@ class TcpSession(Session):
         except BaseException as e:
             logger.error('send_response:' + str(e))
             return
+        if self.response_queue.empty():
+            self.need_write = True
         self.response_queue.put(msg)
 
     def parse_message(self):
@@ -201,8 +204,9 @@ class TcpServer(threading.Thread):
                 now = time.time()
                 for fd, session in self.fd_to_session.items():
                     # check sessions that need to write
-                    if not session.response_queue.empty():
+                    if session.need_write:
                         poller.modify(session.raw_connection, READ_WRITE)
+                        session.need_write = False
                     # collect garbage
                     if now - session.time > session.timeout:
                         stop_session(fd)
