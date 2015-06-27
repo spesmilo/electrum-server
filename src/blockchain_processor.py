@@ -704,12 +704,11 @@ class BlockchainProcessor(Processor):
             mpa = self.mempool_addresses.get(tx_hash, {})
             out_values = []
             for x in tx.get('outputs'):
-                out_values.append( x['value'] )
-
-                addr = x.get('address')
+                addr = x.get('address', '')
+                out_values.append((addr, x['value']))
                 if not addr:
                     continue
-                v = mpa.get(addr,0)
+                v = mpa.get(addr, 0)
                 v += x['value']
                 mpa[addr] = v
                 touched_addresses.add(addr)
@@ -721,22 +720,20 @@ class BlockchainProcessor(Processor):
         for tx_hash, tx in new_tx.items():
             mpa = self.mempool_addresses.get(tx_hash, {})
             for x in tx.get('inputs'):
-                # we assume that the input address can be parsed by deserialize(); this is true for Electrum transactions
-                addr = x.get('address')
-                if not addr:
-                    continue
-
-                v = self.mempool_values.get(x.get('prevout_hash'))
-                if v:
-                    value = v[ x.get('prevout_n')]
+                mpv = self.mempool_values.get(x.get('prevout_hash'))
+                if mpv:
+                    addr, value = mpv[ x.get('prevout_n')]
                 else:
                     txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
                     try:
+                        addr = self.storage.get_address(txi)
                         value = self.storage.get_utxo_value(addr,txi)
                     except:
                         print_log("utxo not in database; postponing mempool update")
                         return
 
+                if not addr:
+                    continue
                 v = mpa.get(addr,0)
                 v -= value
                 mpa[addr] = v
