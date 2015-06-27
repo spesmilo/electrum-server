@@ -216,17 +216,6 @@ def parse_TxIn(vds):
     d['prevout_n'] = vds.read_uint32()
     scriptSig = vds.read_bytes(vds.read_compact_size())
     d['sequence'] = vds.read_uint32()
-
-    if scriptSig:
-        pubkeys, signatures, address = get_address_from_input_script(scriptSig)
-    else:
-        pubkeys = []
-        signatures = []
-        address = None
-
-    d['address'] = address
-    d['signatures'] = signatures
-
     return d
 
 
@@ -247,19 +236,14 @@ def parse_Transaction(vds, is_coinbase):
     n_vin = vds.read_compact_size()
     d['inputs'] = []
     for i in xrange(n_vin):
-            o = parse_TxIn(vds)
-            if not is_coinbase:
-                    d['inputs'].append(o)
+        o = parse_TxIn(vds)
+        if not is_coinbase:
+            d['inputs'].append(o)
     n_vout = vds.read_compact_size()
     d['outputs'] = []
     for i in xrange(n_vout):
-            o = parse_TxOut(vds, i)
-
-            #if o['address'] == "None" and o['value']==0:
-            #        print("skipping strange tx output with zero value")
-            #        continue
-            # if o['address'] != "None":
-            d['outputs'].append(o)
+        o = parse_TxOut(vds, i)
+        d['outputs'].append(o)
 
     d['lockTime'] = vds.read_uint32()
     return d
@@ -345,47 +329,6 @@ def match_decoded(decoded, to_match):
     return True
 
 
-
-def get_address_from_input_script(bytes):
-    try:
-        decoded = [ x for x in script_GetOp(bytes) ]
-    except:
-        # coinbase transactions raise an exception                                                                                                                 
-        return [], [], None
-
-    # non-generated TxIn transactions push a signature
-    # (seventy-something bytes) and then their public key
-    # (33 or 65 bytes) onto the stack:
-
-    match = [ opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4 ]
-    if match_decoded(decoded, match):
-        return None, None, public_key_to_pubkey_address(decoded[1][1])
-
-    # p2sh transaction, 2 of n
-    match = [ opcodes.OP_0 ]
-    while len(match) < len(decoded):
-        match.append(opcodes.OP_PUSHDATA4)
-
-    if match_decoded(decoded, match):
-
-        redeemScript = decoded[-1][1]
-        num = len(match) - 2
-        signatures = map(lambda x:x[1].encode('hex'), decoded[1:-1])
-        dec2 = [ x for x in script_GetOp(redeemScript) ]
-
-        # 2 of 2
-        match2 = [ opcodes.OP_2, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_2, opcodes.OP_CHECKMULTISIG ]
-        if match_decoded(dec2, match2):
-            pubkeys = [ dec2[1][1].encode('hex'), dec2[2][1].encode('hex') ]
-            return pubkeys, signatures, hash_160_to_script_address(hash_160(redeemScript))
-
-        # 2 of 3
-        match2 = [ opcodes.OP_2, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_PUSHDATA4, opcodes.OP_3, opcodes.OP_CHECKMULTISIG ]
-        if match_decoded(dec2, match2):
-            pubkeys = [ dec2[1][1].encode('hex'), dec2[2][1].encode('hex'), dec2[3][1].encode('hex') ]
-            return pubkeys, signatures, hash_160_to_script_address(hash_160(redeemScript))
-
-    return [], [], None
 
 
 def get_address_from_output_script(bytes):
