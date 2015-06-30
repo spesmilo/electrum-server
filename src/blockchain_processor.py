@@ -39,7 +39,7 @@ class BlockchainProcessor(Processor):
 
         self.mempool_values = {}
         self.mempool_addresses = {}
-        self.mempool_hist = {}
+        self.mempool_hist = {} # addr -> (txid, delta)
         self.mempool_hashes = set([])
         self.mempool_lock = threading.Lock()
 
@@ -679,6 +679,7 @@ class BlockchainProcessor(Processor):
 
 
     def memorypool_update(self):
+        t0 = time.time()
         mempool_hashes = set(self.bitcoind('getrawmempool'))
         touched_addresses = set([])
 
@@ -697,7 +698,6 @@ class BlockchainProcessor(Processor):
 
         # remove older entries from mempool_hashes
         self.mempool_hashes = mempool_hashes
-
 
         # check all tx outputs
         for tx_hash, tx in new_tx.items():
@@ -741,7 +741,6 @@ class BlockchainProcessor(Processor):
 
             self.mempool_addresses[tx_hash] = mpa
 
-
         # remove deprecated entries from mempool_addresses
         for tx_hash, addresses in self.mempool_addresses.items():
             if tx_hash not in self.mempool_hashes:
@@ -750,12 +749,21 @@ class BlockchainProcessor(Processor):
                 for addr in addresses:
                     touched_addresses.add(addr)
 
-        # rebuild mempool histories
+        # remove deprecated entries from mempool_hist
         new_mempool_hist = {}
-        for tx_hash, addresses in self.mempool_addresses.items():
+        for addr in self.mempool_hist.keys():
+            h = self.mempool_hist[addr]
+            hh = []
+            for tx_hash, delta in h:
+                if tx_hash in self.mempool_addresses:
+                    hh.append((tx_hash, delta))
+            new_mempool_hist[addr] = hh
+        # add new transactions to mempool_hist
+        for tx_hash in new_tx.keys():
+            addresses = self.mempool_addresses[tx_hash]
             for addr, delta in addresses.items():
                 h = new_mempool_hist.get(addr, [])
-                if tx_hash not in h:
+                if (tx_hash, delta) not in h:
                     h.append((tx_hash, delta))
                 new_mempool_hist[addr] = h
 
@@ -765,6 +773,10 @@ class BlockchainProcessor(Processor):
         # invalidate cache for touched addresses
         for addr in touched_addresses:
             self.invalidate_cache(addr)
+
+        t1 = time.time()
+        if t1-t0>1:
+            print_log('mempool_update', t1-t0)
 
 
     def invalidate_cache(self, address):
