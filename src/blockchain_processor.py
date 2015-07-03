@@ -757,7 +757,8 @@ class BlockchainProcessor(Processor):
             for tx_hash, delta in h:
                 if tx_hash in self.mempool_addresses:
                     hh.append((tx_hash, delta))
-            new_mempool_hist[addr] = hh
+            if hh:
+                new_mempool_hist[addr] = hh
         # add new transactions to mempool_hist
         for tx_hash in new_tx.keys():
             addresses = self.mempool_addresses[tx_hash]
@@ -776,7 +777,7 @@ class BlockchainProcessor(Processor):
 
         t1 = time.time()
         if t1-t0>1:
-            print_log('mempool_update', t1-t0)
+            print_log('mempool_update', t1-t0, len(self.mempool_hashes), len(self.mempool_hist))
 
 
     def invalidate_cache(self, address):
