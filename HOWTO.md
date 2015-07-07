@@ -98,7 +98,7 @@ here are some pointers for Ubuntu:
 
     $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
     $ sudo su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/0.10.2/bitcoin-0.10.2.tar.gz
+    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.10.2/bitcoin-0.10.2.tar.gz
     $ sha256sum bitcoin-0.10.2.tar.gz | grep cddf96c71d0a35524fde93380981cf0cf0b51441454a3a68b9be491b9239bfec
     $ tar xfz bitcoin-0.10.2.tar.gz
     $ cd bitcoin-0.10.2
