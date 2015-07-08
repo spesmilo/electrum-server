@@ -7,10 +7,10 @@ The following config file options are used by the IRC part of Electrum server:
 
     [server]
     irc = yes
+    irc_nick = server nickname
     host = fqdn.host.name.tld
     #report_host = fqdn.host.name.tld
-    irc_nick = server nickname
-    #report_stratum_http_port = 80
+    #report_stratum_tcp_port = 50001
 
 `irc` is used to determine whether the IRC thread will be started or the 
 Electrum server will run in private mode (default). In private mode, 
@@ -25,8 +25,7 @@ instead of `host`. It is used as part of the name field in IRC for incoming clie
 This is useful in a NAT setup where you bind to a private IP locally but have an external IP
 set up at your router and external DNS.
 
-`report_stratum_tcp_port`, `report_stratum_http_port`, `report_stratum_tcp_ssl_port`, 
-`report_stratum_http_ssl_port` are optional settings for a port number to be reported in the
+`report_stratum_tcp_port`, `report_stratum_tcp_ssl_port` are optional settings for a port number to be reported in the
 IRC name field without actually binding this port locally. This is useful in a NAT setup
 where you might want to bind to a high port locally but DNAT a different possibly privileged
 port for inbound connections
