@@ -91,17 +91,17 @@ to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.10.1 stable.
+We currently recommend bitcoind 0.10.2 stable.
 
 If your package manager does not supply a recent bitcoind or you prefer to compile it yourself,
 here are some pointers for Ubuntu:
 
     $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
     $ sudo su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/0.10.1/bitcoin-0.10.1.tar.gz
-    $ sha256sum bitcoin-0.10.1.tar.gz | grep 287873f9ba4fd49cd4e4be7eba070d2606878f1690c5be0273164d37cbf3c138
-    $ tar xfz bitcoin-0.10.1.tar.gz
-    $ cd bitcoin-0.10.1
+    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.10.2/bitcoin-0.10.2.tar.gz
+    $ sha256sum bitcoin-0.10.2.tar.gz | grep cddf96c71d0a35524fde93380981cf0cf0b51441454a3a68b9be491b9239bfec
+    $ tar xfz bitcoin-0.10.2.tar.gz
+    $ cd bitcoin-0.10.2
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
