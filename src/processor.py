@@ -251,6 +251,7 @@ class Session:
 
         if len(self.subscriptions) > self.max_subscriptions:
             print_log("max subscriptions reached", self.address)
+            self.stop()
             return False
 
         # append to self.subscriptions only if this does not raise
