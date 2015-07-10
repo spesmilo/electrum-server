@@ -115,7 +115,7 @@ class TcpServer(threading.Thread):
             # unsuccessful.
             message_id = command['id']
             method = command['method']
-        except KeyError:
+        except:
             # Return an error JSON in response.
             session.send_response({"error": "syntax error", "request": raw_command})
         else:
