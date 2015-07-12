@@ -585,24 +585,28 @@ class BlockchainProcessor(Processor):
                 "id": i,
             })
             i += 1
-
         postdata = dumps(rawtxreq)
-        try:
-            respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
-        except:
-            logger.error("bitcoind error (getfullblock)",exc_info=True)
-            self.shared.stop()
 
-        r = loads(respdata)
-        rawtxdata = []
-        for ir in r:
-            if ir['error'] is not None:
-                self.shared.stop()
-                print_log("Error: make sure you run bitcoind with txindex=1; use -reindex if needed.")
-                raise BaseException(ir['error'])
-            rawtxdata.append(ir['result'])
-        block['tx'] = rawtxdata
-        return block
+        while True:
+            try:
+                respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+            except:
+                logger.error("bitcoind error (getfullblock)")
+                self.wait_on_bitcoind()
+                continue
+            try:
+                r = loads(respdata)
+                rawtxdata = []
+                for ir in r:
+                    assert ir['error'] is None, "Error: make sure you run bitcoind with txindex=1; use -reindex if needed."
+                    rawtxdata.append(ir['result'])
+            except BaseException as e:
+                logger.error(str(e))
+                self.wait_on_bitcoind()
+                continue
+
+            block['tx'] = rawtxdata
+            return block
 
     def catch_up(self, sync=True):
 
@@ -626,10 +630,10 @@ class BlockchainProcessor(Processor):
             self.up_to_date = False
             try:
                 next_block_hash = self.bitcoind('getblockhash', [self.storage.height + 1])
-                next_block = self.getfullblock(next_block_hash)
             except BaseException, e:
                 revert = True
-                next_block = self.getfullblock(self.storage.last_hash)
+
+            next_block = self.getfullblock(next_block_hash if not revert else self.storage.last_hash)
 
             self.mtime('daemon')
 
