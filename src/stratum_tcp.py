@@ -171,9 +171,19 @@ class TcpServer(threading.Thread):
         def check_do_handshake(session):
             if session.handshake:
                 return
+            t0 = time.time()
             try:
+                timeout = session._connection.gettimeout()
+                session._connection.settimeout(10)
                 session._connection.do_handshake()
+                session._connection.settimeout(timeout)
+                t1 = time.time()
+                if t1-t0>1:
+                    print_log('do_handshake(success)', t1-t0,session.address)
             except ssl.SSLError as err:
+                t1 = time.time()
+                if t1-t0>1:
+                    print_log('do_handshake(exception)', t1-t0,session.address,err.args[0])
                 if err.args[0] == ssl.SSL_ERROR_WANT_READ:
                     return
                 elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
