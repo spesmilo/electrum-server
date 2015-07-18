@@ -611,6 +611,8 @@ class BlockchainProcessor(Processor):
     def catch_up(self, sync=True):
 
         t0 = time.time()
+        start_catchup_time = t0
+        start_catchup_height = self.storage.height
         prev_root_hash = None
         while not self.shared.stopped():
 
@@ -652,7 +654,19 @@ class BlockchainProcessor(Processor):
                 if t1-t0>1:
                     t_daemon = self.mtimes.get('daemon')
                     t_import = self.mtimes.get('import')
-                    print_log("catch_up: block %d (%.3fs %.3fs)" % (self.storage.height, t_daemon, t_import), self.storage.get_root_hash().encode('hex'))
+                    
+                    eta = ''
+                    run_blocks = self.storage.height - start_catchup_height
+                    remaining_blocks = self.bitcoind_height - self.storage.height
+                    if run_blocks>0 and remaining_blocks>0:
+                        run_minutes_per_block = (t1-start_catchup_time) / 60 / run_blocks 
+                        remaining_minutes = remaining_blocks * run_minutes_per_block
+                        new_blocks = remaining_minutes / 10 # number of new blocks expected during catchup
+                        blocks_to_process = remaining_blocks + new_blocks
+                        remaining_minutes = blocks_to_process * run_minutes_per_block
+                        eta = "(eta %.0fmin at %.1fmin/block and %.0f blocks remaining)" % (remaining_minutes, run_minutes_per_block, blocks_to_process)
+
+                    print_log("catch_up: block %d (%.3fs %.3fs)" % (self.storage.height, t_daemon, t_import), self.storage.get_root_hash().encode('hex'), eta)
                     self.mtimes['daemon'] = 0
                     self.mtimes['import'] = 0
                     t0 = t1
