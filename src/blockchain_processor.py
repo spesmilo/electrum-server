@@ -1,4 +1,4 @@
-import ast
+﻿import ast
 import hashlib
 from json import dumps, loads
 import os
@@ -610,6 +610,7 @@ class BlockchainProcessor(Processor):
 
     def catch_up(self, sync=True):
 
+        t0 = time.time()
         prev_root_hash = None
         while not self.shared.stopped():
 
@@ -647,12 +648,14 @@ class BlockchainProcessor(Processor):
                 self.storage.last_hash = next_block_hash
                 self.mtime('import')
             
-                if self.storage.height % 1000 == 0 and not sync:
+                t1 = time.time()
+                if t1-t0>1:
                     t_daemon = self.mtimes.get('daemon')
                     t_import = self.mtimes.get('import')
                     print_log("catch_up: block %d (%.3fs %.3fs)" % (self.storage.height, t_daemon, t_import), self.storage.get_root_hash().encode('hex'))
                     self.mtimes['daemon'] = 0
                     self.mtimes['import'] = 0
+                    t0 = t1
 
             else:
 
