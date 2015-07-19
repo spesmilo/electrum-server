@@ -113,17 +113,18 @@ class BlockchainProcessor(Processor):
         while True:
             try:
                 respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
-            except:
-                print_log("cannot reach bitcoind...")
+            except BaseException as e:
+                print_log("cannot reach bitcoind...", str(e))
                 self.wait_on_bitcoind()
             else:
                 r = loads(respdata)
                 if r['error'] is not None:
                     if r['error'].get('code') == -28:
                         print_log("bitcoind still warming up...")
-                        self.wait_on_bitcoind()
-                        continue
-                    raise BaseException(r['error'])
+                    else:
+                        print_log("bitcoind error...", r['error'])
+                    self.wait_on_bitcoind()
+                    continue
                 break
         return r.get('result')
 
