@@ -25,6 +25,7 @@ import threading
 import json
 import os
 import imp
+import resource
 
 
 if os.path.dirname(os.path.realpath(__file__)) == os.getcwd():
@@ -47,6 +48,12 @@ if sys.maxsize <= 2**32:
 if os.getuid() == 0:
     print "Do not run this program as root!"
     print "Run the install script to create a non-privileged user."
+    sys.exit()
+
+# prevent database corruption due to default open file limits
+softlimit, hardlimit = resource.getrlimit(resource.RLIMIT_OFILE)
+if hardlimit < 64000:
+    print "Warning: Your open files limit is too low." 
     sys.exit()
 
 def attempt_read_config(config, filename):
