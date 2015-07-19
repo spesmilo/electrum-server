@@ -168,29 +168,23 @@ class TcpServer(threading.Thread):
             # this will close the socket
             session.stop()
 
-        def check_do_handshake(session):
-            if session.handshake:
-                return
-            t0 = time.time()
+        def try_do_handshake(session, fd):
             try:
-                timeout = session._connection.gettimeout()
-                session._connection.settimeout(10)
                 session._connection.do_handshake()
-                session._connection.settimeout(timeout)
-                t1 = time.time()
-                if t1-t0>1:
-                    print_log('do_handshake(success)', t1-t0,session.address)
             except ssl.SSLError as err:
-                t1 = time.time()
-                if t1-t0>1:
-                    print_log('do_handshake(exception)', t1-t0,session.address,err.args[0])
                 if err.args[0] == ssl.SSL_ERROR_WANT_READ:
                     return
                 elif err.args[0] == ssl.SSL_ERROR_WANT_WRITE:
                     poller.modify(session.raw_connection, READ_WRITE)
                     return
                 else:
-                    raise
+                    logger.error('handshake failure:' + str(err) + ' ' + repr(session.address))
+                    stop_session(fd)
+                    return
+            except BaseException as e:
+                logger.error('handshake failure:' + str(e) + ' ' + repr(session.address))
+                stop_session(fd)
+                return
             poller.modify(session.raw_connection, READ_ONLY)
             session.handshake = True
 
@@ -236,22 +230,17 @@ class TcpServer(threading.Thread):
                             connection.close()
                             continue
                         connection = session._connection
-                        connection.setblocking(0)
+                        connection.setblocking(False)
                         self.fd_to_session[connection.fileno()] = session
                         poller.register(connection, READ_ONLY)
-                        try:
-                            check_do_handshake(session)
-                        except BaseException as e:
-                            logger.error('handshake failure:' + str(e) + ' ' + repr(address))
-                            stop_session(connection.fileno())
                     continue
 
                 session = self.fd_to_session[fd]
                 s = session._connection
-                try:
-                    check_do_handshake(session)
-                except:
-                    stop_session(fd)
+
+                # non-blocking handshake
+                if not session.handshake:
+                    try_do_handshake(session, fd)
                     continue
 
                 # handle inputs
@@ -288,7 +277,7 @@ class TcpServer(threading.Thread):
                         continue
 
                 elif flag & select.POLLHUP:
-                    print_log('client hung up', address)
+                    print_log('client hung up', session.address)
                     stop_session(fd)
 
                 elif flag & select.POLLOUT:
