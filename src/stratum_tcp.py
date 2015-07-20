@@ -221,8 +221,8 @@ class TcpServer(threading.Thread):
 
                 if fd == sock_fd:
                     if flag & (select.POLLIN | select.POLLPRI):
-                        connection, address = sock.accept()
                         try:
+                            connection, address = sock.accept()
                             session = TcpSession(self.dispatcher, connection, address, 
                                                  use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
                         except BaseException as e:
