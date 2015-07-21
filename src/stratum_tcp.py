@@ -168,7 +168,9 @@ class TcpServer(threading.Thread):
             # this will close the socket
             session.stop()
 
-        def try_do_handshake(session, fd):
+        def check_do_handshake(session):
+            if session.handshake:
+                return
             try:
                 session._connection.do_handshake()
             except ssl.SSLError as err:
@@ -178,13 +180,7 @@ class TcpServer(threading.Thread):
                     poller.modify(session.raw_connection, READ_WRITE)
                     return
                 else:
-                    logger.error('handshake failure:' + str(err) + ' ' + repr(session.address))
-                    stop_session(fd)
-                    return
-            except BaseException as e:
-                logger.error('handshake failure:' + str(e) + ' ' + repr(session.address))
-                stop_session(fd)
-                return
+                    raise BaseException(str(err))
             poller.modify(session.raw_connection, READ_ONLY)
             session.handshake = True
 
@@ -239,8 +235,11 @@ class TcpServer(threading.Thread):
                 s = session._connection
 
                 # non-blocking handshake
-                if not session.handshake:
-                    try_do_handshake(session, fd)
+                try:
+                    check_do_handshake(session)
+                except BaseException as e:
+                    logger.error('handshake failure:' + str(e) + ' ' + repr(session.address))
+                    stop_session(fd)
                     continue
 
                 # handle inputs
