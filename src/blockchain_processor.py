@@ -112,7 +112,9 @@ class BlockchainProcessor(Processor):
         postdata = dumps({"method": method, 'params': params, 'id': 'jsonrpc'})
         while True:
             try:
-                respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+                connection = urllib.urlopen(self.bitcoind_url, postdata)
+                respdata = connection.read()
+                connection.close()
             except:
                 print_log("cannot reach bitcoind...")
                 self.wait_on_bitcoind()
@@ -589,7 +591,9 @@ class BlockchainProcessor(Processor):
 
         while True:
             try:
-                respdata = urllib.urlopen(self.bitcoind_url, postdata).read()
+                connection = urllib.urlopen(self.bitcoind_url, postdata)
+                respdata = connection.read()
+                connection.close()
             except:
                 logger.error("bitcoind error (getfullblock)")
                 self.wait_on_bitcoind()
