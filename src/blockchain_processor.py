@@ -715,7 +715,6 @@ class BlockchainProcessor(Processor):
                 continue
 
             new_tx[tx_hash] = tx
-            self.mempool_hashes.add(tx_hash)
 
         # remove older entries from mempool_hashes
         self.mempool_hashes = mempool_hashes
