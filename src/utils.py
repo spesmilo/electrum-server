@@ -40,17 +40,6 @@ def int_to_hex(i, length=1):
     return rev_hex(s)
 
 
-def var_int(i):
-    if i < 0xfd:
-        return int_to_hex(i)
-    elif i <= 0xffff:
-        return "fd" + int_to_hex(i, 2)
-    elif i <= 0xffffffff:
-        return "fe" + int_to_hex(i, 4)
-    else:
-        return "ff" + int_to_hex(i, 8)
-
-
 Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
 
