@@ -259,6 +259,10 @@ class TcpServer(threading.Thread):
                             logger.error('recv error: ' + repr(x) +' %d'%fd)
                         stop_session(fd)
                         continue
+                    except ValueError as e:
+                        logger.error('recv error: ' + str(e) +' %d'%fd)
+                        stop_session(fd)
+                        continue
                     if data:
                         if len(data) == self.buffer_size:
                             redo.append( (fd, flag) )
