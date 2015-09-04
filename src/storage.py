@@ -141,11 +141,14 @@ class Storage(object):
             out.append((txi, hi))
             out.append((txo, ho))
 
-        # sort
-        out.sort(key=lambda x:x[1])
-
+        
         # uniqueness
         out = set(out)
+        # sort
+        out = list(out)
+
+        out.sort(key=lambda x:x[1])
+
 
         return map(lambda x: {'tx_hash':x[0], 'height':x[1]}, out)
 
