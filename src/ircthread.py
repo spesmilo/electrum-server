@@ -93,8 +93,8 @@ class IrcThread(threading.Thread):
         try:
             ip = socket.gethostbyname(line[1])
         except:
-            logger.error("gethostbyname error " + line[1])
-            return
+            # no IPv4 address could be resolved. Could be .onion or IPv6.
+            ip = line[1]
         nick = event.arguments[4]
         host = line[1]
         ports = line[2:]
