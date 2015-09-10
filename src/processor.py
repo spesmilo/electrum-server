@@ -66,6 +66,8 @@ class Processor(threading.Thread):
                 msg_id = request.get('id')
             except:
                 continue
+            if session.stopped():
+                continue
             try:
                 result = self.process(request)
                 self.push_response(session, {'id': msg_id, 'result': result})
