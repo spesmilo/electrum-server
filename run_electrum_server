@@ -180,11 +180,13 @@ def cmd_numpeers():
     return len(server_proc.peers)
 
 def cmd_debug(s):
+    import traceback
     if s:
         try:
             result = str(eval(s))
         except:
-            result = "error"
+            err_lines = traceback.format_exc().splitlines()
+            result = '%s | %s' % (err_lines[-3], err_lines[-1])
         return result
 
 
