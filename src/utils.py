@@ -235,3 +235,18 @@ def print_log(*args):
 
 def print_warning(message):
     logger.warning(message)
+
+
+# profiler
+class ProfiledThread(threading.Thread):
+    def __init__(self, filename, target):
+        self.filename = filename
+        threading.Thread.__init__(self, target = target)
+
+    def run(self):
+        import cProfile
+        profiler = cProfile.Profile()
+        profiler.enable()
+        threading.Thread.run(self)
+        profiler.disable()
+        profiler.dump_stats(self.filename)
