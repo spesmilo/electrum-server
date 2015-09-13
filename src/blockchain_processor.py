@@ -20,7 +20,7 @@ class BlockchainProcessor(Processor):
     def __init__(self, config, shared):
         Processor.__init__(self)
 
-        self.mtimes = {} # monitoring
+        self.mtimes = {}
         self.shared = shared
         self.config = config
         self.up_to_date = False
@@ -350,31 +350,6 @@ class BlockchainProcessor(Processor):
         return out
 
 
-    def add_to_history(self, addr, tx_hash, tx_pos, tx_height):
-        # keep it sorted
-        s = self.serialize_item(tx_hash, tx_pos, tx_height) + 40*chr(0)
-        assert len(s) == 80
-
-        serialized_hist = self.batch_list[addr]
-
-        l = len(serialized_hist)/80
-        for i in range(l-1, -1, -1):
-            item = serialized_hist[80*i:80*(i+1)]
-            item_height = int(rev_hex(item[36:39].encode('hex')), 16)
-            if item_height <= tx_height:
-                serialized_hist = serialized_hist[0:80*(i+1)] + s + serialized_hist[80*(i+1):]
-                break
-        else:
-            serialized_hist = s + serialized_hist
-
-        self.batch_list[addr] = serialized_hist
-
-        # backlink
-        txo = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
-        self.batch_txio[txo] = addr
-
-
-
 
 
 
@@ -430,7 +405,7 @@ class BlockchainProcessor(Processor):
             self.storage.write_undo_info(block_height, self.bitcoind_height, undo_info)
 
         # add the max
-        self.storage.db_undo.put('height', repr( (block_hash, block_height, self.storage.db_version) ))
+        self.storage.save_height(block_hash, block_height)
 
         for addr in touched_addr:
             self.invalidate_cache(addr)
@@ -662,27 +637,26 @@ class BlockchainProcessor(Processor):
                 self.storage.height = self.storage.height + 1
                 self.write_header(self.block2header(next_block), sync)
                 self.storage.last_hash = next_block_hash
+
                 self.mtime('import')
-            
+
                 t1 = time.time()
                 if t1-t0>1 or (self.storage.height % 1000 == 0):
                     t_daemon = self.mtimes.get('daemon')
                     t_import = self.mtimes.get('import')
-                    
+   
                     eta = ''
                     run_blocks = self.storage.height - start_catchup_height
                     remaining_blocks = self.bitcoind_height - self.storage.height
                     if run_blocks>0 and remaining_blocks>0:
-                        run_minutes_per_block = (t1-start_catchup_time) / 60 / run_blocks 
-                        remaining_minutes = remaining_blocks * run_minutes_per_block
+                        seconds_per_block = (t1-start_catchup_time) / run_blocks 
+                        remaining_minutes = remaining_blocks * seconds_per_block / 60
                         new_blocks = remaining_minutes / 10 # number of new blocks expected during catchup
                         blocks_to_process = remaining_blocks + new_blocks
-                        remaining_minutes = blocks_to_process * run_minutes_per_block
-                        eta = "(eta %.0fmin at %.1fmin/block and %.0f blocks remaining)" % (remaining_minutes, run_minutes_per_block, blocks_to_process)
+                        remaining_minutes = blocks_to_process * seconds_per_block / 60
+                        eta = "(eta %.0fmin at %.1fs/block and %.0f blocks remaining)" % (remaining_minutes, seconds_per_block, blocks_to_process)
 
-                    print_log("catch_up: block %d (%.3fs %.3fs)" % (self.storage.height, t_daemon, t_import), self.storage.get_root_hash().encode('hex'), eta)
-                    self.mtimes['daemon'] = 0
-                    self.mtimes['import'] = 0
+                    print_log("block %d (%.3fs %.3fs)" % (self.storage.height, t_daemon, t_import), self.storage.get_root_hash().encode('hex'), eta)
                     t0 = t1
 
             else:

@@ -470,6 +470,9 @@ class Storage(object):
         self.db_hist.close()
         self.db_undo.close()
 
+    def save_height(self, block_hash, block_height):
+        self.db_undo.put('height', repr( (block_hash, block_height, self.db_version) ))
+
 
     def add_to_history(self, addr, tx_hash, tx_pos, value, tx_height):
         key = self.address_to_key(addr)
