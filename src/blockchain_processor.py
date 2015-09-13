@@ -31,6 +31,7 @@ class BlockchainProcessor(Processor):
         self.watched_addresses = {}
 
         self.history_cache = {}
+        self.merkle_cache = {}
         self.max_cache_size = 100000
         self.chunk_cache = {}
         self.cache_lock = threading.Lock()
@@ -308,7 +309,13 @@ class BlockchainProcessor(Processor):
             status += tx.get('tx_hash') + ':%d:' % tx.get('height')
         return hashlib.sha256(status).digest().encode('hex')
 
-    def get_merkle(self, tx_hash, height):
+    def get_merkle(self, tx_hash, height, cache_only):
+        with self.cache_lock:
+            out = self.merkle_cache.get(tx_hash)
+        if out is not None:
+            return out
+        if cache_only:
+            return -1
 
         block_hash = self.bitcoind('getblockhash', [height])
         b = self.bitcoind('getblock', [block_hash])
@@ -334,7 +341,13 @@ class BlockchainProcessor(Processor):
                 merkle = merkle[2:]
             merkle = n
 
-        return {"block_height": height, "merkle": s, "pos": tx_pos}
+        out = {"block_height": height, "merkle": s, "pos": tx_pos}
+        with self.cache_lock:
+            if len(self.merkle_cache) > self.max_cache_size:
+                logger.info("clearing merkle cache")
+                self.merkle_cache.clear()
+            self.merkle_cache[tx_hash] = out
+        return out
 
 
     def add_to_history(self, addr, tx_hash, tx_pos, tx_height):
@@ -551,12 +564,9 @@ class BlockchainProcessor(Processor):
                 print_log("error:", result, params)
 
         elif method == 'blockchain.transaction.get_merkle':
-            if cache_only:
-                result = -1
-            else:
-                tx_hash = params[0]
-                tx_height = params[1]
-                result = self.get_merkle(tx_hash, tx_height)
+            tx_hash = params[0]
+            tx_height = params[1]
+            result = self.get_merkle(tx_hash, tx_height, cache_only)
 
         elif method == 'blockchain.transaction.get':
             tx_hash = params[0]
