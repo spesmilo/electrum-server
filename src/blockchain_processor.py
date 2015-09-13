@@ -665,7 +665,7 @@ class BlockchainProcessor(Processor):
                 self.mtime('import')
             
                 t1 = time.time()
-                if t1-t0>1:
+                if t1-t0>1 or (self.storage.height % 1000 == 0):
                     t_daemon = self.mtimes.get('daemon')
                     t_import = self.mtimes.get('import')
                     
