@@ -109,7 +109,6 @@ class TcpServer(threading.Thread):
         except:
             session.send_response({"error": "bad JSON"})
             return True
-
         try:
             # Try to load vital fields, and return an error if
             # unsuccessful.
@@ -119,11 +118,8 @@ class TcpServer(threading.Thread):
             # Return an error JSON in response.
             session.send_response({"error": "syntax error", "request": raw_command})
         else:
+            #print_log("new request", command)
             self.dispatcher.push_request(session, command)
-            ## sleep a bit to prevent a single session from DOSing the queue
-            #time.sleep(0.01)
-
-
 
 
 
@@ -203,6 +199,16 @@ class TcpServer(threading.Thread):
             else:
                 now = time.time()
                 for fd, session in self.fd_to_session.items():
+                    if now - session.time > 0.01 and session.message:
+                        cmd = session.parse_message()
+                        if not cmd: 
+                            break
+                        if cmd == 'quit':
+                            data = False
+                            break
+                        session.time = now
+                        self.handle_command(cmd, session)
+
                     # check sessions that need to write
                     if session.need_write:
                         poller.modify(session.raw_connection, READ_WRITE)
@@ -214,7 +220,7 @@ class TcpServer(threading.Thread):
                 events = poller.poll(TIMEOUT)
 
             for fd, flag in events:
-
+                # open new session
                 if fd == sock_fd:
                     if flag & (select.POLLIN | select.POLLPRI):
                         try:
@@ -230,18 +236,20 @@ class TcpServer(threading.Thread):
                         self.fd_to_session[connection.fileno()] = session
                         poller.register(connection, READ_ONLY)
                     continue
-
+                # existing session
                 session = self.fd_to_session[fd]
                 s = session._connection
-
                 # non-blocking handshake
                 try:
                     check_do_handshake(session)
                 except BaseException as e:
-                    logger.error('handshake failure:' + str(e) + ' ' + repr(session.address))
+                    #logger.error('handshake failure:' + str(e) + ' ' + repr(session.address))
                     stop_session(fd)
                     continue
-
+                # anti DOS
+                now = time.time()
+                if now - session.time < 0.01:
+                    continue
                 # handle inputs
                 if flag & (select.POLLIN | select.POLLPRI):
                     try:
@@ -264,17 +272,10 @@ class TcpServer(threading.Thread):
                         stop_session(fd)
                         continue
                     if data:
-                        if len(data) == self.buffer_size:
-                            redo.append( (fd, flag) )
                         session.message += data
-                        while True:
-                            cmd = session.parse_message()
-                            if not cmd: 
-                                break
-                            if cmd == 'quit':
-                                data = False
-                                break
-                            self.handle_command(cmd, session)
+                        if len(data) == self.buffer_size:
+                            redo.append((fd, flag))
+                        
                     if not data:
                         stop_session(fd)
                         continue
@@ -309,3 +310,4 @@ class TcpServer(threading.Thread):
                 elif flag & select.POLLNVAL:
                     print_log('invalid request', session.address)
                     stop_session(fd)
+

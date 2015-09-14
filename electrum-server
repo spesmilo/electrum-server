@@ -8,8 +8,8 @@ if [ ! -f $electrum_config ]; then
     exit 1
 fi
 
-if ! hash run_electrum_server 2>/dev/null; then
-    echo "run_electrum_server is not installed"
+if ! hash run_electrum_server.py 2>/dev/null; then
+    echo "run_electrum_server.py is not installed"
     echo "Please run 'python setup.py install'"
     exit 1
 fi
@@ -29,11 +29,11 @@ user=$(read_config "username")
 
 # get PID of server
 if [ `id -u` = 0 ] ; then
-    if ! PID=`su $user -c "run_electrum_server getpid"`; then
+    if ! PID=`su $user -c "run_electrum_server.py getpid"`; then
 	PID=""
     fi
 else
-    if ! PID=`run_electrum_server getpid`; then
+    if ! PID=`run_electrum_server.py getpid`; then
 	PID=""
     fi
 fi;
@@ -57,7 +57,7 @@ case "$1" in
 	fi
 
 	echo "Starting server as daemon"
-	cmd="ulimit -n 65536 ; nohup run_electrum_server > /dev/null &"
+	cmd="ulimit -n 65536 ; nohup run_electrum_server.py > /dev/null &"
 	if [ `id -u` = 0 ] ; then
             su $user -c "$cmd"
 	else
@@ -69,7 +69,7 @@ case "$1" in
 	    echo "Server not running"
 	    exit
 	fi
-        cmd="run_electrum_server stop"
+        cmd="run_electrum_server.py stop"
 	if [ `id -u` = 0 ] ; then
             su $user -c "$cmd"
 	else
@@ -91,7 +91,7 @@ case "$1" in
 	    echo "Server not running"
 	    exit
 	fi
-        cmd="run_electrum_server $1"
+        cmd="run_electrum_server.py $1"
 	if [ `id -u` = 0 ] ; then
             su $user -c "$cmd"
 	else

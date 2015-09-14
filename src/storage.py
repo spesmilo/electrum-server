@@ -117,6 +117,10 @@ class Storage(object):
                 h = hex_to_int(v[8:12])
                 v = hex_to_int(v[0:8])
                 out.append({'tx_hash': txid, 'tx_pos':txpos, 'height': h, 'value':v})
+                if len(out)>1000:
+                    print_log('Too many outputs', addr)
+                    raise BaseException('Too many outputs', addr)
+
 
         out.sort(key=lambda x:x['height'])
         return out

@@ -29,7 +29,6 @@ import imp
 
 if os.path.dirname(os.path.realpath(__file__)) == os.getcwd():
     imp.load_module('electrumserver', *imp.find_module('src'))
-  
 
 from electrumserver import storage, networks, utils
 from electrumserver.processor import Dispatcher, print_log
@@ -181,6 +180,8 @@ def cmd_numpeers():
 
 def cmd_debug(s):
     import traceback
+    from guppy import hpy; 
+    hp = hpy()
     if s:
         try:
             result = str(eval(s))
@@ -196,17 +197,19 @@ def get_port(config, name):
     except:
         return None
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--conf', metavar='path', default=None, help='specify a configuration file')
-    parser.add_argument('command', nargs='*', default=[], help='send a command to the server')
-    args = parser.parse_args()
 
-    config = create_config(args.conf)
+# global
+shared = None
+chain_proc = None
+server_proc = None
+dispatcher = None
+
+def start_server(config):
+    global shared, chain_proc, server_proc, dispatcher
+
     logfile = config.get('server', 'logfile')
     utils.init_logger(logfile)
     host = config.get('server', 'host')
-    electrum_rpc_port = get_port(config, 'electrum_rpc_port')
     stratum_tcp_port = get_port(config, 'stratum_tcp_port')
     stratum_http_port = get_port(config, 'stratum_http_port')
     stratum_tcp_ssl_port = get_port(config, 'stratum_tcp_ssl_port')
@@ -219,25 +222,6 @@ if __name__ == '__main__':
     if ssl_certfile is '' or ssl_keyfile is '':
         stratum_tcp_ssl_port = None
         stratum_http_ssl_port = None
-
-    if len(args.command) >= 1:
-        try:
-            run_rpc_command(args.command, electrum_rpc_port)
-        except socket.error:
-            print "server not running"
-            sys.exit(1)
-        sys.exit(0)
-
-    try:
-        run_rpc_command(['getpid'], electrum_rpc_port)
-        is_running = True
-    except socket.error:
-        is_running = False
-
-    if is_running:
-        print "server already running"
-        sys.exit(1)
-
 
     print_log("Starting Electrum server on", host)
 
@@ -282,7 +266,42 @@ if __name__ == '__main__':
     for server in transports:
         server.start()
 
-    
+
+def stop_server():
+    shared.stop()
+    server_proc.join()
+    chain_proc.join()
+    print_log("Electrum Server stopped")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--conf', metavar='path', default=None, help='specify a configuration file')
+    parser.add_argument('command', nargs='*', default=[], help='send a command to the server')
+    args = parser.parse_args()
+    config = create_config(args.conf)
+
+    electrum_rpc_port = get_port(config, 'electrum_rpc_port')
+
+    if len(args.command) >= 1:
+        try:
+            run_rpc_command(args.command, electrum_rpc_port)
+        except socket.error:
+            print "server not running"
+            sys.exit(1)
+        sys.exit(0)
+
+    try:
+        run_rpc_command(['getpid'], electrum_rpc_port)
+        is_running = True
+    except socket.error:
+        is_running = False
+
+    if is_running:
+        print "server already running"
+        sys.exit(1)
+
+    start_server(config)
 
     from SimpleXMLRPCServer import SimpleXMLRPCServer
     server = SimpleXMLRPCServer(('localhost', electrum_rpc_port), allow_none=True, logRequests=False)
@@ -303,8 +322,4 @@ if __name__ == '__main__':
         except socket.timeout:
             continue
         except:
-            shared.stop()
-
-    server_proc.join()
-    chain_proc.join()
-    print_log("Electrum Server stopped")
+            stop_server()
