@@ -119,7 +119,7 @@ class BlockchainProcessor(Processor):
                 minutes = blocks_to_process * seconds_per_block / 60
                 rt = "%.0fmin"%minutes if minutes < 300 else "%.1f hours"%(minutes/60)
                 eta = "(%.2ftx/s; %.2fs/block; eta %s, %d blocks)" % (1./seconds_per_tx, seconds_per_block, rt, remaining_blocks)
-            print_log("block %d (%d %.2fs) %s" %(num_tx, self.storage.height, delta, self.storage.get_root_hash().encode('hex')), eta)
+            print_log("block %d (%d %.2fs) %s" %(self.storage.height, num_tx, delta, self.storage.get_root_hash().encode('hex')), eta)
 
 
     def wait_on_bitcoind(self):
