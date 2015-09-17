@@ -639,8 +639,7 @@ class BlockchainProcessor(Processor):
 
             self.set_time()
 
-            # fixme: this is unsafe, if we revert when the undo info is not yet written
-            revert = (random.randint(1, 100) == 1) if self.test_reorgs else False
+            revert = (random.randint(1, 100) == 1) if self.test_reorgs and self.storage.height>100 else False
 
             # not done..
             self.up_to_date = False

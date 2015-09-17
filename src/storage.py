@@ -299,7 +299,7 @@ class Storage(object):
         return self.db_addr.get(txi)
 
     def get_undo_info(self, height):
-        s = self.get_undo("undo_info_%d" % (height % 100))
+        s = self.db_undo.get("undo_info_%d" % (height % 100))
         if s is None:
             print_log("no undo info for ", height)
         return eval(s)
@@ -396,8 +396,6 @@ class Storage(object):
 
 
     def update_hashes(self):
-        #print "update hashes", map(lambda x:x.encode('hex'), self.hash_list.keys())
-
         nodes = {} # nodes to write
 
         for i in range(KEYLENGTH, -1, -1):
@@ -405,17 +403,21 @@ class Storage(object):
             for node in self.hash_list.keys():
                 if len(node) != i:
                     continue
-                #print "updating hash of node", node.encode('hex')
 
                 node_hash, node_value = self.hash_list.pop(node)
 
-                # for each node, compute its hash, send it to the parent
+                parent = self.parents[node] if node!='' else ''
+
+                if i != KEYLENGTH and node_hash is None:
+                    n = self.get_node(node)
+                    node_hash, node_value = n.get_hash(node, parent)
+                assert node_hash is not None
+
                 if node == '':
                     self.root_hash = node_hash
                     self.root_value = node_value
+                    assert self.root_hash is not None
                     break
-
-                parent = self.parents[node]
 
                 # read parent
                 d = nodes.get(parent)
@@ -423,19 +425,12 @@ class Storage(object):
                     d = self.get_node(parent)
                     assert d is not None
 
-                if i != KEYLENGTH and node_hash is None:
-                    d2 = self.get_node(node)
-                    node_hash, node_value = d2.get_hash(node, parent)
-
-                assert node_hash is not None
-
                 # write value into parent
                 letter = node[len(parent)]
                 d.set(letter, node_hash, node_value)
                 nodes[parent] = d
 
                 # iterate
-                #print "adding parent to hashlist", parent.encode('hex')
                 grandparent = self.parents[parent] if parent != '' else None
                 parent_hash, parent_value = d.get_hash(parent, grandparent)
                 if parent_hash is not None:
