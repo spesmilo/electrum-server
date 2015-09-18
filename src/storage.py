@@ -17,7 +17,7 @@ Patricia tree for hashing unspents
 # increase this when database needs to be updated
 global GENESIS_HASH
 GENESIS_HASH = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f'
-DB_VERSION = 3 
+DB_VERSION = 3
 KEYLENGTH = 20 + 32 + 4   #56
 
 
@@ -214,7 +214,7 @@ class Storage(object):
         print_log("UTXO tree root hash:", self.root_hash.encode('hex'))
         print_log("Coins in database:", coins)
 
-    # convert between bitcoin addresses and 20 bytes keys used for storage. 
+    # convert between bitcoin addresses and 20 bytes keys used for storage.
     def address_to_key(self, addr):
         return bc_address_to_hash_160(addr)
 
@@ -246,7 +246,7 @@ class Storage(object):
     def get_balance(self, addr):
         key = self.address_to_key(addr)
         k = self.db_utxo.get_next(key)
-        if not k.startswith(key): 
+        if not k.startswith(key):
             return 0
         p = self.get_parent(k)
         d = self.get_node(p)
@@ -268,7 +268,7 @@ class Storage(object):
                     h = hex_to_int(v[8:12])
                     v = hex_to_int(v[0:8])
                     out.append({'tx_hash': txid, 'tx_pos':txpos, 'height': h, 'value':v})
- 
+
         out.sort(key=lambda x:x['height'])
         return out
 
@@ -277,7 +277,7 @@ class Storage(object):
         out = []
         o = self.listunspent(addr)
         for item in o:
-            out.append((item['tx_hash'], item['height']))
+            out.append((item['height'], item['tx_hash']))
         h = self.db_hist.get(addr)
         while h:
             item = h[0:80]
@@ -286,14 +286,14 @@ class Storage(object):
             hi = hex_to_int(item[36:40])
             txo = item[40:72].encode('hex')
             ho = hex_to_int(item[76:80])
-            out.append((txi, hi))
-            out.append((txo, ho))
+            out.append((hi, txi))
+            out.append((ho, txo))
         # uniqueness
         out = set(out)
-        # sort
+        # sort by height then tx_hash
         out = list(out)
-        out.sort(key=lambda x:x[1])
-        return map(lambda x: {'tx_hash':x[0], 'height':x[1]}, out)
+        out.sort()
+        return map(lambda x: {'height':x[0], 'tx_hash':x[1]}, out)
 
     def get_address(self, txi):
         return self.db_addr.get(txi)
@@ -350,7 +350,7 @@ class Storage(object):
             if len(child) == KEYLENGTH:
                 # if it's a leaf, get hash and value of new_key from parent
                 d = Node.from_dict({
-                    target[index]: (None, 0), 
+                    target[index]: (None, 0),
                     child[index]: (h, v)
                     })
             else:
@@ -358,7 +358,7 @@ class Storage(object):
                 child_node = self.get_node(child)
                 h, v = child_node.get_hash(child, prefix)
                 d = Node.from_dict({
-                    target[index]: (None, 0), 
+                    target[index]: (None, 0),
                     child[index]: (h, v)
                     })
             self.set_skip(prefix + target[index], target[index+1:])
@@ -436,7 +436,7 @@ class Storage(object):
                 if parent_hash is not None:
                     self.hash_list[parent] = (parent_hash, parent_value)
 
-        
+
         for k, v in nodes.items():
             self.put_node(k, v)
         # cleanup
@@ -497,7 +497,7 @@ class Storage(object):
         if parent_node.is_singleton(parent):
             #print "deleting parent", parent.encode('hex')
             self.db_utxo.delete(parent)
-            if parent in self.hash_list: 
+            if parent in self.hash_list:
                 self.hash_list.pop(parent)
 
             l = parent_node.get_singleton()
@@ -531,7 +531,7 @@ class Storage(object):
     def get_parent(self, x):
         p = self.get_path(x)
         return p[-1]
-        
+
     def get_root_hash(self):
         return self.root_hash if self.root_hash else ''
 
@@ -616,17 +616,17 @@ class Storage(object):
     def import_transaction(self, txid, tx, block_height, touched_addr):
 
         undo = { 'prev_addr':[] } # contains the list of pruned items for each address in the tx; also, 'prev_addr' is a list of prev addresses
-                
+
         prev_addr = []
         for i, x in enumerate(tx.get('inputs')):
             txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
             addr = self.get_address(txi)
-            if addr is not None: 
+            if addr is not None:
                 self.set_spent(addr, txi, txid, i, block_height, undo)
                 touched_addr.add(addr)
             prev_addr.append(addr)
 
-        undo['prev_addr'] = prev_addr 
+        undo['prev_addr'] = prev_addr
 
         # here I add only the outputs to history; maybe I want to add inputs too (that's in the other loop)
         for x in tx.get('outputs'):
@@ -655,4 +655,3 @@ class Storage(object):
                 touched_addr.add(addr)
 
         assert undo == {}
-
