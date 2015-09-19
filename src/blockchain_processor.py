@@ -100,27 +100,27 @@ class BlockchainProcessor(Processor):
     def print_time(self, num_tx):
         delta = time.time() - self.time_ref
         # leaky averages
-        seconds_per_block, seconds_per_tx, n = self.avg_time
+        seconds_per_block, tx_per_second, n = self.avg_time
         alpha = (1. + 0.01 * n)/(n+1)
         seconds_per_block = (1-alpha) * seconds_per_block + alpha * delta
-        if num_tx>0:
-            seconds_per_tx = (1-alpha) * seconds_per_tx  + alpha * delta/num_tx
-        self.avg_time = seconds_per_block, seconds_per_tx, n+1
+        alpha2 = alpha * delta / seconds_per_block
+        tx_per_second = (1-alpha2) * tx_per_second + alpha2 * num_tx / delta
+        self.avg_time = seconds_per_block, tx_per_second, n+1
         if self.storage.height%100 == 0 \
             or (self.storage.height%10 == 0 and self.storage.height >= 100000)\
             or self.storage.height >= 200000:
-            eta = ''
+            msg = "block %d (%d %.2fs) %s" %(self.storage.height, num_tx, delta, self.storage.get_root_hash().encode('hex'))
+            msg += " (%.2ftx/s, %.2fs/block)" % (tx_per_second, seconds_per_block)
             run_blocks = self.storage.height - self.start_catchup_height
             remaining_blocks = self.bitcoind_height - self.storage.height
-            if run_blocks>0 and remaining_blocks>0 and n>0:
+            if run_blocks>0 and remaining_blocks>0:
                 remaining_minutes = remaining_blocks * seconds_per_block / 60
                 new_blocks = int(remaining_minutes / 10) # number of new blocks expected during catchup
                 blocks_to_process = remaining_blocks + new_blocks
                 minutes = blocks_to_process * seconds_per_block / 60
                 rt = "%.0fmin"%minutes if minutes < 300 else "%.1f hours"%(minutes/60)
-                eta = "(%.2ftx/s; %.2fs/block; eta %s, %d blocks)" % (1./seconds_per_tx, seconds_per_block, rt, remaining_blocks)
-            print_log("block %d (%d %.2fs) %s" %(self.storage.height, num_tx, delta, self.storage.get_root_hash().encode('hex')), eta)
-
+                msg += " (eta %s, %d blocks)" % (rt, remaining_blocks)
+            print_log(msg)
 
     def wait_on_bitcoind(self):
         self.shared.pause()
