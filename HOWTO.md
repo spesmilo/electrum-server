@@ -91,17 +91,20 @@ to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
 Older versions of Electrum used to require a patched version of bitcoind. 
 This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.11.1 stable.
+We currently recommend bitcoind 0.11.0 stable. Please do *not* upgrade to 0.11.1 until 
+Electrum client 2.5 has been released and distributed for some time. 
+0.11.1 and Electrum clients < 2.5 suffer from tx being denied by bitcond with error:
+"mandatory-script-verify-flag-failed u'code': -26"
 
 If your package manager does not supply a recent bitcoind or you prefer to compile it yourself,
 here are some pointers for Ubuntu:
 
     $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
     $ sudo su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.11.1/bitcoin-0.11.1.tar.gz
-    $ sha256sum bitcoin-0.11.1.tar.gz | grep 2bf7fa14aba89d5d3fb9382a3b99e5a25ea89a4c48249288683e30b6b63e6a63
-    $ tar xfz bitcoin-0.11.1.tar.gz
-    $ cd bitcoin-0.11.1
+    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.11.0/bitcoin-0.11.0.tar.gz
+    $ sha256sum bitcoin-0.11.0.tar.gz | grep 51ba1756addfa71567559e3f22331c1d908a63571891287689fff7113035d09f
+    $ tar xfz bitcoin-0.11.0.tar.gz
+    $ cd bitcoin-0.11.0
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
