@@ -292,6 +292,21 @@ the following code to add the limits to your /etc/security/limits.conf:
      echo "bitcoin hard nofile 65536" >> /etc/security/limits.conf
      echo "bitcoin soft nofile 65536" >> /etc/security/limits.conf
 
+If you are on Debian > 8.0 Jessie or other distribution based on it, you also need to add these lines in /etc/pam.d/common-session and /etc/pam.d/common-session-noninteractive otherwise the limits in /etc/security/limits.conf will not work:
+
+    echo "session required pam_limits.so" >> /etc/pam.d/common-session
+    echo "session required pam_limits.so" >> /etc/pam.d/common-session-noninteractive
+    
+Check if the limits are changed either by logging with the user configured to run Electrum server as. Example:
+
+    su - bitcoin
+    ulimit -n
+
+Or if you use sudo and the user is added to sudoers group:
+
+    sudo -u bitcoin -i ulimit -n
+
+
 Two more things for you to consider:
 
 1. To increase security you may want to close bitcoind for incoming connections and connect outbound only
