@@ -556,9 +556,24 @@ class BlockchainProcessor(Processor):
             try:
                 txo = self.bitcoind('sendrawtransaction', params)
                 print_log("sent tx:", txo)
-                result = txo
+                result = txo	
             except BaseException, e:
-                result = str(e)  # do not send an error
+		error = e.args[0]
+		if error["code"] == -26:
+		    # If we return anything that's not the transaction hash,
+		    #  it's considered an error message
+		    message = error["message"]
+		    if "non-mandatory-script-verify-flag" in message:
+	 		# <EagleTM> By the way - there are mandatory-script-verify-flag-failed things that don't seem to be related to LowS like "mandatory-script-verify-flag-failed (Script evaluated without error but finished with a false/empty top stack element)" or " {u'message': u'16: mandatory-script-verify-flag-failed (Script failed an OP_EQUALVERIFY operation)', u'code': -26}"
+			# <EagleTM> but they are rare, i only have like 7 of those out of 15k successful tx
+			# <EagleTM> so it's negligible
+		        result = "Your client produced a transaction that is not accepted by the Bitcoin network any more. Please upgrade to Electrum 2.5.1 or newer\n"
+		    else:
+			result = "The transaction was rejected by network rules."
+		        result += "(" + message + ")\n"
+			result += "[" + params[0] + "]"
+		else:
+                    result = error["message"]  # do send an error
                 print_log("error:", result, params)
 
         elif method == 'blockchain.transaction.get_merkle':
