@@ -105,9 +105,9 @@ def create_config(filename=None):
     config.add_section('leveldb')
     config.set('leveldb', 'path', '/dev/shm/electrum_db')
     config.set('leveldb', 'pruning_limit', '100')
-    config.set('leveldb', 'utxo_cache', str(1024*1024*1024))
-    config.set('leveldb', 'hist_cache', str(2048*1024*1024))
-    config.set('leveldb', 'addr_cache', str(256*1024*1024))
+    config.set('leveldb', 'utxo_cache', str(64*1024*1024))
+    config.set('leveldb', 'hist_cache', str(128*1024*1024))
+    config.set('leveldb', 'addr_cache', str(16*1024*1024))
     config.set('leveldb', 'profiler', 'no')
 
     # set network parameters
