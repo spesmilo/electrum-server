@@ -251,7 +251,7 @@ class Storage(object):
         p = self.get_parent(k)
         d = self.get_node(p)
         letter = k[len(p)]
-        return d[letter][1]
+        return d.get(letter)[1]
 
     def listunspent(self, addr):
         key = self.address_to_key(addr)
