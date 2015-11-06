@@ -571,7 +571,7 @@ class BlockchainProcessor(Processor):
                         result += "[" + params[0] + "]"
                 else:
                     result = error["message"]  # do send an error
-                print_log("error:", result, params)
+                print_log("error:", result)
 
         elif method == 'blockchain.transaction.get_merkle':
             tx_hash = params[0]

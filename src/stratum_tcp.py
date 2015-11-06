@@ -311,3 +311,5 @@ class TcpServer(threading.Thread):
                     print_log('invalid request', session.address)
                     stop_session(fd)
 
+
+        print_log('TCP thread terminating', self.shared.stopped())
