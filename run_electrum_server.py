@@ -207,6 +207,7 @@ shared = None
 chain_proc = None
 server_proc = None
 dispatcher = None
+transports = []
 
 def start_server(config):
     global shared, chain_proc, server_proc, dispatcher
@@ -241,7 +242,6 @@ def start_server(config):
     for sig in [signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT]:
         signal.signal(sig, handler)
 
-
     # Create and register processors
     chain_proc = BlockchainProcessor(config, shared)
     dispatcher.register('blockchain', chain_proc)
@@ -249,7 +249,6 @@ def start_server(config):
     server_proc = ServerProcessor(config, shared)
     dispatcher.register('server', server_proc)
 
-    transports = []
     # Create various transports we need
     if stratum_tcp_port:
         tcp_server = TcpServer(dispatcher, host, stratum_tcp_port, False, None, None)
