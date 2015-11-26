@@ -258,7 +258,8 @@ class BlockchainProcessor(Processor):
             chunk = self.chunk_cache.get(i)
             if not chunk:
                 chunk = self.read_chunk(i)
-                self.chunk_cache[i] = chunk
+                if chunk:
+                    self.chunk_cache[i] = chunk
 
         return chunk
 
