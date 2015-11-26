@@ -148,6 +148,8 @@ def run_rpc_command(params, electrum_rpc_port):
                                                    item.get('version'),
                                                    (now - item.get('time')),
                                                    )
+    elif cmd == 'debug':
+        print r
     else:
         print json.dumps(r, indent=4, sort_keys=True)
 
@@ -182,10 +184,16 @@ def cmd_peers():
 def cmd_numpeers():
     return len(server_proc.peers)
 
+
+hp = None
+def cmd_guppy():
+    from guppy import hpy
+    global hp
+    hp = hpy()
+
 def cmd_debug(s):
     import traceback
-    from guppy import hpy; 
-    hp = hpy()
+    import gc
     if s:
         try:
             result = str(eval(s))
@@ -202,15 +210,18 @@ def get_port(config, name):
         return None
 
 
-# global
+# share these as global, for 'debug' command
 shared = None
 chain_proc = None
 server_proc = None
 dispatcher = None
 transports = []
+tcp_server = None
+ssl_server = None
 
 def start_server(config):
     global shared, chain_proc, server_proc, dispatcher
+    global tcp_server, ssl_server
 
     logfile = config.get('server', 'logfile')
     utils.init_logger(logfile)
@@ -255,16 +266,16 @@ def start_server(config):
         transports.append(tcp_server)
 
     if stratum_tcp_ssl_port:
-        tcp_server = TcpServer(dispatcher, host, stratum_tcp_ssl_port, True, ssl_certfile, ssl_keyfile)
-        transports.append(tcp_server)
+        ssl_server = TcpServer(dispatcher, host, stratum_tcp_ssl_port, True, ssl_certfile, ssl_keyfile)
+        transports.append(ssl_server)
 
     if stratum_http_port:
         http_server = HttpServer(dispatcher, host, stratum_http_port, False, None, None)
         transports.append(http_server)
 
     if stratum_http_ssl_port:
-        http_server = HttpServer(dispatcher, host, stratum_http_ssl_port, True, ssl_certfile, ssl_keyfile)
-        transports.append(http_server)
+        https_server = HttpServer(dispatcher, host, stratum_http_ssl_port, True, ssl_certfile, ssl_keyfile)
+        transports.append(https_server)
 
     for server in transports:
         server.start()
@@ -316,6 +327,7 @@ if __name__ == '__main__':
     server.register_function(cmd_peers, 'peers')
     server.register_function(cmd_numpeers, 'numpeers')
     server.register_function(cmd_debug, 'debug')
+    server.register_function(cmd_guppy, 'guppy')
     server.register_function(cmd_banner_update, 'banner_update')
     server.socket.settimeout(1)
  
