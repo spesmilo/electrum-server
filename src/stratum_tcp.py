@@ -250,8 +250,8 @@ class TcpServer(threading.Thread):
                 now = time.time()
                 if now - session.time < 0.01:
                     continue
-                # handle inputs
-                if flag & (select.POLLIN | select.POLLPRI):
+                # Read input messages. Do not read new messages if the socket does not read responses 
+                if session.response_queue.qsize() < 200 and flag & (select.POLLIN | select.POLLPRI):
                     try:
                         data = s.recv(self.buffer_size)
                     except ssl.SSLError as x:
