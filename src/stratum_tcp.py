@@ -12,6 +12,7 @@ from utils import print_log, logger
 
 READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
 READ_WRITE = READ_ONLY | select.POLLOUT
+WRITE_ONLY = select.POLLOUT
 TIMEOUT = 100
 
 import ssl
@@ -42,7 +43,7 @@ class TcpSession(Session):
         self.message = ''
         self.retry_msg = ''
         self.handshake = not self.use_ssl
-        self.need_write = True
+        self.mode = None
 
     def connection(self):
         if self.stopped():
@@ -64,8 +65,6 @@ class TcpSession(Session):
         except BaseException as e:
             logger.error('send_response:' + str(e))
             return
-        if self.response_queue.empty():
-            self.need_write = True
         self.response_queue.put(msg)
 
     def parse_message(self):
@@ -199,9 +198,10 @@ class TcpServer(threading.Thread):
             else:
                 now = time.time()
                 for fd, session in self.fd_to_session.items():
+                    # Anti-DOS: wait 0.01 second between requests
                     if now - session.time > 0.01 and session.message:
                         cmd = session.parse_message()
-                        if not cmd: 
+                        if not cmd:
                             break
                         if cmd == 'quit':
                             data = False
@@ -209,11 +209,18 @@ class TcpServer(threading.Thread):
                         session.time = now
                         self.handle_command(cmd, session)
 
-                    # check sessions that need to write
-                    if session.need_write:
-                        poller.modify(session.raw_connection, READ_WRITE)
-                        session.need_write = False
-                    # collect garbage
+                    # Anti-DOS: Stop reading if the session does not read responses 
+                    if session.response_queue.empty():
+                        mode = READ_ONLY
+                    elif session.response_queue.qsize() < 200:
+                        mode = READ_WRITE
+                    else:
+                        mode = WRITE_ONLY
+                    if mode != session.mode:
+                        poller.modify(session.raw_connection, mode)
+                        session.mode = mode
+
+                    # Collect garbage
                     if now - session.time > session.timeout:
                         stop_session(fd)
 
@@ -250,8 +257,8 @@ class TcpServer(threading.Thread):
                 now = time.time()
                 if now - session.time < 0.01:
                     continue
-                # Read input messages. Do not read new messages if the socket does not read responses 
-                if session.response_queue.qsize() < 200 and flag & (select.POLLIN | select.POLLPRI):
+                # Read input messages.
+                if flag & (select.POLLIN | select.POLLPRI):
                     try:
                         data = s.recv(self.buffer_size)
                     except ssl.SSLError as x:
@@ -292,8 +299,6 @@ class TcpServer(threading.Thread):
                         try:
                             next_msg = session.response_queue.get_nowait()
                         except queue.Empty:
-                            # No messages waiting so stop checking for writability.
-                            poller.modify(s, READ_ONLY)
                             continue
                     try:
                         sent = s.send(next_msg)
