@@ -253,7 +253,7 @@ When asked for a challenge password just leave it empty and press enter.
     A challenge password []:
     ...
 
-    $ openssl x509 -req -days 730 -in server.csr -signkey server.key -out server.crt
+    $ openssl x509 -req -days 1825 -in server.csr -signkey server.key -out server.crt
 
 The server.crt file is your certificate suitable for the ssl_certfile= parameter and
 server.key corresponds to ssl_keyfile= in your electrum server config.
