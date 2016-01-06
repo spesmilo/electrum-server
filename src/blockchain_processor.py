@@ -1,5 +1,4 @@
-﻿import ast
-import hashlib
+﻿import hashlib
 from json import dumps, loads
 import os
 from Queue import Queue
@@ -11,10 +10,9 @@ import urllib
 
 import deserialize
 from processor import Processor, print_log
-from utils import *
 from storage import Storage
-import utils
-from utils import logger
+from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, rev_hex
+
 
 class BlockchainProcessor(Processor):
 
@@ -71,7 +69,7 @@ class BlockchainProcessor(Processor):
         if config.getboolean('leveldb', 'profiler'):
             filename = os.path.join(config.get('leveldb', 'path'), 'profile')
             print_log('profiled thread', filename)
-            self.blockchain_thread = utils.ProfiledThread(filename, target = self.do_catch_up)
+            self.blockchain_thread = ProfiledThread(filename, target = self.do_catch_up)
         else:
             self.blockchain_thread = threading.Thread(target = self.do_catch_up)
         self.blockchain_thread.start()
