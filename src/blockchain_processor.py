@@ -1,5 +1,5 @@
 ﻿import hashlib
-from json import dumps, loads
+from json import dumps, load
 import os
 from Queue import Queue
 import random
@@ -11,8 +11,7 @@ import urllib
 import deserialize
 from processor import Processor, print_log
 from storage import Storage
-from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, rev_hex
-
+from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, rev_hex, int_to_hex
 
 class BlockchainProcessor(Processor):
 
@@ -131,14 +130,13 @@ class BlockchainProcessor(Processor):
         postdata = dumps({"method": method, 'params': params, 'id': 'jsonrpc'})
         while True:
             try:
-                connection = urllib.urlopen(self.bitcoind_url, postdata)
-                respdata = connection.read()
-                connection.close()
+                response = urllib.urlopen(self.bitcoind_url, postdata)
             except:
                 print_log("cannot reach bitcoind...")
                 self.wait_on_bitcoind()
             else:
-                r = loads(respdata)
+                r = load(response)
+                response.close()
                 if r['error'] is not None:
                     if r['error'].get('code') == -28:
                         print_log("bitcoind still warming up...")
@@ -613,15 +611,14 @@ class BlockchainProcessor(Processor):
 
         while True:
             try:
-                connection = urllib.urlopen(self.bitcoind_url, postdata)
-                respdata = connection.read()
-                connection.close()
+                response = urllib.urlopen(self.bitcoind_url, postdata)
             except:
                 logger.error("bitcoind error (getfullblock)")
                 self.wait_on_bitcoind()
                 continue
             try:
-                r = loads(respdata)
+                r = load(response)
+                response.close()
                 rawtxdata = []
                 for ir in r:
                     assert ir['error'] is None, "Error: make sure you run bitcoind with txindex=1; use -reindex if needed."
@@ -725,7 +722,7 @@ class BlockchainProcessor(Processor):
         self.mempool_hashes = mempool_hashes
 
         # check all tx outputs
-        for tx_hash, tx in new_tx.items():
+        for tx_hash, tx in new_tx.iteritems():
             mpa = self.mempool_addresses.get(tx_hash, {})
             out_values = []
             for x in tx.get('outputs'):
@@ -742,7 +739,7 @@ class BlockchainProcessor(Processor):
             self.mempool_values[tx_hash] = out_values
 
         # check all inputs
-        for tx_hash, tx in new_tx.items():
+        for tx_hash, tx in new_tx.iteritems():
             mpa = self.mempool_addresses.get(tx_hash, {})
             for x in tx.get('inputs'):
                 mpv = self.mempool_values.get(x.get('prevout_hash'))
@@ -787,7 +784,7 @@ class BlockchainProcessor(Processor):
         # add new transactions to mempool_hist
         for tx_hash in new_tx.keys():
             addresses = self.mempool_addresses[tx_hash]
-            for addr, delta in addresses.items():
+            for addr, delta in addresses.iteritems():
                 h = new_mempool_hist.get(addr, [])
                 if (tx_hash, delta) not in h:
                     h.append((tx_hash, delta))
