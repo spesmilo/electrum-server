@@ -42,7 +42,7 @@ class BlockchainProcessor(Processor):
         self.mempool_values = {}
         self.mempool_addresses = {}
         self.mempool_hist = {} # addr -> (txid, delta)
-        self.mempool_hashes = set([])
+        self.mempool_hashes = set()
         self.mempool_lock = threading.Lock()
 
         self.address_queue = Queue()
@@ -392,7 +392,7 @@ class BlockchainProcessor(Processor):
 
     def import_block(self, block, block_hash, block_height, sync, revert=False):
 
-        touched_addr = set([])
+        touched_addr = set()
 
         # deserialize transactions
         tx_hashes, txdict = self.deserialize_block(block)
@@ -704,7 +704,7 @@ class BlockchainProcessor(Processor):
     def memorypool_update(self):
         t0 = time.time()
         mempool_hashes = set(self.bitcoind('getrawmempool'))
-        touched_addresses = set([])
+        touched_addresses = set()
 
         # get new transactions
         new_tx = {}
