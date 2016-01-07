@@ -146,8 +146,8 @@ class BlockchainProcessor(Processor):
                 break
         return r.get('result')
 
-
-    def block2header(self, b):
+    @staticmethod
+    def block2header(b):
         return {
             "block_height": b.get('height'),
             "version": b.get('version'),
@@ -204,7 +204,8 @@ class BlockchainProcessor(Processor):
 
         self.flush_headers()
 
-    def hash_header(self, header):
+    @staticmethod
+    def hash_header(header):
         return rev_hex(Hash(header_to_string(header).decode('hex')).encode('hex'))
 
     def read_header(self, block_height):
@@ -365,11 +366,8 @@ class BlockchainProcessor(Processor):
             self.merkle_cache[tx_hash] = out
         return out
 
-
-
-
-
-    def deserialize_block(self, block):
+    @staticmethod
+    def deserialize_block(block):
         txlist = block.get('tx')
         tx_hashes = []  # ordered txids
         txdict = {}     # deserialized tx
@@ -390,7 +388,7 @@ class BlockchainProcessor(Processor):
 
 
 
-    def import_block(self, block, block_hash, block_height, sync, revert=False):
+    def import_block(self, block, block_hash, block_height, revert=False):
 
         touched_addr = set()
 
@@ -666,7 +664,7 @@ class BlockchainProcessor(Processor):
 
                 prev_root_hash = self.storage.get_root_hash()
 
-                n = self.import_block(next_block, next_block_hash, self.storage.height+1, sync)
+                n = self.import_block(next_block, next_block_hash, self.storage.height+1)
                 self.storage.height = self.storage.height + 1
                 self.write_header(self.block2header(next_block), sync)
                 self.storage.last_hash = next_block_hash
@@ -676,7 +674,7 @@ class BlockchainProcessor(Processor):
                 # revert current block
                 block = self.getfullblock(self.storage.last_hash)
                 print_log("blockchain reorg", self.storage.height, block.get('previousblockhash'), self.storage.last_hash)
-                n = self.import_block(block, self.storage.last_hash, self.storage.height, sync, revert=True)
+                n = self.import_block(block, self.storage.last_hash, self.storage.height, revert=True)
                 self.pop_header()
                 self.flush_headers()
 
