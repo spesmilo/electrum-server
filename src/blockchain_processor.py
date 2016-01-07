@@ -126,7 +126,7 @@ class BlockchainProcessor(Processor):
             # this will end the thread
             raise BaseException()
 
-    def bitcoind(self, method, params=[]):
+    def bitcoind(self, method, params=()):
         postdata = dumps({"method": method, 'params': params, 'id': 'jsonrpc'})
         while True:
             try:
