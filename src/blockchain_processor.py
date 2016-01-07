@@ -164,7 +164,6 @@ class BlockchainProcessor(Processor):
         return self.block2header(b)
 
     def init_headers(self, db_height):
-        self.chunk_cache = {}
         self.headers_filename = os.path.join(self.headers_path, 'blockchain_headers')
 
         if os.path.exists(self.headers_filename):
