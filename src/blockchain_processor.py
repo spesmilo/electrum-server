@@ -553,7 +553,7 @@ class BlockchainProcessor(Processor):
                 print_log("sent tx:", txo)
                 result = txo
             except BaseException, e:
-		error = e.args[0]
+                error = e.args[0]
                 if error["code"] == -26:
                     # If we return anything that's not the transaction hash,
                     #  it's considered an error message
