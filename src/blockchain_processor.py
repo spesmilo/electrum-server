@@ -587,9 +587,6 @@ class BlockchainProcessor(Processor):
         else:
             raise BaseException("unknown method:%s" % method)
 
-        if cache_only and result == -1:
-            return -1
-
         return result
 
 
