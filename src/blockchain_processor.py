@@ -760,8 +760,7 @@ class BlockchainProcessor(Processor):
             if tx_hash not in self.mempool_hashes:
                 self.mempool_addresses.pop(tx_hash)
                 self.mempool_values.pop(tx_hash)
-                for addr in addresses:
-                    touched_addresses.add(addr)
+                touched_addresses.update(addresses)
 
         # remove deprecated entries from mempool_hist
         new_mempool_hist = {}
