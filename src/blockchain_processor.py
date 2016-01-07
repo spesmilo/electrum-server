@@ -321,9 +321,7 @@ class BlockchainProcessor(Processor):
             return None
         if tx_points == ['*']:
             return '*'
-        status = ''
-        for tx in tx_points:
-            status += tx.get('tx_hash') + ':%d:' % tx.get('height')
+        status = ''.join(tx.get('tx_hash') + ':%d:' % tx.get('height') for tx in tx_points)
         return hashlib.sha256(status).digest().encode('hex')
 
     def get_merkle(self, tx_hash, height, cache_only):
@@ -561,9 +559,8 @@ class BlockchainProcessor(Processor):
                     if "non-mandatory-script-verify-flag" in message:
                         result = "Your client produced a transaction that is not accepted by the Bitcoin network any more. Please upgrade to Electrum 2.5.1 or newer\n"
                     else:
-                        result = "The transaction was rejected by network rules."
-                        result += "(" + message + ")\n"
-                        result += "[" + params[0] + "]"
+                        result = "The transaction was rejected by network rules.(" + message + ")\n" \
+                            "[" + params[0] + "]"
                 else:
                     result = error["message"]  # do send an error
                 print_log("error:", result)
