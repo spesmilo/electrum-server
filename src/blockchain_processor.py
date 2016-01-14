@@ -587,6 +587,9 @@ class BlockchainProcessor(Processor):
             num = int(params[0])
             result = self.bitcoind('estimatefee', [num])
 
+        elif method == 'blockchain.relayfee':
+            result = self.relayfee
+
         else:
             raise BaseException("unknown method:%s" % method)
 
@@ -644,6 +647,7 @@ class BlockchainProcessor(Processor):
         while not self.shared.stopped():
             # are we done yet?
             info = self.bitcoind('getinfo')
+            self.relayfee = info.get('relayfee')
             self.bitcoind_height = info.get('blocks')
             bitcoind_block_hash = self.bitcoind('getblockhash', [self.bitcoind_height])
             if self.storage.last_hash == bitcoind_block_hash:
