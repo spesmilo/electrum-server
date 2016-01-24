@@ -131,12 +131,12 @@ class BlockchainProcessor(Processor):
         while True:
             try:
                 response = urllib.urlopen(self.bitcoind_url, postdata)
+                r = load(response)
+                response.close()
             except:
                 print_log("cannot reach bitcoind...")
                 self.wait_on_bitcoind()
             else:
-                r = load(response)
-                response.close()
                 if r['error'] is not None:
                     if r['error'].get('code') == -28:
                         print_log("bitcoind still warming up...")
@@ -603,13 +603,13 @@ class BlockchainProcessor(Processor):
         while True:
             try:
                 response = urllib.urlopen(self.bitcoind_url, postdata)
+                r = load(response)
+                response.close()
             except:
                 logger.error("bitcoind error (getfullblock)")
                 self.wait_on_bitcoind()
                 continue
             try:
-                r = load(response)
-                response.close()
                 rawtxdata = []
                 for ir in r:
                     assert ir['error'] is None, "Error: make sure you run bitcoind with txindex=1; use -reindex if needed."
