@@ -594,7 +594,7 @@ class BlockchainProcessor(Processor):
         for txid in block['tx']:
             rawtxreq.append({
                 "method": "getrawtransaction",
-                "params": [txid],
+                "params": (txid,),
                 "id": i,
             })
             i += 1
@@ -763,7 +763,7 @@ class BlockchainProcessor(Processor):
 
         # remove deprecated entries from mempool_hist
         new_mempool_hist = {}
-        for addr in self.mempool_hist.keys():
+        for addr in self.mempool_hist.iterkeys():
             h = self.mempool_hist[addr]
             hh = []
             for tx_hash, delta in h:
@@ -772,7 +772,7 @@ class BlockchainProcessor(Processor):
             if hh:
                 new_mempool_hist[addr] = hh
         # add new transactions to mempool_hist
-        for tx_hash in new_tx.keys():
+        for tx_hash in new_tx.iterkeys():
             addresses = self.mempool_addresses[tx_hash]
             for addr, delta in addresses.iteritems():
                 h = new_mempool_hist.get(addr, [])
@@ -828,7 +828,7 @@ class BlockchainProcessor(Processor):
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.numblocks.subscribe',
-                        'params': [self.storage.height],
+                        'params': (self.storage.height,),
                         })
 
         if self.sent_header != self.header:
@@ -837,7 +837,7 @@ class BlockchainProcessor(Processor):
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.headers.subscribe',
-                        'params': [self.header],
+                        'params': (self.header,),
                         })
 
         while True:
@@ -851,7 +851,7 @@ class BlockchainProcessor(Processor):
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.address.subscribe',
-                        'params': [addr, status],
+                        'params': (addr, status),
                         })
 
 
