@@ -18,7 +18,7 @@ Patricia tree for hashing unspents
 global GENESIS_HASH
 GENESIS_HASH = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f'
 DB_VERSION = 3
-KEYLENGTH = 20 + 32 + 4   #56
+KEYLENGTH = 56   # 20 + 32 + 4
 
 
 class Node(object):
@@ -44,7 +44,7 @@ class Node(object):
         return len(self.s) == 40
 
     def get_singleton(self):
-        for i in range(256):
+        for i in xrange(256):
             if self.k == (1<<i):
                 return chr(i)
         raise BaseException("get_singleton")
@@ -52,7 +52,7 @@ class Node(object):
     def indexof(self, c):
         assert self.k != 0 or self.s == ''
         x = 0
-        for i in range(ord(c)):
+        for i in xrange(ord(c)):
             if (self.k & (1<<i)) != 0:
                 x += 40
         return x
@@ -89,7 +89,7 @@ class Node(object):
         x = 0
         v = 0
         hh = ''
-        for i in range(256):
+        for i in xrange(256):
             if (self.k&(1<<i)) != 0:
                 ss = self.s[x:x+40]
                 hh += ss[0:32]
@@ -107,8 +107,8 @@ class Node(object):
     def from_dict(klass, d):
         k = 0
         s = ''
-        for i in range(256):
-            if chr(i) in d.keys():
+        for i in xrange(256):
+            if chr(i) in d:
                 k += 1<<i
                 h, value = d[chr(i)]
                 if h is None: h = chr(0)*32
@@ -215,11 +215,9 @@ class Storage(object):
         print_log("Coins in database:", coins)
 
     # convert between bitcoin addresses and 20 bytes keys used for storage.
-    def address_to_key(self, addr):
+    @staticmethod
+    def address_to_key(addr):
         return bc_address_to_hash_160(addr)
-
-    def key_to_address(self, addr):
-        return hash_160_to_pubkey_address(addr)
 
     def get_skip(self, key):
         o = self.skip_batch.get(key)
@@ -294,8 +292,7 @@ class Storage(object):
         # uniqueness
         out = set(out)
         # sort by height then tx_hash
-        out = list(out)
-        out.sort()
+        out = sorted(out)
         return map(lambda x: {'height':x[0], 'tx_hash':x[1]}, out)
 
     def get_address(self, txi):
@@ -312,10 +309,10 @@ class Storage(object):
         if height > bitcoind_height - 100 or self.test_reorgs:
             self.db_undo.put("undo_info_%d" % (height % 100), repr(undo_info))
 
-
-    def common_prefix(self, word1, word2):
+    @staticmethod
+    def common_prefix(word1, word2):
         max_len = min(len(word1),len(word2))
-        for i in range(max_len):
+        for i in xrange(max_len):
             if word2[i] != word1[i]:
                 index = i
                 break
@@ -401,7 +398,7 @@ class Storage(object):
     def update_hashes(self):
         nodes = {} # nodes to write
 
-        for i in range(KEYLENGTH, -1, -1):
+        for i in xrange(KEYLENGTH, -1, -1):
 
             for node in self.hash_list.keys():
                 if len(node) != i:
@@ -440,7 +437,7 @@ class Storage(object):
                     self.hash_list[parent] = (parent_hash, parent_value)
 
 
-        for k, v in nodes.items():
+        for k, v in nodes.iteritems():
             self.put_node(k, v)
         # cleanup
         assert self.hash_list == {}

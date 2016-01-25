@@ -1,6 +1,5 @@
-﻿import ast
-import hashlib
-from json import dumps, loads
+﻿import hashlib
+from json import dumps, load
 import os
 from Queue import Queue
 import random
@@ -11,10 +10,8 @@ import urllib
 
 import deserialize
 from processor import Processor, print_log
-from utils import *
 from storage import Storage
-import utils
-from utils import logger
+from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, rev_hex, int_to_hex
 
 class BlockchainProcessor(Processor):
 
@@ -45,7 +42,7 @@ class BlockchainProcessor(Processor):
         self.mempool_values = {}
         self.mempool_addresses = {}
         self.mempool_hist = {} # addr -> (txid, delta)
-        self.mempool_hashes = set([])
+        self.mempool_hashes = set()
         self.mempool_lock = threading.Lock()
 
         self.address_queue = Queue()
@@ -71,14 +68,14 @@ class BlockchainProcessor(Processor):
         if config.getboolean('leveldb', 'profiler'):
             filename = os.path.join(config.get('leveldb', 'path'), 'profile')
             print_log('profiled thread', filename)
-            self.blockchain_thread = utils.ProfiledThread(filename, target = self.do_catch_up)
+            self.blockchain_thread = ProfiledThread(filename, target = self.do_catch_up)
         else:
             self.blockchain_thread = threading.Thread(target = self.do_catch_up)
         self.blockchain_thread.start()
 
 
     def do_catch_up(self):
-        self.header = self.block2header(self.bitcoind('getblock', [self.storage.last_hash]))
+        self.header = self.block2header(self.bitcoind('getblock', (self.storage.last_hash,)))
         self.header['utxo_root'] = self.storage.get_root_hash().encode('hex')
         self.catch_up(sync=False)
         if not self.shared.stopped():
@@ -129,18 +126,17 @@ class BlockchainProcessor(Processor):
             # this will end the thread
             raise BaseException()
 
-    def bitcoind(self, method, params=[]):
+    def bitcoind(self, method, params=()):
         postdata = dumps({"method": method, 'params': params, 'id': 'jsonrpc'})
         while True:
             try:
-                connection = urllib.urlopen(self.bitcoind_url, postdata)
-                respdata = connection.read()
-                connection.close()
+                response = urllib.urlopen(self.bitcoind_url, postdata)
+                r = load(response)
+                response.close()
             except:
                 print_log("cannot reach bitcoind...")
                 self.wait_on_bitcoind()
             else:
-                r = loads(respdata)
                 if r['error'] is not None:
                     if r['error'].get('code') == -28:
                         print_log("bitcoind still warming up...")
@@ -150,8 +146,8 @@ class BlockchainProcessor(Processor):
                 break
         return r.get('result')
 
-
-    def block2header(self, b):
+    @staticmethod
+    def block2header(b):
         return {
             "block_height": b.get('height'),
             "version": b.get('version'),
@@ -163,12 +159,11 @@ class BlockchainProcessor(Processor):
         }
 
     def get_header(self, height):
-        block_hash = self.bitcoind('getblockhash', [height])
-        b = self.bitcoind('getblock', [block_hash])
+        block_hash = self.bitcoind('getblockhash', (height,))
+        b = self.bitcoind('getblock', (block_hash,))
         return self.block2header(b)
 
     def init_headers(self, db_height):
-        self.chunk_cache = {}
         self.headers_filename = os.path.join(self.headers_path, 'blockchain_headers')
 
         if os.path.exists(self.headers_filename):
@@ -208,7 +203,8 @@ class BlockchainProcessor(Processor):
 
         self.flush_headers()
 
-    def hash_header(self, header):
+    @staticmethod
+    def hash_header(header):
         return rev_hex(Hash(header_to_string(header).decode('hex')).encode('hex'))
 
     def read_header(self, block_height):
@@ -265,7 +261,7 @@ class BlockchainProcessor(Processor):
 
     def get_mempool_transaction(self, txid):
         try:
-            raw_tx = self.bitcoind('getrawtransaction', [txid, 0])
+            raw_tx = self.bitcoind('getrawtransaction', (txid, 0))
         except:
             return None
 
@@ -290,7 +286,7 @@ class BlockchainProcessor(Processor):
 
         # add memory pool
         with self.mempool_lock:
-            for txid, delta in self.mempool_hist.get(addr, []):
+            for txid, delta in self.mempool_hist.get(addr, ()):
                 hist.append({'tx_hash':txid, 'height':0})
 
         with self.cache_lock:
@@ -303,14 +299,14 @@ class BlockchainProcessor(Processor):
     def get_unconfirmed_history(self, addr):
         hist = []
         with self.mempool_lock:
-            for txid, delta in self.mempool_hist.get(addr, []):
+            for txid, delta in self.mempool_hist.get(addr, ()):
                 hist.append({'tx_hash':txid, 'height':0})
         return hist
 
     def get_unconfirmed_value(self, addr):
         v = 0
         with self.mempool_lock:
-            for txid, delta in self.mempool_hist.get(addr, []):
+            for txid, delta in self.mempool_hist.get(addr, ()):
                 v += delta
         return v
 
@@ -324,9 +320,7 @@ class BlockchainProcessor(Processor):
             return None
         if tx_points == ['*']:
             return '*'
-        status = ''
-        for tx in tx_points:
-            status += tx.get('tx_hash') + ':%d:' % tx.get('height')
+        status = ''.join(tx.get('tx_hash') + ':%d:' % tx.get('height') for tx in tx_points)
         return hashlib.sha256(status).digest().encode('hex')
 
     def get_merkle(self, tx_hash, height, cache_only):
@@ -337,8 +331,8 @@ class BlockchainProcessor(Processor):
         if cache_only:
             return -1
 
-        block_hash = self.bitcoind('getblockhash', [height])
-        b = self.bitcoind('getblock', [block_hash])
+        block_hash = self.bitcoind('getblockhash', (height,))
+        b = self.bitcoind('getblock', (block_hash,))
         tx_list = b.get('tx')
         tx_pos = tx_list.index(tx_hash)
 
@@ -369,11 +363,8 @@ class BlockchainProcessor(Processor):
             self.merkle_cache[tx_hash] = out
         return out
 
-
-
-
-
-    def deserialize_block(self, block):
+    @staticmethod
+    def deserialize_block(block):
         txlist = block.get('tx')
         tx_hashes = []  # ordered txids
         txdict = {}     # deserialized tx
@@ -394,9 +385,9 @@ class BlockchainProcessor(Processor):
 
 
 
-    def import_block(self, block, block_hash, block_height, sync, revert=False):
+    def import_block(self, block, block_hash, block_height, revert=False):
 
-        touched_addr = set([])
+        touched_addr = set()
 
         # deserialize transactions
         tx_hashes, txdict = self.deserialize_block(block)
@@ -497,7 +488,7 @@ class BlockchainProcessor(Processor):
         
         message_id = request['id']
         method = request['method']
-        params = request.get('params', [])
+        params = request.get('params', ())
         result = None
         error = None
 
@@ -559,7 +550,7 @@ class BlockchainProcessor(Processor):
                 print_log("sent tx:", txo)
                 result = txo
             except BaseException, e:
-		error = e.args[0]
+                error = e.args[0]
                 if error["code"] == -26:
                     # If we return anything that's not the transaction hash,
                     #  it's considered an error message
@@ -567,9 +558,8 @@ class BlockchainProcessor(Processor):
                     if "non-mandatory-script-verify-flag" in message:
                         result = "Your client produced a transaction that is not accepted by the Bitcoin network any more. Please upgrade to Electrum 2.5.1 or newer\n"
                     else:
-                        result = "The transaction was rejected by network rules."
-                        result += "(" + message + ")\n"
-                        result += "[" + params[0] + "]"
+                        result = "The transaction was rejected by network rules.(" + message + ")\n" \
+                            "[" + params[0] + "]"
                 else:
                     result = error["message"]  # do send an error
                 print_log("error:", result)
@@ -581,11 +571,11 @@ class BlockchainProcessor(Processor):
 
         elif method == 'blockchain.transaction.get':
             tx_hash = params[0]
-            result = self.bitcoind('getrawtransaction', [tx_hash, 0])
+            result = self.bitcoind('getrawtransaction', (tx_hash, 0))
 
         elif method == 'blockchain.estimatefee':
             num = int(params[0])
-            result = self.bitcoind('estimatefee', [num])
+            result = self.bitcoind('estimatefee', (num,))
 
         elif method == 'blockchain.relayfee':
             result = self.relayfee
@@ -593,21 +583,18 @@ class BlockchainProcessor(Processor):
         else:
             raise BaseException("unknown method:%s" % method)
 
-        if cache_only and result == -1:
-            return -1
-
         return result
 
 
     def getfullblock(self, block_hash):
-        block = self.bitcoind('getblock', [block_hash])
+        block = self.bitcoind('getblock', (block_hash,))
 
         rawtxreq = []
         i = 0
         for txid in block['tx']:
             rawtxreq.append({
                 "method": "getrawtransaction",
-                "params": [txid],
+                "params": (txid,),
                 "id": i,
             })
             i += 1
@@ -615,15 +602,14 @@ class BlockchainProcessor(Processor):
 
         while True:
             try:
-                connection = urllib.urlopen(self.bitcoind_url, postdata)
-                respdata = connection.read()
-                connection.close()
+                response = urllib.urlopen(self.bitcoind_url, postdata)
+                r = load(response)
+                response.close()
             except:
                 logger.error("bitcoind error (getfullblock)")
                 self.wait_on_bitcoind()
                 continue
             try:
-                r = loads(respdata)
                 rawtxdata = []
                 for ir in r:
                     assert ir['error'] is None, "Error: make sure you run bitcoind with txindex=1; use -reindex if needed."
@@ -649,7 +635,7 @@ class BlockchainProcessor(Processor):
             info = self.bitcoind('getinfo')
             self.relayfee = info.get('relayfee')
             self.bitcoind_height = info.get('blocks')
-            bitcoind_block_hash = self.bitcoind('getblockhash', [self.bitcoind_height])
+            bitcoind_block_hash = self.bitcoind('getblockhash', (self.bitcoind_height,))
             if self.storage.last_hash == bitcoind_block_hash:
                 self.up_to_date = True
                 break
@@ -661,7 +647,7 @@ class BlockchainProcessor(Processor):
             # not done..
             self.up_to_date = False
             try:
-                next_block_hash = self.bitcoind('getblockhash', [self.storage.height + 1])
+                next_block_hash = self.bitcoind('getblockhash', (self.storage.height + 1,))
             except BaseException, e:
                 revert = True
 
@@ -671,7 +657,7 @@ class BlockchainProcessor(Processor):
 
                 prev_root_hash = self.storage.get_root_hash()
 
-                n = self.import_block(next_block, next_block_hash, self.storage.height+1, sync)
+                n = self.import_block(next_block, next_block_hash, self.storage.height+1)
                 self.storage.height = self.storage.height + 1
                 self.write_header(self.block2header(next_block), sync)
                 self.storage.last_hash = next_block_hash
@@ -681,7 +667,7 @@ class BlockchainProcessor(Processor):
                 # revert current block
                 block = self.getfullblock(self.storage.last_hash)
                 print_log("blockchain reorg", self.storage.height, block.get('previousblockhash'), self.storage.last_hash)
-                n = self.import_block(block, self.storage.last_hash, self.storage.height, sync, revert=True)
+                n = self.import_block(block, self.storage.last_hash, self.storage.height, revert=True)
                 self.pop_header()
                 self.flush_headers()
 
@@ -698,7 +684,7 @@ class BlockchainProcessor(Processor):
             # print time
             self.print_time(n)
 
-        self.header = self.block2header(self.bitcoind('getblock', [self.storage.last_hash]))
+        self.header = self.block2header(self.bitcoind('getblock', (self.storage.last_hash,)))
         self.header['utxo_root'] = self.storage.get_root_hash().encode('hex')
 
         if self.shared.stopped(): 
@@ -709,7 +695,7 @@ class BlockchainProcessor(Processor):
     def memorypool_update(self):
         t0 = time.time()
         mempool_hashes = set(self.bitcoind('getrawmempool'))
-        touched_addresses = set([])
+        touched_addresses = set()
 
         # get new transactions
         new_tx = {}
@@ -727,7 +713,7 @@ class BlockchainProcessor(Processor):
         self.mempool_hashes = mempool_hashes
 
         # check all tx outputs
-        for tx_hash, tx in new_tx.items():
+        for tx_hash, tx in new_tx.iteritems():
             mpa = self.mempool_addresses.get(tx_hash, {})
             out_values = []
             for x in tx.get('outputs'):
@@ -744,7 +730,7 @@ class BlockchainProcessor(Processor):
             self.mempool_values[tx_hash] = out_values
 
         # check all inputs
-        for tx_hash, tx in new_tx.items():
+        for tx_hash, tx in new_tx.iteritems():
             mpa = self.mempool_addresses.get(tx_hash, {})
             for x in tx.get('inputs'):
                 mpv = self.mempool_values.get(x.get('prevout_hash'))
@@ -773,12 +759,11 @@ class BlockchainProcessor(Processor):
             if tx_hash not in self.mempool_hashes:
                 self.mempool_addresses.pop(tx_hash)
                 self.mempool_values.pop(tx_hash)
-                for addr in addresses:
-                    touched_addresses.add(addr)
+                touched_addresses.update(addresses)
 
         # remove deprecated entries from mempool_hist
         new_mempool_hist = {}
-        for addr in self.mempool_hist.keys():
+        for addr in self.mempool_hist.iterkeys():
             h = self.mempool_hist[addr]
             hh = []
             for tx_hash, delta in h:
@@ -787,9 +772,9 @@ class BlockchainProcessor(Processor):
             if hh:
                 new_mempool_hist[addr] = hh
         # add new transactions to mempool_hist
-        for tx_hash in new_tx.keys():
+        for tx_hash in new_tx.iterkeys():
             addresses = self.mempool_addresses[tx_hash]
-            for addr, delta in addresses.items():
+            for addr, delta in addresses.iteritems():
                 h = new_mempool_hist.get(addr, [])
                 if (tx_hash, delta) not in h:
                     h.append((tx_hash, delta))
@@ -843,7 +828,7 @@ class BlockchainProcessor(Processor):
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.numblocks.subscribe',
-                        'params': [self.storage.height],
+                        'params': (self.storage.height,),
                         })
 
         if self.sent_header != self.header:
@@ -852,7 +837,7 @@ class BlockchainProcessor(Processor):
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.headers.subscribe',
-                        'params': [self.header],
+                        'params': (self.header,),
                         })
 
         while True:
@@ -866,7 +851,7 @@ class BlockchainProcessor(Processor):
                 self.push_response(session, {
                         'id': None,
                         'method': 'blockchain.address.subscribe',
-                        'params': [addr, status],
+                        'params': (addr, status),
                         })
 
 
