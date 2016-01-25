@@ -486,7 +486,7 @@ class Storage(object):
         self.db_utxo.delete(leaf)
 
         if leaf in self.hash_list:
-            self.hash_list.pop(leaf)
+            del self.hash_list[leaf]
 
         parent = path[-1]
         letter = leaf[len(parent)]
@@ -498,7 +498,7 @@ class Storage(object):
             #print "deleting parent", parent.encode('hex')
             self.db_utxo.delete(parent)
             if parent in self.hash_list:
-                self.hash_list.pop(parent)
+                del self.hash_list[parent]
 
             l = parent_node.get_singleton()
             _hash, value = parent_node.get(l)

@@ -45,8 +45,8 @@ class ServerProcessor(Processor):
                 self.peers[nick] = (ip, host, ports)
             if event == 'quit':
                 nick = params[0]
-                if self.peers.get(nick):
-                    self.peers.pop(nick)
+                if nick in self.peers:
+                    del self.peers[nick]
 
 
     def get_peers(self):

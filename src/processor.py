@@ -186,7 +186,7 @@ class RequestDispatcher(threading.Thread):
     def remove_session(self, session):
         key = session.key()
         with self.lock:
-            self.sessions.pop(key)
+            del self.sessions[key]
 
     def collect_garbage(self):
         # only for HTTP sessions.

@@ -232,8 +232,8 @@ class BlockchainProcessor(Processor):
 
         with self.cache_lock:
             chunk_index = header.get('block_height')/2016
-            if self.chunk_cache.get(chunk_index):
-                self.chunk_cache.pop(chunk_index)
+            if chunk_index in self.chunk_cache:
+                del self.chunk_cache[chunk_index]
 
     def pop_header(self):
         # we need to do this only if we have not flushed
@@ -481,7 +481,7 @@ class BlockchainProcessor(Processor):
                     print_log("error rc!!")
                     self.shared.stop()
                 if l == []:
-                    self.watched_addresses.pop(addr)
+                    del self.watched_addresses[addr]
 
 
     def process(self, request, cache_only=False):
@@ -757,8 +757,7 @@ class BlockchainProcessor(Processor):
         # remove deprecated entries from mempool_addresses
         for tx_hash, addresses in self.mempool_addresses.items():
             if tx_hash not in self.mempool_hashes:
-                self.mempool_addresses.pop(tx_hash)
-                self.mempool_values.pop(tx_hash)
+                del self.mempool_addresses[tx_hash], self.mempool_values[tx_hash]
                 touched_addresses.update(addresses)
 
         # remove deprecated entries from mempool_hist
@@ -796,7 +795,7 @@ class BlockchainProcessor(Processor):
         with self.cache_lock:
             if address in self.history_cache:
                 # print_log("cache: invalidating", address)
-                self.history_cache.pop(address)
+                del self.history_cache[address]
 
         with self.watch_lock:
             sessions = self.watched_addresses.get(address)
