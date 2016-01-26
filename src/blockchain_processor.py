@@ -586,7 +586,7 @@ class BlockchainProcessor(Processor):
         return result
 
 
-    def getfullblock(self, block_hash):
+    def get_block(self, block_hash):
         block = self.bitcoind('getblock', (block_hash,))
 
         rawtxreq = []
@@ -651,7 +651,7 @@ class BlockchainProcessor(Processor):
             except BaseException, e:
                 revert = True
 
-            next_block = self.getfullblock(next_block_hash if not revert else self.storage.last_hash)
+            next_block = self.get_block(next_block_hash if not revert else self.storage.last_hash)
 
             if (next_block.get('previousblockhash') == self.storage.last_hash) and not revert:
 
@@ -665,7 +665,7 @@ class BlockchainProcessor(Processor):
             else:
 
                 # revert current block
-                block = self.getfullblock(self.storage.last_hash)
+                block = self.get_block(self.storage.last_hash)
                 print_log("blockchain reorg", self.storage.height, block.get('previousblockhash'), self.storage.last_hash)
                 n = self.import_block(block, self.storage.last_hash, self.storage.height, revert=True)
                 self.pop_header()

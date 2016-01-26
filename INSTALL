@@ -20,9 +20,9 @@ You will need to run bitcoind with the config option txindex=1. If you
 have not previously done so, you may need to reindex the bitcoind
 blockchain
 
-Note: you cannot use a pruning bitcoind (possible since 0.11).  A full bitcoin node is required in order to know for each
-address if it has been used. Pruning occurs only at the level of the
-Electrum database.
+Note: you cannot use a pruning bitcoind.  A full bitcoin node is
+required in order to know for each address if it has been
+used. Pruning occurs only at the level of the Electrum database.
 
 
 2. Run the 'configure' script
