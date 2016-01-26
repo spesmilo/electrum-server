@@ -11,7 +11,8 @@ import urllib
 import deserialize
 from processor import Processor, print_log
 from storage import Storage
-from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, rev_hex, int_to_hex
+from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, \
+    rev_hex, int_to_unsigned_long_bytes_hex
 
 class BlockchainProcessor(Processor):
 
@@ -527,7 +528,7 @@ class BlockchainProcessor(Processor):
         elif method == 'blockchain.utxo.get_address':
             txid = str(params[0])
             pos = int(params[1])
-            txi = (txid + int_to_hex(pos, 4)).decode('hex')
+            txi = (txid + int_to_unsigned_long_bytes_hex(pos)).decode('hex')
             result = self.storage.get_address(txi)
 
         elif method == 'blockchain.block.get_header':
@@ -737,7 +738,7 @@ class BlockchainProcessor(Processor):
                 if mpv:
                     addr, value = mpv[ x.get('prevout_n')]
                 else:
-                    txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+                    txi = (x.get('prevout_hash') + int_to_unsigned_long_bytes_hex(x.get('prevout_n'))).decode('hex')
                     try:
                         addr = self.storage.get_address(txi)
                         value = self.storage.get_utxo_value(addr,txi)
