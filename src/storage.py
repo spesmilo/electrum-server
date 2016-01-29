@@ -7,7 +7,7 @@ import threading
 
 from processor import print_log, logger
 from utils import bc_address_to_hash_160, hash_160_to_pubkey_address, Hash, \
-    int_from_bytes8, int_from_bytes4, int_to_bytes8, \
+    bytes8_to_int, bytes4_to_int, int_to_bytes8, \
     int_to_hex8, int_to_bytes4, int_to_hex4
 
 
@@ -63,7 +63,7 @@ class Node(object):
         x = self.indexof(c)
         ss = self.s[x:x+40]
         _hash = ss[0:32]
-        value = int_from_bytes8(ss[32:40])
+        value = bytes8_to_int(ss[32:40])
         return _hash, value
 
     def set(self, c, h, value):
@@ -95,7 +95,7 @@ class Node(object):
             if (self.k&(1<<i)) != 0:
                 ss = self.s[x:x+40]
                 hh += ss[0:32]
-                v += int_from_bytes8(ss[32:40])
+                v += bytes8_to_int(ss[32:40])
                 x += 40
         try:
             _hash = Hash(skip_string + hh)
@@ -264,9 +264,9 @@ class Storage(object):
                     break
                 if len(k) == KEYLENGTH:
                     txid = k[20:52].encode('hex')
-                    txpos = int_from_bytes4(k[52:56])
-                    h = int_from_bytes4(v[8:12])
-                    v = int_from_bytes8(v[0:8])
+                    txpos = bytes4_to_int(k[52:56])
+                    h = bytes4_to_int(v[8:12])
+                    v = bytes8_to_int(v[0:8])
                     out.append({'tx_hash': txid, 'tx_pos':txpos, 'height': h, 'value':v})
                 if len(out) == 1000:
                     print_log('max utxo reached', addr)
@@ -286,9 +286,9 @@ class Storage(object):
             item = h[0:80]
             h = h[80:]
             txi = item[0:32].encode('hex')
-            hi = int_from_bytes4(item[36:40])
+            hi = bytes4_to_int(item[36:40])
             txo = item[40:72].encode('hex')
-            ho = int_from_bytes4(item[76:80])
+            ho = bytes4_to_int(item[76:80])
             out.append((hi, txi))
             out.append((ho, txo))
         # uniqueness
@@ -519,7 +519,7 @@ class Storage(object):
             # note: k is not necessarily a leaf
             if len(otherleaf) == KEYLENGTH:
                 ss = self.db_utxo.get(otherleaf)
-                _hash, value = otherleaf[20:52], int_from_bytes8(ss[0:8])
+                _hash, value = otherleaf[20:52], bytes8_to_int(ss[0:8])
             else:
                 _hash, value = None, None
             self.update_node_hash(otherleaf, path[:-1], _hash, value)
@@ -570,7 +570,7 @@ class Storage(object):
         key = self.address_to_key(addr)
         leaf = key + txi
         s = self.db_utxo.get(leaf)
-        value = int_from_bytes8(s[0:8])
+        value = bytes8_to_int(s[0:8])
         return value
 
 
@@ -578,8 +578,8 @@ class Storage(object):
         key = self.address_to_key(addr)
         leaf = key + txi
         s = self.delete_key(leaf)
-        value = int_from_bytes8(s[0:8])
-        in_height = int_from_bytes4(s[8:12])
+        value = bytes8_to_int(s[0:8])
+        in_height = bytes4_to_int(s[8:12])
         undo[leaf] = value, in_height
         # delete backlink txi-> addr
         self.db_addr.delete(txi)

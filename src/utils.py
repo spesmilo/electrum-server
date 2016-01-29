@@ -56,16 +56,16 @@ def header_to_string(res):
            + int_to_hex4(int(res.get('nonce')))
 
 
-_unpack_int_from_bytes4 = struct.Struct("<L").unpack
-_unpack_int_from_bytes8 = struct.Struct("<Q").unpack
+_unpack_bytes4_to_int = struct.Struct("<L").unpack
+_unpack_bytes8_to_int = struct.Struct("<Q").unpack
 
 
-def int_from_bytes4(s):
-    return _unpack_int_from_bytes4(s)[0]
+def bytes4_to_int(s):
+    return _unpack_bytes4_to_int(s)[0]
 
 
-def int_from_bytes8(s):
-    return _unpack_int_from_bytes8(s)[0]
+def bytes8_to_int(s):
+    return _unpack_bytes8_to_int(s)[0]
 
 
 int_to_bytes4 = struct.Struct('<L').pack
@@ -75,18 +75,19 @@ int_to_bytes8 = struct.Struct('<Q').pack
 def int_to_hex4(i):
     return int_to_bytes4(i).encode('hex')
 
+
 def int_to_hex8(i):
     return int_to_bytes8(i).encode('hex')
 
 
 def header_from_string(s):
     return {
-        'version': int_from_bytes4(s[0:4]),
+        'version': bytes4_to_int(s[0:4]),
         'prev_block_hash': hash_encode(s[4:36]),
         'merkle_root': hash_encode(s[36:68]),
-        'timestamp': int_from_bytes4(s[68:72]),
-        'bits': int_from_bytes4(s[72:76]),
-        'nonce': int_from_bytes4(s[76:80]),
+        'timestamp': bytes4_to_int(s[68:72]),
+        'bits': bytes4_to_int(s[72:76]),
+        'nonce': bytes4_to_int(s[76:80]),
     }
 
 
