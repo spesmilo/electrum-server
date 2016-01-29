@@ -56,30 +56,27 @@ def header_to_string(res):
            + int_to_hex4(int(res.get('nonce')))
 
 
-def _bytes_unpacker_for_number_format(format):
-    unpack = struct.Struct(format).unpack
-
-    def unpack_and_normalize(s):
-        return unpack(s)[0]
-
-    return unpack_and_normalize
+_unpack_int_from_bytes4 = struct.Struct("<L").unpack
+_unpack_int_from_bytes8 = struct.Struct("<Q").unpack
 
 
-int_from_bytes4 = _bytes_unpacker_for_number_format("<L")
-int_from_bytes8 = _bytes_unpacker_for_number_format("<Q")
+def int_from_bytes4(s):
+    return _unpack_int_from_bytes4(s)[0]
 
 
-def _int_to_bytes_converters_for_number_format(format):
-    pack = struct.Struct(format).pack
-
-    def pack_and_convert_to_hex(i):
-        return pack(i).encode('hex')
-
-    return pack, pack_and_convert_to_hex
+def int_from_bytes8(s):
+    return _unpack_int_from_bytes8(s)[0]
 
 
-int_to_bytes4, int_to_hex4 = _int_to_bytes_converters_for_number_format('<L')
-int_to_bytes8, int_to_hex8 = _int_to_bytes_converters_for_number_format('<Q')
+int_to_bytes4 = struct.Struct('<L').pack
+int_to_bytes8 = struct.Struct('<Q').pack
+
+
+def int_to_hex4(i):
+    return int_to_bytes4(i).encode('hex')
+
+def int_to_hex8(i):
+    return int_to_bytes8(i).encode('hex')
 
 
 def header_from_string(s):
