@@ -48,12 +48,12 @@ def header_to_string(res):
     if pbh is None:
         pbh = '0'*64
 
-    return int_to_signed_long_bytes_hex(res.get('version')) \
-        + rev_hex(pbh) \
-        + rev_hex(res.get('merkle_root')) \
-        + int_to_unsigned_long_bytes_hex(int(res.get('timestamp'))) \
-        + int_to_unsigned_long_bytes_hex(int(res.get('bits'))) \
-        + int_to_unsigned_long_bytes_hex(int(res.get('nonce')))
+    return int_to_hex4(res.get('version')) \
+           + rev_hex(pbh) \
+           + rev_hex(res.get('merkle_root')) \
+           + int_to_hex4(int(res.get('timestamp'))) \
+           + int_to_hex4(int(res.get('bits'))) \
+           + int_to_hex4(int(res.get('nonce')))
 
 
 def _bytes_unpacker_for_number_format(format):
@@ -65,9 +65,8 @@ def _bytes_unpacker_for_number_format(format):
     return unpack_and_normalize
 
 
-signed_long_from_bytes = _bytes_unpacker_for_number_format("<l")
-unsigned_long_from_bytes = _bytes_unpacker_for_number_format("<L")
-unsigned_long_long_from_bytes = _bytes_unpacker_for_number_format("<Q")
+int_from_bytes4 = _bytes_unpacker_for_number_format("<L")
+int_from_bytes8 = _bytes_unpacker_for_number_format("<Q")
 
 
 def _int_to_bytes_converters_for_number_format(format):
@@ -79,19 +78,18 @@ def _int_to_bytes_converters_for_number_format(format):
     return pack, pack_and_convert_to_hex
 
 
-int_to_signed_long_bytes, int_to_signed_long_bytes_hex = _int_to_bytes_converters_for_number_format('<l')
-int_to_unsigned_long_bytes, int_to_unsigned_long_bytes_hex = _int_to_bytes_converters_for_number_format('<L')
-int_to_unsigned_long_long_bytes, int_to_unsigned_long_long_bytes_hex = _int_to_bytes_converters_for_number_format('<Q')
+int_to_bytes4, int_to_hex4 = _int_to_bytes_converters_for_number_format('<L')
+int_to_bytes8, int_to_hex8 = _int_to_bytes_converters_for_number_format('<Q')
 
 
 def header_from_string(s):
     return {
-        'version': signed_long_from_bytes(s[0:4]),
+        'version': int_from_bytes4(s[0:4]),
         'prev_block_hash': hash_encode(s[4:36]),
         'merkle_root': hash_encode(s[36:68]),
-        'timestamp': unsigned_long_from_bytes(s[68:72]),
-        'bits': unsigned_long_from_bytes(s[72:76]),
-        'nonce': unsigned_long_from_bytes(s[76:80]),
+        'timestamp': int_from_bytes4(s[68:72]),
+        'bits': int_from_bytes4(s[72:76]),
+        'nonce': int_from_bytes4(s[76:80]),
     }
 
 
