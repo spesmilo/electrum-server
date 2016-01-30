@@ -2,6 +2,7 @@ import re
 import time
 import socket
 import threading
+import Queue
 import irc.client
 from utils import logger
 from utils import Hash
@@ -42,6 +43,7 @@ class IrcThread(threading.Thread):
         self.pruning_limit = config.get('leveldb', 'pruning_limit')
         self.nick = 'E_' + self.nick
         self.password = None
+        self.who_queue = Queue.Queue()
 
     def getname(self):
         s = 'v' + VERSION + ' '
@@ -72,7 +74,7 @@ class IrcThread(threading.Thread):
     def on_join(self, connection, event):
         m = re.match("(E_.*)!", event.source)
         if m:
-            connection.who(m.group(1))
+            self.who_queue.put((connection, m.group(1)))
 
     def on_quit(self, connection, event):
         m = re.match("(E_.*)!", event.source)
@@ -103,9 +105,20 @@ class IrcThread(threading.Thread):
     def on_name(self, connection, event):
         for s in event.arguments[2].split():
             if s.startswith("E_"):
-                connection.who(s)
+                self.who_queue.put((connection, s))
+
+    def who_thread(self):
+        while not self.processor.shared.stopped():
+            try:
+                connection, s = self.who_queue.get(timeout=1)
+            except Queue.Empty:
+                continue
+            #logger.info("who: "+ s)
+            connection.who(s)
+            time.sleep(1)
 
     def run(self):
+
         while self.processor.shared.paused():
             time.sleep(1)
 
@@ -113,6 +126,9 @@ class IrcThread(threading.Thread):
         # avoid UnicodeDecodeError using LenientDecodingLineBuffer
         irc.client.ServerConnection.buffer_class = irc.buffer.LenientDecodingLineBuffer
         logger.info("joining IRC")
+
+        t = threading.Thread(target=self.who_thread)
+        t.start()
 
         while not self.processor.shared.stopped():
             client = irc.client.Reactor()
