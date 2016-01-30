@@ -6,7 +6,9 @@ import sys
 import threading
 
 from processor import print_log, logger
-from utils import bc_address_to_hash_160, hash_160_to_pubkey_address, hex_to_int, int_to_hex, Hash
+from utils import bc_address_to_hash_160, hash_160_to_pubkey_address, Hash, \
+    bytes8_to_int, bytes4_to_int, int_to_bytes8, \
+    int_to_hex8, int_to_bytes4, int_to_hex4
 
 
 """
@@ -61,13 +63,13 @@ class Node(object):
         x = self.indexof(c)
         ss = self.s[x:x+40]
         _hash = ss[0:32]
-        value = hex_to_int(ss[32:40])
+        value = bytes8_to_int(ss[32:40])
         return _hash, value
 
     def set(self, c, h, value):
         if h is None:
             h = chr(0)*32
-        vv = int_to_hex(value, 8).decode('hex')
+        vv = int_to_bytes8(value)
         item = h + vv
         assert len(item) == 40
         if self.has(c):
@@ -93,7 +95,7 @@ class Node(object):
             if (self.k&(1<<i)) != 0:
                 ss = self.s[x:x+40]
                 hh += ss[0:32]
-                v += hex_to_int(ss[32:40])
+                v += bytes8_to_int(ss[32:40])
                 x += 40
         try:
             _hash = Hash(skip_string + hh)
@@ -112,7 +114,7 @@ class Node(object):
                 k += 1<<i
                 h, value = d[chr(i)]
                 if h is None: h = chr(0)*32
-                vv = int_to_hex(value, 8).decode('hex')
+                vv = int_to_bytes8(value)
                 item = h + vv
                 assert len(item) == 40
                 s += item
@@ -262,9 +264,9 @@ class Storage(object):
                     break
                 if len(k) == KEYLENGTH:
                     txid = k[20:52].encode('hex')
-                    txpos = hex_to_int(k[52:56])
-                    h = hex_to_int(v[8:12])
-                    v = hex_to_int(v[0:8])
+                    txpos = bytes4_to_int(k[52:56])
+                    h = bytes4_to_int(v[8:12])
+                    v = bytes8_to_int(v[0:8])
                     out.append({'tx_hash': txid, 'tx_pos':txpos, 'height': h, 'value':v})
                 if len(out) == 1000:
                     print_log('max utxo reached', addr)
@@ -284,9 +286,9 @@ class Storage(object):
             item = h[0:80]
             h = h[80:]
             txi = item[0:32].encode('hex')
-            hi = hex_to_int(item[36:40])
+            hi = bytes4_to_int(item[36:40])
             txo = item[40:72].encode('hex')
-            ho = hex_to_int(item[76:80])
+            ho = bytes4_to_int(item[76:80])
             out.append((hi, txi))
             out.append((ho, txo))
         # uniqueness
@@ -380,7 +382,7 @@ class Storage(object):
             self.put_node(parent, parent_node)
 
         # write the new leaf
-        s = (int_to_hex(value, 8) + int_to_hex(height,4)).decode('hex')
+        s = (int_to_hex8(value) + int_to_hex4(height)).decode('hex')
         self.db_utxo.put(target, s)
         # the hash of a leaf is the txid
         _hash = target[20:52]
@@ -486,7 +488,7 @@ class Storage(object):
         self.db_utxo.delete(leaf)
 
         if leaf in self.hash_list:
-            self.hash_list.pop(leaf)
+            del self.hash_list[leaf]
 
         parent = path[-1]
         letter = leaf[len(parent)]
@@ -498,7 +500,7 @@ class Storage(object):
             #print "deleting parent", parent.encode('hex')
             self.db_utxo.delete(parent)
             if parent in self.hash_list:
-                self.hash_list.pop(parent)
+                del self.hash_list[parent]
 
             l = parent_node.get_singleton()
             _hash, value = parent_node.get(l)
@@ -517,7 +519,7 @@ class Storage(object):
             # note: k is not necessarily a leaf
             if len(otherleaf) == KEYLENGTH:
                 ss = self.db_utxo.get(otherleaf)
-                _hash, value = otherleaf[20:52], hex_to_int(ss[0:8])
+                _hash, value = otherleaf[20:52], bytes8_to_int(ss[0:8])
             else:
                 _hash, value = None, None
             self.update_node_hash(otherleaf, path[:-1], _hash, value)
@@ -548,7 +550,7 @@ class Storage(object):
 
     def add_to_history(self, addr, tx_hash, tx_pos, value, tx_height):
         key = self.address_to_key(addr)
-        txo = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
+        txo = (tx_hash + int_to_hex4(tx_pos)).decode('hex')
         # write the new history
         self.add_key(key + txo, value, tx_height)
         # backlink
@@ -557,7 +559,7 @@ class Storage(object):
 
     def revert_add_to_history(self, addr, tx_hash, tx_pos, value, tx_height):
         key = self.address_to_key(addr)
-        txo = (tx_hash + int_to_hex(tx_pos, 4)).decode('hex')
+        txo = (tx_hash + int_to_hex4(tx_pos)).decode('hex')
         # delete
         self.delete_key(key + txo)
         # backlink
@@ -568,7 +570,7 @@ class Storage(object):
         key = self.address_to_key(addr)
         leaf = key + txi
         s = self.db_utxo.get(leaf)
-        value = hex_to_int(s[0:8])
+        value = bytes8_to_int(s[0:8])
         return value
 
 
@@ -576,16 +578,16 @@ class Storage(object):
         key = self.address_to_key(addr)
         leaf = key + txi
         s = self.delete_key(leaf)
-        value = hex_to_int(s[0:8])
-        in_height = hex_to_int(s[8:12])
+        value = bytes8_to_int(s[0:8])
+        in_height = bytes4_to_int(s[8:12])
         undo[leaf] = value, in_height
         # delete backlink txi-> addr
         self.db_addr.delete(txi)
         # add to history
         s = self.db_hist.get(addr)
         if s is None: s = ''
-        txo = (txid + int_to_hex(index,4) + int_to_hex(height,4)).decode('hex')
-        s += txi + int_to_hex(in_height,4).decode('hex') + txo
+        txo = (txid + int_to_hex4(index) + int_to_hex4(height)).decode('hex')
+        s += txi + int_to_bytes4(in_height) + txo
         s = s[ -80*self.pruning_limit:]
         self.db_hist.put(addr, s)
 
@@ -619,7 +621,7 @@ class Storage(object):
 
         prev_addr = []
         for i, x in enumerate(tx.get('inputs')):
-            txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+            txi = (x.get('prevout_hash') + int_to_hex4(x.get('prevout_n'))).decode('hex')
             addr = self.get_address(txi)
             if addr is not None:
                 self.set_spent(addr, txi, txid, i, block_height, undo)
@@ -650,7 +652,7 @@ class Storage(object):
         for i, x in reversed(list(enumerate(tx.get('inputs')))):
             addr = prev_addr[i]
             if addr is not None:
-                txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+                txi = (x.get('prevout_hash') + int_to_hex4(x.get('prevout_n'))).decode('hex')
                 self.revert_set_spent(addr, txi, undo)
                 touched_addr.add(addr)
 

@@ -20,7 +20,7 @@ from itertools import imap
 import threading
 import time
 import hashlib
-import sys
+import struct
 
 __b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 __b58base = len(__b58chars)
@@ -32,12 +32,6 @@ SCRIPT_ADDRESS = 5
 
 def rev_hex(s):
     return s.decode('hex')[::-1].encode('hex')
-
-
-def int_to_hex(i, length=1):
-    s = hex(i)[2:].rstrip('L')
-    s = "0"*(2*length - len(s)) + s
-    return rev_hex(s)
 
 
 Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
@@ -54,26 +48,46 @@ def header_to_string(res):
     if pbh is None:
         pbh = '0'*64
 
-    return int_to_hex(res.get('version'), 4) \
-        + rev_hex(pbh) \
-        + rev_hex(res.get('merkle_root')) \
-        + int_to_hex(int(res.get('timestamp')), 4) \
-        + int_to_hex(int(res.get('bits')), 4) \
-        + int_to_hex(int(res.get('nonce')), 4)
+    return int_to_hex4(res.get('version')) \
+           + rev_hex(pbh) \
+           + rev_hex(res.get('merkle_root')) \
+           + int_to_hex4(int(res.get('timestamp'))) \
+           + int_to_hex4(int(res.get('bits'))) \
+           + int_to_hex4(int(res.get('nonce')))
 
 
-def hex_to_int(s):
-    return int('0x' + s[::-1].encode('hex'), 16)
+_unpack_bytes4_to_int = struct.Struct("<L").unpack
+_unpack_bytes8_to_int = struct.Struct("<Q").unpack
+
+
+def bytes4_to_int(s):
+    return _unpack_bytes4_to_int(s)[0]
+
+
+def bytes8_to_int(s):
+    return _unpack_bytes8_to_int(s)[0]
+
+
+int_to_bytes4 = struct.Struct('<L').pack
+int_to_bytes8 = struct.Struct('<Q').pack
+
+
+def int_to_hex4(i):
+    return int_to_bytes4(i).encode('hex')
+
+
+def int_to_hex8(i):
+    return int_to_bytes8(i).encode('hex')
 
 
 def header_from_string(s):
     return {
-        'version': hex_to_int(s[0:4]),
+        'version': bytes4_to_int(s[0:4]),
         'prev_block_hash': hash_encode(s[4:36]),
         'merkle_root': hash_encode(s[36:68]),
-        'timestamp': hex_to_int(s[68:72]),
-        'bits': hex_to_int(s[72:76]),
-        'nonce': hex_to_int(s[76:80]),
+        'timestamp': bytes4_to_int(s[68:72]),
+        'bits': bytes4_to_int(s[72:76]),
+        'nonce': bytes4_to_int(s[76:80]),
     }
 
 

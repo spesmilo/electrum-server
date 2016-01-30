@@ -11,7 +11,8 @@ import urllib
 import deserialize
 from processor import Processor, print_log
 from storage import Storage
-from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, rev_hex, int_to_hex
+from utils import logger, hash_decode, hash_encode, Hash, header_from_string, header_to_string, ProfiledThread, \
+    rev_hex, int_to_hex4
 
 class BlockchainProcessor(Processor):
 
@@ -232,8 +233,8 @@ class BlockchainProcessor(Processor):
 
         with self.cache_lock:
             chunk_index = header.get('block_height')/2016
-            if self.chunk_cache.get(chunk_index):
-                self.chunk_cache.pop(chunk_index)
+            if chunk_index in self.chunk_cache:
+                del self.chunk_cache[chunk_index]
 
     def pop_header(self):
         # we need to do this only if we have not flushed
@@ -481,7 +482,7 @@ class BlockchainProcessor(Processor):
                     print_log("error rc!!")
                     self.shared.stop()
                 if l == []:
-                    self.watched_addresses.pop(addr)
+                    del self.watched_addresses[addr]
 
 
     def process(self, request, cache_only=False):
@@ -527,7 +528,7 @@ class BlockchainProcessor(Processor):
         elif method == 'blockchain.utxo.get_address':
             txid = str(params[0])
             pos = int(params[1])
-            txi = (txid + int_to_hex(pos, 4)).decode('hex')
+            txi = (txid + int_to_hex4(pos)).decode('hex')
             result = self.storage.get_address(txi)
 
         elif method == 'blockchain.block.get_header':
@@ -737,7 +738,7 @@ class BlockchainProcessor(Processor):
                 if mpv:
                     addr, value = mpv[ x.get('prevout_n')]
                 else:
-                    txi = (x.get('prevout_hash') + int_to_hex(x.get('prevout_n'), 4)).decode('hex')
+                    txi = (x.get('prevout_hash') + int_to_hex4(x.get('prevout_n'))).decode('hex')
                     try:
                         addr = self.storage.get_address(txi)
                         value = self.storage.get_utxo_value(addr,txi)
@@ -757,8 +758,7 @@ class BlockchainProcessor(Processor):
         # remove deprecated entries from mempool_addresses
         for tx_hash, addresses in self.mempool_addresses.items():
             if tx_hash not in self.mempool_hashes:
-                self.mempool_addresses.pop(tx_hash)
-                self.mempool_values.pop(tx_hash)
+                del self.mempool_addresses[tx_hash], self.mempool_values[tx_hash]
                 touched_addresses.update(addresses)
 
         # remove deprecated entries from mempool_hist
@@ -796,7 +796,7 @@ class BlockchainProcessor(Processor):
         with self.cache_lock:
             if address in self.history_cache:
                 # print_log("cache: invalidating", address)
-                self.history_cache.pop(address)
+                del self.history_cache[address]
 
         with self.watch_lock:
             sessions = self.watched_addresses.get(address)
