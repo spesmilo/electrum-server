@@ -157,11 +157,11 @@ class TcpServer(threading.Thread):
             try:
                 # unregister before we close s 
                 poller.unregister(fd)
+                session = self.fd_to_session.pop(fd)
+                # this will close the socket
+                session.stop()
             except BaseException as e:
-                logger.error('unregister error:' + str(e))
-            session = self.fd_to_session.pop(fd)
-            # this will close the socket
-            session.stop()
+                logger.error('stop_session error:' + str(e))
 
         def check_do_handshake(session):
             if session.handshake:
