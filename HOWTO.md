@@ -53,9 +53,9 @@ build chain. You will need root access in order to install other software or
 Python libraries. Python 2.7 is the minimum supported version.
 
 **Hardware.** The lightest setup is a pruning server with diskspace
-requirements of about 10 GB for the Electrum database. However note that
+requirements of about 30 GB for the Electrum database (February 2016). However note that
 you also need to run bitcoind and keep a copy of the full blockchain,
-which is roughly 37 GB in July 2015. If you have less than 2 GB of RAM
+which is roughly 55 GB (February 2016). If you have less than 2 GB of RAM
 make sure you limit bitcoind to 8 concurrent connections. If you have more
 resources to spare you can run the server with a higher limit of historic
 transactions per address. CPU speed is important for the initial block
@@ -89,22 +89,15 @@ to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
 ### Step 2. Download bitcoind
 
-Older versions of Electrum required a patched version of bitcoind.
-This is not the case anymore since bitcoind supports the 'txindex' option.
-We currently recommend bitcoind 0.11.0 stable. Please do *not* upgrade to 0.11.1 until
-Electrum client 2.5 has been released and distributed for some time.
-0.11.1 and Electrum clients prior to 2.5 suffer from the transaction index being denied by
-bitcoind with the error, "mandatory-script-verify-flag-failed u'code': -26".
-
-If your package manager does not supply a recent bitcoind or you prefer to compile it yourself,
-here are some pointers for Ubuntu:
+We currently recommend bitcoind 0.11.2 stable. If your package manager does not supply
+a recent bitcoind or you prefer to compile it yourself, here are some pointers for Ubuntu:
 
     $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
     $ sudo su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.11.0/bitcoin-0.11.0.tar.gz
-    $ sha256sum bitcoin-0.11.0.tar.gz | grep 51ba1756addfa71567559e3f22331c1d908a63571891287689fff7113035d09f
-    $ tar xfz bitcoin-0.11.0.tar.gz
-    $ cd bitcoin-0.11.0
+    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.11.2/bitcoin-0.11.2.tar.gz
+    $ sha256sum bitcoin-0.11.2.tar.gz | grep a4d2bd642e5f7f1f82dc3f708618ac77e1e45353db7a98bf81c3bdc0e10690d3
+    $ tar xfz bitcoin-0.11.2.tar.gz
+    $ cd bitcoin-0.11.2
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
@@ -222,9 +215,9 @@ It's not recommended to do initial indexing of the database on an SSD because th
 does at least 20 TB (!) of disk writes and puts considerable wear-and-tear on an SSD. It's a lot better
 to use tmpfs and just swap out to disk when necessary.
 
-Databases have grown to roughly 8 GB in April 2014, give or take a gigabyte, between pruning limits
-100 and 10000. Leveldb prunes the database from time to time, so it's not uncommon to see databases
-~50% larger at times when it's writing a lot, especially when indexing from the beginning.
+Databases have grown to roughly 30 GB as of February 2016. Leveldb prunes the database from time to time,
+so it's not uncommon to see databases ~50% larger at times when it's writing a lot, especially when
+indexing from the beginning.
 
 
 ### Step 8. Create a self-signed SSL cert
