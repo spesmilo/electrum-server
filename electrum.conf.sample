@@ -1,32 +1,33 @@
 [server]
 # username for running the daemon
-username = 
+username =
 # hostname. set it to a FQDN in order to be reached from outside
 host = localhost
 # ports
 electrum_rpc_port = 8000
 stratum_tcp_port = 50001
 #stratum_tcp_ssl_port = 50002
-#report_host = 
+#report_host =
 #report_stratum_tcp_port = 50001
 #report_stratum_tcp_ssl_port = 50002
 banner = Welcome to Electrum!
 banner_file = /etc/electrum.banner
 #irc = no
 #irc_nick = <yournickname>
+#irc_bind_ip = <external ip address>
 #ssl_certfile = /path/to/electrum-server.crt
 #ssl_keyfile = /path/to/electrum-server.key
 logfile = /var/log/electrum.log
-donation_address = 
+donation_address =
 
 [leveldb]
 # path to your database
-path = 
+path =
 # for each address, history will be pruned if it is longer than this limit
 pruning_limit = 100
 
 # cache sizes in bytes, the default is optimized for ~4 GB RAM setups to run bitcoind alongside
-# If you have lots of RAM increase up to 16 times for best performance 
+# If you have lots of RAM increase up to 16 times for best performance
 #hist_cache = 67108864
 #utxo_cache = 134217728
 #addr_cache = 16777216
@@ -35,5 +36,5 @@ pruning_limit = 100
 bitcoind_host = localhost
 bitcoind_port = 8332
 # user and password from bitcoin.conf
-bitcoind_user = 
-bitcoind_password = 
+bitcoind_user =
+bitcoind_password =
