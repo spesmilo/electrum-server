@@ -326,6 +326,12 @@ You should see this in the log file:
 
     starting Electrum server
 
+If your blockchain database is out of date Electrum Server will start updating it. You will see something similar to this in the log file:
+
+    [09/02/2016-09:58:18] block 397319 (1727 197.37s) 0290aae5dc6395e2c60e8b2c9e48a7ee246cad7d0630d17dd5b54d70a41ffed7 (10.13tx/s, 139.78s/block) (eta 11.5 hours, 240 blocks)
+    
+The important pieces to you are at the end. In this example, the server has to calculate 240 more blocks, with an ETA of 11.5 hours. Multiple entries will appear below this one as the server catches back up to the latest block. During this time the server will not accept incoming connections from clients or connect to the IRC channel.
+
 If you want to stop Electrum server, use the 'stop' command:
 
     # electrum-server stop
