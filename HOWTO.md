@@ -32,7 +32,7 @@ Lines that lack hash or dollar signs are pastes from config files. They
 should be copied verbatim or adapted without the indentation tab.
 
 `apt-get install` commands are suggestions for required dependencies.
-They conform to an Ubuntu 13.10 system but may well work with Debian
+They conform to an Ubuntu 14.10 system but may well work with Debian
 or other versions of Ubuntu.
 
 Prerequisites
@@ -55,14 +55,18 @@ Python libraries. Python 2.7 is the minimum supported version.
 **Hardware.** The lightest setup is a pruning server with diskspace
 requirements of about 30 GB for the Electrum database (February 2016). However note that
 you also need to run bitcoind and keep a copy of the full blockchain,
-which is roughly 55 GB (February 2016). If you have less than 2 GB of RAM
-make sure you limit bitcoind to 8 concurrent connections. If you have more
-resources to spare you can run the server with a higher limit of historic
-transactions per address. CPU speed is important for the initial block
-chain import, but is also important if you plan to run a public Electrum server,
-which could serve tens of concurrent requests. Any multi-core x86 CPU from 2009 or
-newer other than an Atom should do for good performance. An ideal setup
-has enough RAM to hold and process the leveldb database in tmpfs (e.g. `/dev/shm`).
+which is roughly 55 GB (February 2016). Ideally you have a machine with 16 GB of RAM
+and an equal amount of swap. If you have ~2 GB of RAM make sure you limit bitcoind 
+to 8 concurrent connections by disabling incoming connections. electrum-server may
+bail-out on you from time to time with less than 4 GB of RAM, so you might have to 
+monitor the process and restart it. You can tweak cache sizes in the config to an extend
+but most RAM will be used to process blocks and catch-up on initial start.
+
+CPU speed is less important than fast I/O speed. electrum-server makes uses of one core 
+only leaving spare cycles for bitcoind. Fast single core CPU power helps for the initial 
+block chain import. Any multi-core x86 CPU with CPU Mark / PassMark > 1500 will work
+(see https://www.cpubenchmark.net/). An ideal setup in February 2016 has 16 GB+ RAM and
+SSD for good i/o speed.
 
 Instructions
 ------------
@@ -302,7 +306,9 @@ Or if you use sudo and the user is added to sudoers group:
 
 Two more things for you to consider:
 
-1. To increase security you may want to close bitcoind for incoming connections and connect outbound only
+1. To increase privacy of transactions going through your server
+   you may want to close bitcoind for incoming connections and connect outbound only. Most servers do run
+   full nodes with open incoming connections though.
 
 2. Consider restarting bitcoind (together with electrum-server) on a weekly basis to clear out unconfirmed
    transactions from the local the memory pool which did not propagate over the network.
