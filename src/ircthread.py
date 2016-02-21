@@ -1,6 +1,7 @@
 import re
 import time
 import socket
+import ssl
 import threading
 import Queue
 import irc.client
@@ -24,6 +25,7 @@ class IrcThread(threading.Thread):
         self.report_stratum_http_port = config.get('server', 'report_stratum_http_port')
         self.report_stratum_tcp_ssl_port = config.get('server', 'report_stratum_tcp_ssl_port')
         self.report_stratum_http_ssl_port = config.get('server', 'report_stratum_http_ssl_port')
+        self.irc_bind_ip = config.get('server', 'irc_bind_ip')
         self.host = config.get('server', 'host')
         self.report_host = config.get('server', 'report_host')
         self.nick = config.get('server', 'irc_nick')
@@ -67,7 +69,7 @@ class IrcThread(threading.Thread):
     def start(self, queue):
         self.queue = queue
         threading.Thread.start(self)
- 
+
     def on_connect(self, connection, event):
         connection.join("#electrum")
 
@@ -80,7 +82,7 @@ class IrcThread(threading.Thread):
         m = re.match("(E_.*)!", event.source)
         if m:
             self.queue.put(('quit', [m.group(1)]))
-        
+
     def on_kick(self, connection, event):
         m = re.match("(E_.*)", event.arguments[0])
         if m:
@@ -133,7 +135,8 @@ class IrcThread(threading.Thread):
         while not self.processor.shared.stopped():
             client = irc.client.Reactor()
             try:
-                c = client.server().connect('irc.freenode.net', 6667, self.nick, self.password, ircname=self.ircname)
+                ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket, bind_address=(self.irc_bind_ip, 0))
+                c = client.server().connect('irc.freenode.net', 6697, self.nick, self.password, ircname=self.ircname, connect_factory=ssl_factory)
             except irc.client.ServerConnectionError:
                 logger.error('irc', exc_info=True)
                 time.sleep(10)
