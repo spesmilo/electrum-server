@@ -17,18 +17,19 @@ class IrcThread(threading.Thread):
         threading.Thread.__init__(self)
         self.processor = processor
         self.daemon = True
-        self.stratum_tcp_port = config.get('server', 'stratum_tcp_port')
-        self.stratum_http_port = config.get('server', 'stratum_http_port')
-        self.stratum_tcp_ssl_port = config.get('server', 'stratum_tcp_ssl_port')
-        self.stratum_http_ssl_port = config.get('server', 'stratum_http_ssl_port')
-        self.report_stratum_tcp_port = config.get('server', 'report_stratum_tcp_port')
-        self.report_stratum_http_port = config.get('server', 'report_stratum_http_port')
-        self.report_stratum_tcp_ssl_port = config.get('server', 'report_stratum_tcp_ssl_port')
-        self.report_stratum_http_ssl_port = config.get('server', 'report_stratum_http_ssl_port')
-        self.irc_bind_ip = config.get('server', 'irc_bind_ip')
-        self.host = config.get('server', 'host')
-        self.report_host = config.get('server', 'report_host')
-        self.nick = config.get('server', 'irc_nick')
+        options = dict(config.items('server'))
+        self.stratum_tcp_port = options.get('stratum_tcp_port')
+        self.stratum_http_port = options.get('stratum_http_port')
+        self.stratum_tcp_ssl_port = options.get('stratum_tcp_ssl_port')
+        self.stratum_http_ssl_port = options.get('stratum_http_ssl_port')
+        self.report_stratum_tcp_port = options.get('report_stratum_tcp_port')
+        self.report_stratum_http_port = options.get('report_stratum_http_port')
+        self.report_stratum_tcp_ssl_port = options.get('report_stratum_tcp_ssl_port')
+        self.report_stratum_http_ssl_port = options.get('report_stratum_http_ssl_port')
+        self.irc_bind_ip = options.get('irc_bind_ip')
+        self.host = options.get('host')
+        self.report_host = options.get('report_host')
+        self.nick = options.get('irc_nick')
         if self.report_stratum_tcp_port:
             self.stratum_tcp_port = self.report_stratum_tcp_port
         if self.report_stratum_http_port:
@@ -135,7 +136,8 @@ class IrcThread(threading.Thread):
         while not self.processor.shared.stopped():
             client = irc.client.Reactor()
             try:
-                ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket, bind_address=(self.irc_bind_ip, 0))
+                bind_address = (self.irc_bind_ip, 0) if self.irc_bind_ip else None
+                ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket, bind_address=dind_address)
                 c = client.server().connect('irc.freenode.net', 6697, self.nick, self.password, ircname=self.ircname, connect_factory=ssl_factory)
             except irc.client.ServerConnectionError:
                 logger.error('irc', exc_info=True)
