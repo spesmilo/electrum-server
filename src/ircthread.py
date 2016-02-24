@@ -160,7 +160,7 @@ class IrcThread(threading.Thread):
             client = irc.client.Reactor()
             try:
                 bind_address = (self.irc_bind_ip, 0) if self.irc_bind_ip else None
-                ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket, bind_address=dind_address)
+                ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket, bind_address=bind_address)
                 c = client.server().connect('irc.freenode.net', 6697, self.nick, self.password, ircname=self.ircname, connect_factory=ssl_factory)
             except irc.client.ServerConnectionError:
                 logger.error('irc', exc_info=True)
