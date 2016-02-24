@@ -32,7 +32,7 @@ Lines that lack hash or dollar signs are pastes from config files. They
 should be copied verbatim or adapted without the indentation tab.
 
 `apt-get install` commands are suggestions for required dependencies.
-They conform to an Ubuntu 14.10 system but may well work with Debian
+They conform to an Ubuntu 15.10 system but may well work with Debian
 or other versions of Ubuntu.
 
 Prerequisites
@@ -93,15 +93,15 @@ to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
 ### Step 2. Download bitcoind
 
-We currently recommend bitcoind 0.11.2 stable. If your package manager does not supply
+We currently recommend bitcoin core 0.12.0 stable. If your package manager does not supply
 a recent bitcoind or you prefer to compile it yourself, here are some pointers for Ubuntu:
 
-    $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config
+    $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config libevent-dev
     $ sudo su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.11.2/bitcoin-0.11.2.tar.gz
-    $ sha256sum bitcoin-0.11.2.tar.gz | grep a4d2bd642e5f7f1f82dc3f708618ac77e1e45353db7a98bf81c3bdc0e10690d3
-    $ tar xfz bitcoin-0.11.2.tar.gz
-    $ cd bitcoin-0.11.2
+    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.12.0/bitcoin-0.12.0.tar.gz
+    $ sha256sum bitcoin-0.12.0.tar.gz | grep 0f1cda66c841a548a07cc37e80b0727354b1236d9f374c7d44362acdb85eb3e1
+    $ tar xfz bitcoin-0.12.0.tar.gz
+    $ cd bitcoin-0.12.0
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
