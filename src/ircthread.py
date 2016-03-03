@@ -159,9 +159,10 @@ class IrcThread(threading.Thread):
         while not self.processor.shared.stopped():
             client = irc.client.Reactor()
             try:
-                bind_address = (self.irc_bind_ip, 0) if self.irc_bind_ip else None
-                ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket, bind_address=bind_address)
-                c = client.server().connect('irc.freenode.net', 6697, self.nick, self.password, ircname=self.ircname, connect_factory=ssl_factory)
+                #bind_address = (self.irc_bind_ip, 0) if self.irc_bind_ip else None
+                #ssl_factory = irc.connection.Factory(wrapper=ssl.wrap_socket, bind_address=bind_address)
+                #c = client.server().connect('irc.freenode.net', 6697, self.nick, self.password, ircname=self.ircname, connect_factory=ssl_factory)
+                c = client.server().connect('irc.freenode.net', 6667, self.nick, self.password, ircname=self.ircname) 
             except irc.client.ServerConnectionError:
                 logger.error('irc', exc_info=True)
                 time.sleep(10)
