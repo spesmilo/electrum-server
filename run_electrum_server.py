@@ -90,19 +90,15 @@ def create_config(filename=None):
     config.set('server', 'banner_file', '/etc/electrum.banner')
     config.set('server', 'host', 'localhost')
     config.set('server', 'electrum_rpc_port', '8000')
-    config.set('server', 'report_host', '')
     config.set('server', 'stratum_tcp_port', '50001')
-    config.set('server', 'stratum_http_port', '')
     config.set('server', 'stratum_tcp_ssl_port', '50002')
-    config.set('server', 'stratum_http_ssl_port', '')
-    config.set('server', 'report_stratum_tcp_port', '')
-    config.set('server', 'report_stratum_http_port', '')
-    config.set('server', 'report_stratum_tcp_ssl_port', '')
-    config.set('server', 'report_stratum_http_ssl_port', '')
+    #config.set('server', 'report_host', '')
+    #config.set('server', 'report_stratum_tcp_port', '')
+    #config.set('server', 'report_stratum_tcp_ssl_port', '')
     config.set('server', 'ssl_certfile', '')
     config.set('server', 'ssl_keyfile', '')
-    config.set('server', 'irc', 'no')
-    config.set('server', 'irc_nick', '')
+    config.set('server', 'p2p', 'yes')
+    config.set('server', 'mempool', 'yes')
     config.set('server', 'coin', '')
     config.set('server', 'logfile', '/var/log/electrum.log')
     config.set('server', 'donation_address', '')
@@ -167,7 +163,7 @@ def cmd_banner_update():
 def cmd_getinfo():
     return {
         'blocks': chain_proc.storage.height,
-        'peers': len(server_proc.peers),
+        'peers': len(server_proc.get_peers()),
         'sessions': len(dispatcher.request_dispatcher.get_sessions()),
         'watched': len(chain_proc.watched_addresses),
         'cached': len(chain_proc.history_cache),
@@ -185,7 +181,7 @@ def cmd_numsessions():
     return len(dispatcher.request_dispatcher.get_sessions())
 
 def cmd_peers():
-    return server_proc.peers.keys()
+    return server_proc.get_peer_headers()
 
 def cmd_numpeers():
     return len(server_proc.peers)

@@ -63,6 +63,7 @@ class BlockchainProcessor(Processor):
         self.headers_data = ''
         self.headers_path = config.get('leveldb', 'path')
 
+        self.mempool = config.getboolean('server', 'mempool')
         self.mempool_values = {}
         self.mempool_addresses = {}
         self.mempool_hist = {} # addr -> (txid, delta)
@@ -717,6 +718,8 @@ class BlockchainProcessor(Processor):
 
 
     def memorypool_update(self):
+        if not self.mempool:
+            return
         t0 = time.time()
         mempool_hashes = set(self.bitcoind('getrawmempool'))
         touched_addresses = set()
