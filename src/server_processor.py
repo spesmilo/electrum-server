@@ -104,6 +104,23 @@ class P2PThread(Network):
         self.known_peers = set([])
         self.good_peers = {}
 
+        options = dict(config.items('server'))
+        self.stratum_tcp_port = options.get('stratum_tcp_port')
+        self.stratum_tcp_ssl_port = options.get('stratum_tcp_ssl_port')
+        self.report_stratum_tcp_port = options.get('report_stratum_tcp_port')
+        self.report_stratum_tcp_ssl_port = options.get('report_stratum_tcp_ssl_port')
+        self.host = options.get('host')
+        self.report_host = options.get('report_host')
+        if self.report_stratum_tcp_port:
+            self.stratum_tcp_port = self.report_stratum_tcp_port
+        if self.report_stratum_tcp_ssl_port:
+            self.stratum_tcp_ssl_port = self.report_stratum_tcp_ssl_port
+        if self.report_host:
+            self.host = self.report_host
+
+        self.server_name = self.host + ':' + self.stratum_tcp_ssl_port + ':s'
+        print "server name", self.server_name
+
         # hardcoded peers
         hh = set(['erbium1.sytes.net:50002:s', 'ecdsa.net:110:s', 'ulrichard.ch:50002:s'])
         for x in hh:
@@ -168,7 +185,7 @@ class P2PThread(Network):
             else:
                 if socket:
                     i = self.add_interface(server, socket)
-                    i.queue_request('server.new_peer', [], 0)
+                    i.queue_request('server.new_peer', [self.server_name], 0)
                     i.queue_request('server.peers.subscribe', [], 1)
                     i.queue_request('blockchain.headers.subscribe', [], 2)
                     i.queue_request('server.version', [], 3)
