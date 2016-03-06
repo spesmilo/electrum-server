@@ -143,7 +143,7 @@ class P2PThread(Network):
             # result should be "ok"
             pass
 
-        if method == 'server.version':
+        elif method == 'server.version':
             self.peers_version[server] = result
 
         elif method == 'server.peers.subscribe':
@@ -201,7 +201,7 @@ class P2PThread(Network):
         out = []
         for server, v in self.peers_header.items():
             host, port, x = server.split(':')
-            v = self.peers_version.get(host)
+            v = self.peers_version.get(server)
             if not v:
                 continue
             out.append(('', host, ['s' if port == '50002' else 's'+port, 'v'+v]))
