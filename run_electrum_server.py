@@ -184,7 +184,7 @@ def cmd_peers():
     return server_proc.get_peer_headers()
 
 def cmd_numpeers():
-    return len(server_proc.peers)
+    return len(server_proc.get_peers())
 
 
 hp = None
