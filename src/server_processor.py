@@ -78,6 +78,8 @@ class Network(threading.Thread):
 
             self.process_response(interface.server, method, params, response)
  
+    def connection_down(self, server):
+        pass
 
     def add_interface(self, server, socket):
         self.interfaces[server] = i = Interface(server, socket)
