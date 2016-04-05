@@ -98,6 +98,7 @@ def create_config(filename=None):
     config.set('server', 'ssl_certfile', '')
     config.set('server', 'ssl_keyfile', '')
     config.set('server', 'p2p', 'yes')
+    config.set('server', 'blockchain', 'yes')
     config.set('server', 'mempool', 'yes')
     config.set('server', 'coin', '')
     config.set('server', 'logfile', '/var/log/electrum.log')

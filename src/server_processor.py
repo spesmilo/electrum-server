@@ -124,7 +124,8 @@ class P2PThread(Network):
         print "server name", self.server_name
 
         # hardcoded peers
-        hh = set(['erbium1.sytes.net:50002:s', 'ecdsa.net:110:s', 'ulrichard.ch:50002:s'])
+        #hh = set(['erbium1.sytes.net:50002:s', 'ecdsa.net:110:s', 'ulrichard.ch:50002:s'])
+        hh = set(['jwu42.hopto.org:50004:s'])
         for x in hh:
             self.add_peer(x)
 
@@ -244,13 +245,14 @@ class ServerProcessor(Processor):
         elif method == 'server.donation_address':
             result = self.config.get('server', 'donation_address')
 
-        elif method == 'server.peers.subscribe':
+        elif method in ['server.get_peers', 'server.peers.subscribe']:
             result = self.get_peers()
 
         elif method == 'server.version':
             result = VERSION
 
         elif method == 'server.new_peer':
+            logger.info("new peer", params)
             self.p2p.add_peer(params[0])
             result = "ok"
 
