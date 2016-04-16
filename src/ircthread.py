@@ -42,25 +42,17 @@ class IrcThread(threading.Thread):
         self.daemon = True
         options = dict(config.items('server'))
         self.stratum_tcp_port = options.get('stratum_tcp_port')
-        self.stratum_http_port = options.get('stratum_http_port')
         self.stratum_tcp_ssl_port = options.get('stratum_tcp_ssl_port')
-        self.stratum_http_ssl_port = options.get('stratum_http_ssl_port')
         self.report_stratum_tcp_port = options.get('report_stratum_tcp_port')
-        self.report_stratum_http_port = options.get('report_stratum_http_port')
         self.report_stratum_tcp_ssl_port = options.get('report_stratum_tcp_ssl_port')
-        self.report_stratum_http_ssl_port = options.get('report_stratum_http_ssl_port')
         self.irc_bind_ip = options.get('irc_bind_ip')
         self.host = options.get('host')
         self.report_host = options.get('report_host')
         self.nick = options.get('irc_nick')
         if self.report_stratum_tcp_port:
             self.stratum_tcp_port = self.report_stratum_tcp_port
-        if self.report_stratum_http_port:
-            self.stratum_http_port = self.report_stratum_http_port
         if self.report_stratum_tcp_ssl_port:
             self.stratum_tcp_ssl_port = self.report_stratum_tcp_ssl_port
-        if self.report_stratum_http_ssl_port:
-            self.stratum_http_ssl_port = self.report_stratum_http_ssl_port
         if self.report_host:
             self.host = self.report_host
         if not self.nick:
@@ -77,7 +69,7 @@ class IrcThread(threading.Thread):
             s += 'p' + self.pruning_limit + ' '
 
         def add_port(letter, number):
-            DEFAULT_PORTS = {'t':'50001', 's':'50002', 'h':'8081', 'g':'8082'}
+            DEFAULT_PORTS = {'t':'50001', 's':'50002'}
             if not number: return ''
             if DEFAULT_PORTS[letter] == number:
                 return letter + ' '
@@ -85,9 +77,7 @@ class IrcThread(threading.Thread):
                 return letter + number + ' '
 
         s += add_port('t',self.stratum_tcp_port)
-        s += add_port('h',self.stratum_http_port)
         s += add_port('s',self.stratum_tcp_ssl_port)
-        s += add_port('g',self.stratum_http_ssl_port)
         return s
 
     def start(self, queue):
