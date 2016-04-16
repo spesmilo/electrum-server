@@ -19,8 +19,7 @@ setup(
         'electrumserver.processor',
         'electrumserver.version',
         'electrumserver.ircthread',
-        'electrumserver.stratum_tcp',
-        'electrumserver.stratum_http'
+        'electrumserver.stratum_tcp'
     ],
     description="Bitcoin Electrum Server",
     author="Thomas Voegtlin",
