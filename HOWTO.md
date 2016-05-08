@@ -151,6 +151,7 @@ We will download the latest git snapshot for Electrum to configure and install i
     $ cd ~
     $ git clone https://github.com/spesmilo/electrum-server.git
     $ cd electrum-server
+    $ sudo apt-get install python-setuptools
     $ sudo configure
     $ sudo python setup.py install
 
@@ -164,6 +165,10 @@ package manager if you don't want to use the install routine.
 
     $ sudo apt-get install python-setuptools python-openssl python-leveldb libleveldb-dev
     $ sudo easy_install jsonrpclib irc plyvel
+
+For the python irc module please note electrum-server currently only supports versions between 11 and 14.0. 
+The setup.py takes care of installing a supported version but be aware of it when installing or upgrading
+manually.
 
 Regarding leveldb, see the steps in README.leveldb for further details, especially if your system
 doesn't have the python-leveldb package or if plyvel installation fails.
