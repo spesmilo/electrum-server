@@ -63,6 +63,7 @@ class BlockchainProcessor(Processor):
         self.headers_data = ''
         self.headers_path = config.get('leveldb', 'path')
 
+        self.mempool_fees = {}
         self.mempool_values = {}
         self.mempool_addresses = {}
         self.mempool_hist = {} # addr -> (txid, delta)
@@ -302,7 +303,8 @@ class BlockchainProcessor(Processor):
         with self.mempool_lock:
             for tx_hash, delta in self.mempool_hist.get(addr, ()):
                 height = -1 if self.mempool_unconfirmed.get(tx_hash) else 0
-                hist.append({'tx_hash':tx_hash, 'height':height})
+                fee = self.mempool_fees.get(tx_hash)
+                hist.append({'tx_hash':tx_hash, 'height':height, 'fee':fee})
         return hist
 
     def get_history(self, addr, cache_only=False):
@@ -730,16 +732,20 @@ class BlockchainProcessor(Processor):
         for tx_hash, tx in new_tx.iteritems():
             mpa = self.mempool_addresses.get(tx_hash, {})
             out_values = []
+            out_sum = 0
             for x in tx.get('outputs'):
                 addr = x.get('address', '')
-                out_values.append((addr, x['value']))
+                value = x['value']
+                out_values.append((addr, value))
                 if not addr:
                     continue
                 v = mpa.get(addr, 0)
-                v += x['value']
+                v += value
                 mpa[addr] = v
                 touched_addresses.add(addr)
+                out_sum += value
 
+            self.mempool_fees[tx_hash] = -out_sum
             self.mempool_addresses[tx_hash] = mpa
             self.mempool_values[tx_hash] = out_values
 
@@ -748,6 +754,7 @@ class BlockchainProcessor(Processor):
             mpa = self.mempool_addresses.get(tx_hash, {})
             # are we spending unconfirmed inputs?
             unconfirmed = set()
+            input_sum = 0
             for x in tx.get('inputs'):
                 prev_hash = x.get('prevout_hash')
                 prev_n = x.get('prevout_n')
@@ -763,7 +770,8 @@ class BlockchainProcessor(Processor):
                     except:
                         print_log("utxo not in database; postponing mempool update")
                         return
-
+                # we can proceed
+                input_sum += value
                 if not addr:
                     continue
                 v = mpa.get(addr, 0)
@@ -772,6 +780,7 @@ class BlockchainProcessor(Processor):
                 touched_addresses.add(addr)
             self.mempool_unconfirmed[tx_hash] = unconfirmed
             self.mempool_addresses[tx_hash] = mpa
+            self.mempool_fees[tx_hash] += input_sum
 
         # remove deprecated entries from mempool_addresses
         for tx_hash, addresses in self.mempool_addresses.items():
@@ -779,6 +788,7 @@ class BlockchainProcessor(Processor):
                 del self.mempool_addresses[tx_hash]
                 del self.mempool_values[tx_hash]
                 del self.mempool_unconfirmed[tx_hash]
+                del self.mempool_fees[tx_hash]
                 touched_addresses.update(addresses)
 
         # remove deprecated entries from mempool_hist
