@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # check root
 if [ ! "$(id -u)" == "0" ]; then
