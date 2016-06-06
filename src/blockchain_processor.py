@@ -748,12 +748,12 @@ class BlockchainProcessor(Processor):
             self.mempool_fees[tx_hash] = -out_sum
             self.mempool_addresses[tx_hash] = mpa
             self.mempool_values[tx_hash] = out_values
+            self.mempool_unconfirmed[tx_hash] = set()
 
         # check all inputs
         for tx_hash, tx in new_tx.iteritems():
             mpa = self.mempool_addresses.get(tx_hash, {})
             # are we spending unconfirmed inputs?
-            unconfirmed = set()
             input_sum = 0
             for x in tx.get('inputs'):
                 prev_hash = x.get('prevout_hash')
@@ -761,7 +761,7 @@ class BlockchainProcessor(Processor):
                 mpv = self.mempool_values.get(prev_hash)
                 if mpv:
                     addr, value = mpv[prev_n]
-                    unconfirmed.add(prev_hash)
+                    self.mempool_unconfirmed[tx_hash].add(prev_hash)
                 else:
                     txi = (prev_hash + int_to_hex4(prev_n)).decode('hex')
                     try:
@@ -778,7 +778,6 @@ class BlockchainProcessor(Processor):
                 v -= value
                 mpa[addr] = v
                 touched_addresses.add(addr)
-            self.mempool_unconfirmed[tx_hash] = unconfirmed
             self.mempool_addresses[tx_hash] = mpa
             self.mempool_fees[tx_hash] += input_sum
 
