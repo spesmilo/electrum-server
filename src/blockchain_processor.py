@@ -324,8 +324,11 @@ class BlockchainProcessor(Processor):
         return hist
 
     def get_unconfirmed_value(self, addr):
-        h = self.get_unconfirmed_history(addr)
-        return sum([x[1] for x in h])
+        v = 0
+        with self.mempool_lock:
+            for txid, delta in self.mempool_hist.get(addr, ()):
+                v += delta
+        return v
 
     def get_status(self, addr, cache_only=False):
         tx_points = self.get_history(addr, cache_only)
