@@ -229,12 +229,19 @@ class Storage(object):
         except:
             self.pruning_limit = config.getint('leveldb', 'pruning_limit')
             self.db_undo.put('version', repr(self.pruning_limit))
+        # reorg limit
+        try:
+            self.reorg_limit = ast.literal_eval(self.db_undo.get('reorg_limit'))
+        except:
+            self.reorg_limit = config.getint('leveldb', 'reorg_limit')
+            self.db_undo.put('reorg_limit', repr(self.reorg_limit))
         # compute root hash
         root_node = self.get_node('')
         self.root_hash, coins = root_node.get_hash('', None)
         # print stuff
         print_log("Database version %d."%db_version)
         print_log("Pruning limit for spent outputs is %d."%self.pruning_limit)
+        print_log("Reorg limit is %d blocks."%self.reorg_limit)
         print_log("Blockchain height", self.height)
         print_log("UTXO tree root hash:", self.root_hash.encode('hex'))
         print_log("Coins in database:", coins)
@@ -324,15 +331,14 @@ class Storage(object):
         return self.db_addr.get(txi)
 
     def get_undo_info(self, height):
-        s = self.db_undo.get("undo_info_%d" % (height % 100))
+        s = self.db_undo.get("undo_info_%d" % (height % self.reorg_limit))
         if s is None:
             print_log("no undo info for ", height)
         return eval(s)
 
-
     def write_undo_info(self, height, bitcoind_height, undo_info):
-        if height > bitcoind_height - 100 or self.test_reorgs:
-            self.db_undo.put("undo_info_%d" % (height % 100), repr(undo_info))
+        if height > bitcoind_height - self.reorg_limit or self.test_reorgs:
+            self.db_undo.put("undo_info_%d" % (height % self.reorg_limit), repr(undo_info))
 
     @staticmethod
     def common_prefix(word1, word2):
