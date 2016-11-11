@@ -52,10 +52,10 @@ installed: `python`, `easy_install`, `git`, standard C/C++
 build chain. You will need root access in order to install other software or
 Python libraries. Python 2.7 is the minimum supported version.
 
-**Hardware.** The lightest setup is a pruning server with diskspace
-requirements of about 30 GB for the Electrum database (February 2016). However note that
+**Hardware.** The lightest setup is a pruning server with disk space
+requirements of about 50 GB for the Electrum database (January 2017). However note that
 you also need to run bitcoind and keep a copy of the full blockchain,
-which is roughly 55 GB (February 2016). Ideally you have a machine with 16 GB of RAM
+which is roughly 125 GB (January 2017). Ideally you have a machine with 16 GB of RAM
 and an equal amount of swap. If you have ~2 GB of RAM make sure you limit bitcoind 
 to 8 concurrent connections by disabling incoming connections. electrum-server may
 bail-out on you from time to time with less than 4 GB of RAM, so you might have to 
@@ -118,11 +118,9 @@ wait for it to complete downloading the blockchain.
 
 Write this in `bitcoin.conf`:
 
-    rpcuser=<rpc-username>
-    rpcpassword=<rpc-password>
     daemon=1
     txindex=1
-
+    maxconnections=8
 
 If you have an existing installation of bitcoind and have not previously
 set txindex=1 you need to reindex the blockchain by running
@@ -187,7 +185,7 @@ deprecated.
 
 The pruning server uses leveldb and keeps a smaller and
 faster database by pruning spent transactions. It's a lot quicker to get up
-and running and requires less maintenance and diskspace than abe.
+and running and requires less maintenance and disk space than abe.
 
 The section in the electrum server configuration file (see step 10) looks like this:
 
@@ -203,7 +201,7 @@ The "configure" script above will offer you to download a database with pruning 
 
 You can fetch recent copies of electrum leveldb databases with different pruning limits
 and further instructions from the Electrum full archival server foundry at:
-http://foundry.electrum.org/
+https://foundry.electrum.org/
 
 
 Alternatively, if you have the time and nerve, you can import the blockchain yourself.
