@@ -96,7 +96,7 @@ to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 We currently recommend bitcoin core 0.13.2 stable. If your package manager does not supply
 a recent bitcoind or you prefer to compile it yourself, here are some pointers for Ubuntu:
 
-    $ sudo apt-get install make g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config libevent-dev
+    $ sudo apt-get install make bsdmainutils g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config libevent-dev
     $ sudo su - bitcoin
     $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.13.2/bitcoin-0.13.2.tar.gz
     $ sha256sum bitcoin-0.13.2.tar.gz | grep 621201189c0409cb17a5073278872dcdcfff1ea147ead6958b55e94416b896d7
@@ -120,7 +120,10 @@ Write this in `bitcoin.conf`:
 
     daemon=1
     txindex=1
-    maxconnections=8
+
+rpcuser / rpcpassword options are only needed for non-localhost connections.
+you can consider setting maxconnections if you want to reduce bitcoind bandwidth
+(as stated above)
 
 If you have an existing installation of bitcoind and have not previously
 set txindex=1 you need to reindex the blockchain by running
@@ -283,14 +286,14 @@ If you intend to run the server publicly have a look at README-IRC.md
 
 Electrum server currently needs quite a few file handles to use leveldb. It also requires
 file handles for each connection made to the server. It's good practice to increase the
-open files limit to 64k.
+open files limit to 128k.
 
 The "configure" script will take care of this and ask you to create a user for running electrum-server.
 If you're using the user `bitcoin` to run electrum and have added it as shown in this document, run
 the following code to add the limits to your /etc/security/limits.conf:
 
-     echo "bitcoin hard nofile 65536" >> /etc/security/limits.conf
-     echo "bitcoin soft nofile 65536" >> /etc/security/limits.conf
+     echo "bitcoin hard nofile 131072" >> /etc/security/limits.conf
+     echo "bitcoin soft nofile 131072" >> /etc/security/limits.conf
 
 If you are on Debian > 8.0 Jessie or another distribution based on it, you also need to add these lines in /etc/pam.d/common-session and /etc/pam.d/common-session-noninteractive otherwise the limits in /etc/security/limits.conf will not work:
 

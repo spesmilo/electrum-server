@@ -47,8 +47,8 @@ fi
 if [ ! id -u $user >/dev/null 2>&1 ]; then
     echo "adding user $user"
     useradd $user
-    echo "$user hard nofile 65536" >> /etc/security/limits.conf
-    echo "$user soft nofile 65536" >> /etc/security/limits.conf
+    echo "$user hard nofile 131072" >> /etc/security/limits.conf
+    echo "$user soft nofile 131072" >> /etc/security/limits.conf
 fi
 
 
@@ -110,13 +110,13 @@ chown $user:$user $logfile
 
 bitcoind_user=$(read_config "bitcoind_user")
 if ! [ "$bitcoind_user" ]; then
-    read -p "rpcuser (from your bitcoin.conf file): " -r
+    read -p "rpcuser (from your bitcoin.conf file, leave empty for localhost): " -r
     write_config "bitcoind_user" $REPLY
 fi
 
 bitcoind_password=$(read_config "bitcoind_password")
 if ! [ "$bitcoind_password" ]; then
-    read -p "rpcpassword (from your bitcoin.conf file): " -r
+    read -p "rpcpassword (from your bitcoin.conf file, leave emtpy for localhost): " -r
     write_config "bitcoind_password" $REPLY
 fi
 

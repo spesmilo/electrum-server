@@ -35,6 +35,6 @@ pruning_limit = 100
 [bitcoind]
 bitcoind_host = localhost
 bitcoind_port = 8332
-# user and password from bitcoin.conf
-bitcoind_user =
-bitcoind_password =
+# user and password from bitcoin.conf (not needed for localhost)
+#bitcoind_user =
+#bitcoind_password =
