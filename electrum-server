@@ -1,6 +1,6 @@
 #! /bin/bash
 
-
+PATH=$PATH:/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/bin
 electrum_config="/etc/electrum.conf"
 if [ ! -f $electrum_config ]; then
     echo "$electrum_config does not exist"
