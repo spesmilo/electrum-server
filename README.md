@@ -4,6 +4,14 @@ Electrum-server for the Electrum client
   * Author: Thomas Voegtlin (ThomasV on the bitcointalk forum)
   * Language: Python
 
+
+Note
+----
+
+  This code is now unmaintained. The replacement code for electrum
+  server is ElectrumX: https://github.com/kyuupichan/electrumx
+
+
 Features
 --------
 
