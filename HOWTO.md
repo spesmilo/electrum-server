@@ -1,3 +1,9 @@
+Note
+====
+
+This code is now unmaintained. The replacement code for electrum
+server is ElectrumX: https://github.com/kyuupichan/electrumx
+
 How to run your own Electrum server
 ===================================
 
