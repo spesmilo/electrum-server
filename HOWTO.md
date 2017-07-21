@@ -108,6 +108,8 @@ a recent bitcoind or you prefer to compile it yourself, here are some pointers f
     $ sha256sum bitcoin-0.14.2.tar.gz | grep 1ac4e5ce51ac03c41df0ad1e759dbb55d91e1456b9a616e43344bf2258dbe8ca
     $ tar xfz bitcoin-0.14.2.tar.gz
     $ cd bitcoin-0.14.2
+    $ # wget https://github.com/bitcoin/bitcoin/compare/v0.14.2...UASF:0.14-BIP148.patch # Optional for BIP148 support
+    $ # patch -p 1 < v0.14.2...UASF\:0.14-BIP148.patch # Optional for BIP148 support, answer "n" to all questions (already applied patches)
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
