@@ -109,7 +109,9 @@ a recent bitcoind or you prefer to compile it yourself, here are some pointers f
     $ tar xfz bitcoin-0.14.2.tar.gz
     $ cd bitcoin-0.14.2
     $ # wget https://github.com/bitcoin/bitcoin/compare/v0.14.2...UASF:0.14-BIP148.patch # Optional for BIP148 support
+    $ # wget https://github.com/bitcoin/bitcoin/compare/0.14...achow101:early-uasf-bip91.patch # Optional for BIP91 enforcement
     $ # patch -p 1 < v0.14.2...UASF\:0.14-BIP148.patch # Optional for BIP148 support, answer "n" to all questions (already applied patches)
+    $ # patch -p 1 < 0.14...achow101\:early-uasf-bip91.patch # Optional for BIP91 enforcement
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
