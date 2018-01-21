@@ -99,15 +99,15 @@ to your `.bashrc`, `.profile`, or `.bash_profile`, then logout and relogin:
 
 ### Step 2. Download bitcoind
 
-We currently recommend bitcoin core 0.15.0 stable. If your package manager does not supply
+We currently recommend bitcoin core 0.15.1 stable. If your package manager does not supply
 a recent bitcoind or you prefer to compile it yourself, here are some pointers for Ubuntu:
 
     $ sudo apt-get install make bsdmainutils g++ python-leveldb libboost-all-dev libssl-dev libdb++-dev pkg-config libevent-dev
     $ sudo su - bitcoin
-    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.15.0/bitcoin-0.15.0.tar.gz
-    $ sha256sum bitcoin-0.15.0.tar.gz | grep 54b6f54982da97f294d21ad69c6b8624f2cf40d157be0683123b2ba6db2bf2a1
-    $ tar xfz bitcoin-0.15.0.tar.gz
-    $ cd bitcoin-0.15.0
+    $ cd ~/src && wget https://bitcoin.org/bin/bitcoin-core-0.15.1/bitcoin-0.15.1.tar.gz
+    $ sha256sum bitcoin-0.15.1.tar.gz | grep 34de2dbe058c1f8b6464494468ebe2ff0422614203d292da1c6458d6f87342b4
+    $ tar xfz bitcoin-0.15.1.tar.gz
+    $ cd bitcoin-0.15.1
     $ ./configure --disable-wallet --without-miniupnpc
     $ make
     $ strip src/bitcoind src/bitcoin-cli src/bitcoin-tx
